@@ -10,6 +10,7 @@ from telegram.ext import (
 from app.config.settings import BOT_TOKEN
 from app.handlers.start import start
 from app.handlers.ride import request_ride
+from app.handlers.location import receive_location
 
 # Configure logging
 logging.basicConfig(
@@ -34,6 +35,14 @@ def main():
         MessageHandler(
             filters.TEXT & filters.Regex("^🛺 Request Ride$"),
             request_ride,
+        )
+    )
+
+    # Handle location messages
+    app.add_handler(
+        MessageHandler(
+            filters.LOCATION,
+            receive_location,
         )
     )
 
