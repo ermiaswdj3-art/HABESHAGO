@@ -1,6 +1,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from app.keyboards.location import get_location_keyboard
+from app.services.distance_service import calculate_distance
 from app.state.ride_state import ride_requests
 
 
@@ -11,11 +13,12 @@ async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
     latitude = location.latitude
     longitude = location.longitude
 
-    # New ride request
+    # First location = Pickup
     if (
         user_id not in ride_requests
         or ride_requests[user_id]["status"] != "waiting_for_destination"
     ):
+
         ride_requests[user_id] = {
             "pickup": (latitude, longitude),
             "destination": None,
@@ -24,16 +27,30 @@ async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(
             "✅ Pickup location received!\n\n"
-            "📍 Now please send your destination location."
+            "Please share your destination location.",
+            reply_markup=get_location_keyboard(
+                "📍 Share Destination Location"
+            ),
         )
 
-    # Destination received
+    # Second location = Destination
     else:
-        ride_requests[user_id]["destination"] = (latitude, longitude)
+        ride_requests[user_id]["destination"] = (
+            latitude,
+            longitude,
+        )
         ride_requests[user_id]["status"] = "completed"
 
         pickup = ride_requests[user_id]["pickup"]
         destination = ride_requests[user_id]["destination"]
+
+        # Calculate distance
+        distance = calculate_distance(
+            pickup[0],
+            pickup[1],
+            destination[0],
+            destination[1],
+        )
 
         await update.message.reply_text(
             "🎉 Ride request completed!\n\n"
@@ -43,5 +60,9 @@ async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🏁 Destination:\n"
             f"Latitude: {destination[0]}\n"
             f"Longitude: {destination[1]}\n\n"
+            f"📏 Estimated Distance: {distance:.2f} km\n\n"
             "🚖 Your ride request has been created successfully!"
         )
+
+        # Clear the ride from memory
+        del ride_requests[user_id]
