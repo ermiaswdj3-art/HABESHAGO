@@ -43,3 +43,28 @@ def save_ride(
 
     connection.commit()
     connection.close()
+
+
+def get_rides_by_passenger(passenger_id):
+    connection = create_connection()
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            distance,
+            fare,
+            status
+        FROM rides
+        WHERE passenger_id = ?
+        ORDER BY id DESC
+        """,
+        (passenger_id,),
+    )
+
+    rides = cursor.fetchall()
+
+    connection.close()
+
+    return rides
