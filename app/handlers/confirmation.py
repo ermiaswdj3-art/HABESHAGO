@@ -1,7 +1,10 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from app.database.ride_repository import save_ride
 from app.services.driver_service import find_nearest_driver
+from app.services.distance_service import calculate_distance
+from app.services.pricing_service import calculate_fare
 from app.state.ride_state import ride_requests
 
 
@@ -15,6 +18,16 @@ async def confirm_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     pickup = ride_requests[user_id]["pickup"]
+    destination = ride_requests[user_id]["destination"]
+
+    distance = calculate_distance(
+        pickup[0],
+        pickup[1],
+        destination[0],
+        destination[1],
+    )
+
+    fare = calculate_fare(distance)
 
     driver = find_nearest_driver(
         pickup[0],
@@ -27,6 +40,18 @@ async def confirm_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    # Save ride to the database
+    save_ride(
+        passenger_id=user_id,
+        pickup_latitude=pickup[0],
+        pickup_longitude=pickup[1],
+        destination_latitude=destination[0],
+        destination_longitude=destination[1],
+        distance=distance,
+        fare=fare,
+        status="Confirmed",
+    )
+
     await update.message.reply_text(
         "✅ Your ride has been confirmed!\n\n"
         "🚖 Driver Found!\n\n"
@@ -35,6 +60,7 @@ async def confirm_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🚗 Vehicle: {driver['vehicle']}\n"
         f"🎨 Color: {driver['color']}\n"
         f"🔢 Plate: {driver['plate']}\n\n"
+        "💾 Ride saved successfully.\n\n"
         "🚗 Your driver is on the way."
     )
 
