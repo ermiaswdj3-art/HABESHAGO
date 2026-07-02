@@ -8,6 +8,7 @@ from telegram.ext import (
 )
 
 from app.config.settings import BOT_TOKEN
+from app.database.database import create_tables
 from app.handlers.start import start
 from app.handlers.ride import request_ride
 from app.handlers.location import receive_location
@@ -27,9 +28,13 @@ def main():
     if not BOT_TOKEN:
         raise ValueError("BOT_TOKEN not found in .env")
 
+    # Create database tables
+    create_tables()
+
+    # Create Telegram application
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # Commands
+    # Start command
     app.add_handler(CommandHandler("start", start))
 
     # Ride request
@@ -56,7 +61,7 @@ def main():
         )
     )
 
-    # GPS location
+    # Receive GPS location
     app.add_handler(
         MessageHandler(
             filters.LOCATION,
@@ -66,6 +71,7 @@ def main():
 
     print("=" * 50)
     print("🚖 HABESHAGO Bot is running...")
+    print("💾 Database initialized successfully.")
     print("Press Ctrl + C to stop the bot.")
     print("=" * 50)
 
