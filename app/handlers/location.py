@@ -4,6 +4,7 @@ from telegram.ext import ContextTypes
 from app.keyboards.location import get_location_keyboard
 from app.services.distance_service import calculate_distance
 from app.services.pricing_service import calculate_fare
+from app.keyboards.confirmation import get_confirmation_keyboard
 from app.state.ride_state import ride_requests
 
 
@@ -57,17 +58,12 @@ async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
         fare = calculate_fare(distance)
 
         await update.message.reply_text(
-            "🎉 Ride Request Summary\n\n"
-            f"📍 Pickup:\n"
-            f"Latitude: {pickup[0]}\n"
-            f"Longitude: {pickup[1]}\n\n"
-            f"🏁 Destination:\n"
-            f"Latitude: {destination[0]}\n"
-            f"Longitude: {destination[1]}\n\n"
-            f"📏 Estimated Distance: {distance:.2f} km\n"
-            f"💰 Estimated Fare: {fare:.2f} ETB\n\n"
-            "🚖 Your ride request has been created successfully!"
-        )
+    "🚖 Ride Summary\n\n"
+    f"📏 Estimated Distance: {distance:.2f} km\n"
+    f"💰 Estimated Fare: {fare:.2f} ETB\n\n"
+    "Would you like to confirm this ride?",
+    reply_markup=get_confirmation_keyboard(),
+)
 
         # Clear the ride from memory
-        del ride_requests[user_id]
+        

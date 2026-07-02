@@ -11,6 +11,10 @@ from app.config.settings import BOT_TOKEN
 from app.handlers.start import start
 from app.handlers.ride import request_ride
 from app.handlers.location import receive_location
+from app.handlers.confirmation import (
+    confirm_ride,
+    cancel_ride,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -20,17 +24,15 @@ logging.basicConfig(
 
 
 def main():
-    # Check if BOT_TOKEN exists
     if not BOT_TOKEN:
         raise ValueError("BOT_TOKEN not found in .env")
 
-    # Create the Telegram application
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # Register command handlers
+    # Commands
     app.add_handler(CommandHandler("start", start))
 
-    # Register message handlers
+    # Ride request
     app.add_handler(
         MessageHandler(
             filters.TEXT & filters.Regex("^🛺 Request Ride$"),
@@ -38,7 +40,23 @@ def main():
         )
     )
 
-    # Handle location messages
+    # Confirm ride
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^✅ Confirm Ride$"),
+            confirm_ride,
+        )
+    )
+
+    # Cancel ride
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^❌ Cancel Ride$"),
+            cancel_ride,
+        )
+    )
+
+    # GPS location
     app.add_handler(
         MessageHandler(
             filters.LOCATION,
@@ -51,7 +69,6 @@ def main():
     print("Press Ctrl + C to stop the bot.")
     print("=" * 50)
 
-    # Start the bot
     app.run_polling()
 
 
