@@ -30,6 +30,22 @@ def create_tables():
         )
     """)
 
+    # Drivers table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS drivers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            telegram_id INTEGER UNIQUE,
+            full_name TEXT NOT NULL,
+            phone_number TEXT,
+            vehicle TEXT NOT NULL,
+            vehicle_color TEXT NOT NULL,
+            plate_number TEXT UNIQUE NOT NULL,
+            rating REAL DEFAULT 5.0,
+            is_available INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     # Rides table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS rides (
