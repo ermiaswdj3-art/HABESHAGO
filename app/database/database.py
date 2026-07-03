@@ -19,6 +19,18 @@ def create_tables():
 
     cursor = connection.cursor()
 
+    # Passengers table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS passengers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            telegram_id INTEGER UNIQUE NOT NULL,
+            full_name TEXT NOT NULL,
+            phone_number TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Rides table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS rides (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,7 +41,9 @@ def create_tables():
             destination_longitude REAL NOT NULL,
             distance REAL NOT NULL,
             fare REAL NOT NULL,
-            status TEXT NOT NULL
+            status TEXT NOT NULL,
+            FOREIGN KEY (passenger_id)
+                REFERENCES passengers (telegram_id)
         )
     """)
 

@@ -9,14 +9,17 @@ from telegram.ext import (
 
 from app.config.settings import BOT_TOKEN
 from app.database.database import create_tables
+
 from app.handlers.start import start
 from app.handlers.ride import request_ride
+from app.handlers.rides import show_rides
+from app.handlers.profile import show_profile
+from app.handlers.set_phone import set_phone
 from app.handlers.location import receive_location
 from app.handlers.confirmation import (
     confirm_ride,
     cancel_ride,
 )
-from app.handlers.rides import show_rides
 
 # Configure logging
 logging.basicConfig(
@@ -29,13 +32,17 @@ def main():
     if not BOT_TOKEN:
         raise ValueError("BOT_TOKEN not found in .env")
 
+    # Create database tables
     create_tables()
 
+    # Create Telegram application
     app = Application.builder().token(BOT_TOKEN).build()
 
     # Commands
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("rides", show_rides))
+    app.add_handler(CommandHandler("profile", show_profile))
+    app.add_handler(CommandHandler("setphone", set_phone))
 
     # Ride request
     app.add_handler(
