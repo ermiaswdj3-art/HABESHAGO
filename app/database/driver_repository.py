@@ -78,3 +78,45 @@ def get_available_drivers():
     connection.close()
 
     return drivers
+
+
+def set_driver_unavailable(telegram_id):
+    """
+    Mark a driver as unavailable.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE drivers
+        SET is_available = 0
+        WHERE telegram_id = ?
+        """,
+        (telegram_id,),
+    )
+
+    connection.commit()
+    connection.close()
+
+
+def set_driver_available(telegram_id):
+    """
+    Mark a driver as available.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE drivers
+        SET is_available = 1
+        WHERE telegram_id = ?
+        """,
+        (telegram_id,),
+    )
+
+    connection.commit()
+    connection.close()

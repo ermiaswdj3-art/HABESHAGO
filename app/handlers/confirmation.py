@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from app.database.driver_repository import set_driver_unavailable
 from app.database.ride_repository import save_ride
 from app.services.driver_service import find_nearest_driver
 from app.services.distance_service import calculate_distance
@@ -40,7 +41,10 @@ async def confirm_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Save ride to the database
+    # Mark the driver as unavailable
+    set_driver_unavailable(driver["telegram_id"])
+
+    # Save the ride
     save_ride(
         passenger_id=user_id,
         pickup_latitude=pickup[0],
@@ -62,6 +66,7 @@ async def confirm_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🎨 Color: {driver['color']}\n"
         f"🔢 Plate: {driver['plate']}\n\n"
         "💾 Ride saved successfully.\n\n"
+        "🟢 Driver status updated to BUSY.\n\n"
         "🚗 Your driver is on the way."
     )
 
