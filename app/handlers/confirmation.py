@@ -55,6 +55,7 @@ async def confirm_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "✅ Your ride has been confirmed!\n\n"
         "🚖 Driver Found!\n\n"
+        f"📍 Driver is {driver['distance']} km away\n"
         f"👤 Driver: {driver['name']}\n"
         f"⭐ Rating: {driver['rating']}\n"
         f"🚗 Vehicle: {driver['vehicle']}\n"

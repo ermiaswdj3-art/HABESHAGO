@@ -8,6 +8,8 @@ def register_driver(
     vehicle,
     vehicle_color,
     plate_number,
+    latitude,
+    longitude,
 ):
     """
     Register a new driver.
@@ -18,15 +20,17 @@ def register_driver(
 
     cursor.execute(
         """
-        INSERT OR IGNORE INTO drivers (
+        INSERT INTO drivers (
             telegram_id,
             full_name,
             phone_number,
             vehicle,
             vehicle_color,
-            plate_number
+            plate_number,
+            latitude,
+            longitude
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             telegram_id,
@@ -35,6 +39,8 @@ def register_driver(
             vehicle,
             vehicle_color,
             plate_number,
+            latitude,
+            longitude,
         ),
     )
 
@@ -59,7 +65,9 @@ def get_available_drivers():
             vehicle,
             vehicle_color,
             plate_number,
-            rating
+            rating,
+            latitude,
+            longitude
         FROM drivers
         WHERE is_available = 1
         """
