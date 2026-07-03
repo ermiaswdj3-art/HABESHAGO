@@ -18,3 +18,5 @@ __pycache__/
 # Operating System
 .DS_Store
 Thumbs.db
+# SQLite database
+habeshago.db
