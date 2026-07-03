@@ -19,6 +19,7 @@ from app.handlers.location import receive_location
 from app.handlers.confirmation import (
     confirm_ride,
     cancel_ride,
+    complete_ride_handler,
 )
 
 # Configure logging
@@ -65,6 +66,14 @@ def main():
         MessageHandler(
             filters.TEXT & filters.Regex("^❌ Cancel Ride$"),
             cancel_ride,
+        )
+    )
+
+    # Complete ride
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^🏁 Complete Ride$"),
+            complete_ride_handler,
         )
     )
 

@@ -53,6 +53,7 @@ def create_tables():
         CREATE TABLE IF NOT EXISTS rides (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             passenger_id INTEGER NOT NULL,
+            driver_id INTEGER NOT NULL,
             pickup_latitude REAL NOT NULL,
             pickup_longitude REAL NOT NULL,
             destination_latitude REAL NOT NULL,
@@ -61,7 +62,9 @@ def create_tables():
             fare REAL NOT NULL,
             status TEXT NOT NULL,
             FOREIGN KEY (passenger_id)
-                REFERENCES passengers (telegram_id)
+                REFERENCES passengers (telegram_id),
+            FOREIGN KEY (driver_id)
+                REFERENCES drivers (telegram_id)
         )
     """)
 
