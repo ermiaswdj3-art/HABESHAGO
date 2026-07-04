@@ -16,11 +16,13 @@ from app.handlers.rides import show_rides
 from app.handlers.profile import show_profile
 from app.handlers.set_phone import set_phone
 from app.handlers.location import receive_location
+from app.handlers.rating import rate_driver_handler
 from app.handlers.confirmation import (
     confirm_ride,
     cancel_ride,
     complete_ride_handler,
 )
+
 
 # Configure logging
 logging.basicConfig(
@@ -74,6 +76,14 @@ def main():
         MessageHandler(
             filters.TEXT & filters.Regex("^🏁 Complete Ride$"),
             complete_ride_handler,
+        )
+    )
+    
+    # Driver rating
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^⭐ [1-5]$"),
+            rate_driver_handler,
         )
     )
 

@@ -79,7 +79,7 @@ def get_rides_by_passenger(passenger_id):
     return rides
 
 
-def get_latest_active_ride(passenger_id):
+def get_latest_confirmed_ride(passenger_id):
     """
     Return the latest confirmed ride.
     """
@@ -108,28 +108,9 @@ def get_latest_active_ride(passenger_id):
     return ride
 
 
-def complete_ride(ride_id):
+def get_latest_completed_ride(passenger_id):
     """
-    Mark a ride as completed.
-    """
-
-    connection = create_connection()
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        UPDATE rides
-        SET status = 'Completed'
-        WHERE id = ?
-        """,
-        (ride_id,),
-    )
-
-    connection.commit()
-    connection.close()
-def get_latest_active_ride(passenger_id):
-    """
-    Return the latest confirmed ride for a passenger.
+    Return the latest completed ride waiting for rating.
     """
 
     connection = create_connection()
@@ -142,7 +123,8 @@ def get_latest_active_ride(passenger_id):
             driver_id
         FROM rides
         WHERE passenger_id = ?
-        AND status = 'Confirmed'
+        AND status = 'Completed'
+        AND driver_rating IS NULL
         ORDER BY id DESC
         LIMIT 1
         """,
@@ -174,4 +156,52 @@ def complete_ride(ride_id):
     )
 
     connection.commit()
-    connection.close()   
+    connection.close()
+
+
+def rate_driver(ride_id, rating):
+    """
+    Save passenger rating.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE rides
+        SET driver_rating = ?
+        WHERE id = ?
+        """,
+        (
+            rating,
+            ride_id,
+        ),
+    )
+
+    connection.commit()
+    connection.close()
+
+
+def rate_passenger(ride_id, rating):
+    """
+    Save driver rating.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE rides
+        SET passenger_rating = ?
+        WHERE id = ?
+        """,
+        (
+            rating,
+            ride_id,
+        ),
+    )
+
+    connection.commit()
+    connection.close()

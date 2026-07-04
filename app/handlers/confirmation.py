@@ -1,6 +1,8 @@
 from telegram import Update
-from app.keyboards.ride_menu import get_ride_menu
 from telegram.ext import ContextTypes
+
+from app.keyboards.ride_menu import get_ride_menu
+from app.keyboards.rating_menu import get_rating_menu
 
 from app.database.driver_repository import (
     set_driver_unavailable,
@@ -9,7 +11,7 @@ from app.database.driver_repository import (
 
 from app.database.ride_repository import (
     save_ride,
-    get_latest_active_ride,
+    get_latest_confirmed_ride,
     complete_ride,
 )
 
@@ -66,19 +68,19 @@ async def confirm_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     await update.message.reply_text(
-    "✅ Your ride has been confirmed!\n\n"
-    "🚖 Driver Found!\n\n"
-    f"📍 Driver is {driver['distance']} km away\n"
-    f"👤 Driver: {driver['name']}\n"
-    f"⭐ Rating: {driver['rating']}\n"
-    f"🚗 Vehicle: {driver['vehicle']}\n"
-    f"🎨 Color: {driver['color']}\n"
-    f"🔢 Plate: {driver['plate']}\n\n"
-    "💾 Ride saved successfully.\n\n"
-    "🟢 Driver status updated to BUSY.\n\n"
-    "🚗 Your driver is on the way.",
-    reply_markup=get_ride_menu(),
-)
+        "✅ Your ride has been confirmed!\n\n"
+        "🚖 Driver Found!\n\n"
+        f"📍 Driver is {driver['distance']} km away\n"
+        f"👤 Driver: {driver['name']}\n"
+        f"⭐ Rating: {driver['rating']}\n"
+        f"🚗 Vehicle: {driver['vehicle']}\n"
+        f"🎨 Color: {driver['color']}\n"
+        f"🔢 Plate: {driver['plate']}\n\n"
+        "💾 Ride saved successfully.\n\n"
+        "🟢 Driver status updated to BUSY.\n\n"
+        "🚗 Your driver is on the way.",
+        reply_markup=get_ride_menu(),
+    )
 
     del ride_requests[user_id]
 
@@ -86,7 +88,13 @@ async def confirm_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def complete_ride_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
-    ride = get_latest_active_ride(user_id)
+    print("========== COMPLETE RIDE ==========")
+    print("STEP 1: Button pressed")
+    print("Passenger ID:", user_id)
+
+    ride = get_latest_confirmed_ride(user_id)
+
+    print("STEP 2: Ride found ->", ride)
 
     if ride is None:
         await update.message.reply_text(
@@ -97,15 +105,25 @@ async def complete_ride_handler(update: Update, context: ContextTypes.DEFAULT_TY
     ride_id = ride[0]
     driver_id = ride[1]
 
+    print("Ride ID:", ride_id)
+    print("Driver ID:", driver_id)
+
     complete_ride(ride_id)
 
+    print("STEP 3: Ride marked as Completed")
+
     set_driver_available(driver_id)
+
+    print("STEP 4: Driver marked Available")
 
     await update.message.reply_text(
         "🎉 Ride completed successfully!\n\n"
         "✅ Driver is now available for new passengers.\n\n"
-        "🙏 Thank you for choosing HABESHAGO!"
+        "⭐ Please rate your driver.",
+        reply_markup=get_rating_menu(),
     )
+
+    print("STEP 5: Rating keyboard sent")
 
 
 async def cancel_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):

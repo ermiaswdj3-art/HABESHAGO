@@ -3,19 +3,22 @@ from app.services.distance_service import calculate_distance
 
 
 def find_nearest_driver(passenger_latitude, passenger_longitude):
-    """
-    Find the nearest available driver from the database.
-    """
+    print("\n========== DRIVER DEBUG ==========")
 
     drivers = get_available_drivers()
 
+    print("Available drivers:", drivers)
+
     if not drivers:
+        print("No available drivers found.")
         return None
 
     nearest_driver = None
     shortest_distance = float("inf")
 
     for driver in drivers:
+        print("Checking driver:", driver)
+
         driver_latitude = driver[7]
         driver_longitude = driver[8]
 
@@ -26,9 +29,13 @@ def find_nearest_driver(passenger_latitude, passenger_longitude):
             driver_longitude,
         )
 
+        print("Distance:", distance)
+
         if distance < shortest_distance:
             shortest_distance = distance
             nearest_driver = driver
+
+    print("Selected driver:", nearest_driver)
 
     return {
         "telegram_id": nearest_driver[0],

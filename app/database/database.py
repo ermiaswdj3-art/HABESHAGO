@@ -3,12 +3,20 @@ import sqlite3
 DATABASE_NAME = "habeshago.db"
 
 
+import sqlite3
+import os
+
+DATABASE_NAME = "habeshago.db"
+
+
 def create_connection():
-    """
-    Create and return a connection to the SQLite database.
-    """
-    connection = sqlite3.connect(DATABASE_NAME)
-    return connection
+    database_path = os.path.abspath(DATABASE_NAME)
+
+    print("\n==============================")
+    print("DATABASE:", database_path)
+    print("==============================\n")
+
+    return sqlite3.connect(database_path)
 
 
 def create_tables():
@@ -54,15 +62,24 @@ def create_tables():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             passenger_id INTEGER NOT NULL,
             driver_id INTEGER NOT NULL,
+
             pickup_latitude REAL NOT NULL,
             pickup_longitude REAL NOT NULL,
+
             destination_latitude REAL NOT NULL,
             destination_longitude REAL NOT NULL,
+
             distance REAL NOT NULL,
             fare REAL NOT NULL,
+
             status TEXT NOT NULL,
+
+            driver_rating INTEGER,
+            passenger_rating INTEGER,
+
             FOREIGN KEY (passenger_id)
                 REFERENCES passengers (telegram_id),
+
             FOREIGN KEY (driver_id)
                 REFERENCES drivers (telegram_id)
         )

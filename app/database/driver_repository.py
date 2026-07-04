@@ -120,3 +120,39 @@ def set_driver_available(telegram_id):
 
     connection.commit()
     connection.close()
+def update_driver_rating(driver_id):
+    """
+    Update a driver's average rating based on completed rides.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT AVG(driver_rating)
+        FROM rides
+        WHERE driver_id = ?
+          AND driver_rating IS NOT NULL
+        """,
+        (driver_id,),
+    )
+
+    result = cursor.fetchone()
+
+    average_rating = result[0] if result[0] is not None else 5.0
+
+    cursor.execute(
+        """
+        UPDATE drivers
+        SET rating = ?
+        WHERE telegram_id = ?
+        """,
+        (
+            round(average_rating, 2),
+            driver_id,
+        ),
+    )
+
+    connection.commit()
+    connection.close()
