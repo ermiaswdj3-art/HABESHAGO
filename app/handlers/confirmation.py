@@ -3,6 +3,8 @@ from telegram.ext import ContextTypes
 
 from app.keyboards.ride_menu import get_ride_menu
 from app.keyboards.rating_menu import get_rating_menu
+from app.state.driver_state import pending_driver_requests
+from app.keyboards.driver_ride_menu import get_driver_ride_menu
 
 from app.database.driver_repository import (
     set_driver_unavailable,
@@ -53,36 +55,32 @@ async def confirm_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    set_driver_unavailable(driver["telegram_id"])
+    pending_driver_requests[driver["telegram_id"]] = {
+        "passenger_id": user_id,
+        "pickup": pickup,
+        "destination": destination,
+        "distance": distance,
+        "fare": fare,
+    }
 
-    save_ride(
-        passenger_id=user_id,
-        driver_id=driver["telegram_id"],
-        pickup_latitude=pickup[0],
-        pickup_longitude=pickup[1],
-        destination_latitude=destination[0],
-        destination_longitude=destination[1],
-        distance=distance,
-        fare=fare,
-        status="Confirmed",
+    await context.bot.send_message(
+        chat_id=driver["telegram_id"],
+        text=(
+            "🚖 New Ride Request!\n\n"
+            f"📍 Pickup: {pickup}\n"
+            f"🏁 Destination: {destination}\n"
+            f"📏 Distance: {distance:.2f} km\n"
+            f"💰 Fare: {fare:.2f} ETB\n\n"
+            "Would you like to accept this ride?"
+        ),
+        reply_markup=get_driver_ride_menu(),
     )
 
     await update.message.reply_text(
-        "✅ Your ride has been confirmed!\n\n"
-        "🚖 Driver Found!\n\n"
-        f"📍 Driver is {driver['distance']} km away\n"
-        f"👤 Driver: {driver['name']}\n"
-        f"⭐ Rating: {driver['rating']}\n"
-        f"🚗 Vehicle: {driver['vehicle']}\n"
-        f"🎨 Color: {driver['color']}\n"
-        f"🔢 Plate: {driver['plate']}\n\n"
-        "💾 Ride saved successfully.\n\n"
-        "🟢 Driver status updated to BUSY.\n\n"
-        "🚗 Your driver is on the way.",
-        reply_markup=get_ride_menu(),
+        "📡 Ride request sent to the nearest driver.\n\n"
+        "⏳ Waiting for driver response..."
     )
 
-    del ride_requests[user_id]
 
 
 async def complete_ride_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

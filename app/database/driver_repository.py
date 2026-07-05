@@ -15,38 +15,45 @@ def register_driver(
     Register a new driver.
     """
 
-    connection = create_connection()
-    cursor = connection.cursor()
+    try:
+        connection = create_connection()
+        cursor = connection.cursor()
 
-    cursor.execute(
-        """
-        INSERT INTO drivers (
-            telegram_id,
-            full_name,
-            phone_number,
-            vehicle,
-            vehicle_color,
-            plate_number,
-            latitude,
-            longitude
+        cursor.execute(
+            """
+            INSERT INTO drivers (
+                telegram_id,
+                full_name,
+                phone_number,
+                vehicle,
+                vehicle_color,
+                plate_number,
+                latitude,
+                longitude
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                telegram_id,
+                full_name,
+                phone_number,
+                vehicle,
+                vehicle_color,
+                plate_number,
+                latitude,
+                longitude,
+            ),
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            telegram_id,
-            full_name,
-            phone_number,
-            vehicle,
-            vehicle_color,
-            plate_number,
-            latitude,
-            longitude,
-        ),
-    )
 
-    connection.commit()
-    connection.close()
+        connection.commit()
+        connection.close()
 
+        print("✅ Driver registered successfully!")
+
+    except Exception as e:
+        print("❌ DRIVER REGISTRATION ERROR:")
+        print(e)
+        raise
 
 def get_available_drivers():
     """
@@ -156,3 +163,33 @@ def update_driver_rating(driver_id):
 
     connection.commit()
     connection.close()
+    
+def get_driver_by_id(telegram_id):
+    """
+    Return one driver's information by Telegram ID.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            telegram_id,
+            full_name,
+            phone_number,
+            vehicle,
+            vehicle_color,
+            plate_number,
+            rating
+        FROM drivers
+        WHERE telegram_id = ?
+        """,
+        (telegram_id,),
+    )
+
+    driver = cursor.fetchone()
+
+    connection.close()
+
+    return driver   

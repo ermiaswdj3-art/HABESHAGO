@@ -11,6 +11,11 @@ from app.config.settings import BOT_TOKEN
 from app.database.database import create_tables
 
 from app.handlers.start import start
+from app.handlers.driver import become_driver
+from app.handlers.driver_response import (
+    accept_ride,
+    decline_ride,
+)
 from app.handlers.ride import request_ride
 from app.handlers.rides import show_rides
 from app.handlers.profile import show_profile
@@ -47,6 +52,14 @@ def main():
     app.add_handler(CommandHandler("profile", show_profile))
     app.add_handler(CommandHandler("setphone", set_phone))
 
+    # Become Driver
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^💼 Become a Driver$"),
+            become_driver,
+        )
+    )
+
     # Ride request
     app.add_handler(
         MessageHandler(
@@ -78,12 +91,28 @@ def main():
             complete_ride_handler,
         )
     )
-    
+
     # Driver rating
     app.add_handler(
         MessageHandler(
             filters.TEXT & filters.Regex("^⭐ [1-5]$"),
             rate_driver_handler,
+        )
+    )
+
+    # Driver accepts ride
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^✅ Accept Ride$"),
+            accept_ride,
+        )
+    )
+
+    # Driver declines ride
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^❌ Decline Ride$"),
+            decline_ride,
         )
     )
 
