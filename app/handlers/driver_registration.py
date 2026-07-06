@@ -1,10 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-
-from app.keyboards.toyota_models import (
-    get_toyota_model_keyboard,
-)
 from app.state.driver_registration_state import (
     driver_registration_state,
 )
@@ -23,6 +19,10 @@ from app.keyboards.electric_vehicle_brand import (
 
 from app.keyboards.motorcycle_brand import (
     get_motorcycle_brand_keyboard,
+)
+
+from app.keyboards.model_keyboard import (
+    get_vehicle_model_keyboard,
 )
 
 from app.keyboards.driver_location import (
@@ -105,23 +105,20 @@ async def driver_registration_handler(
         state["vehicle_brand"] = brand
         state["step"] = "vehicle_model"
 
-        # Toyota models
-        if brand == "Toyota":
+        vehicle_type = (
+            state["vehicle_type"]
+                .replace("⛽ ", "")
+                .replace("⚡ ", "")
+                .replace("🏍 ", "")
+        )
 
-            await update.message.reply_text(
-                "🚗 Please select your Toyota model.",
-                reply_markup=get_toyota_model_keyboard(),
-            )
-
-        # Other brands (temporary)
-        else:
-
-            await update.message.reply_text(
-                "🚘 Great!\n\n"
-                "Please enter your vehicle model.\n\n"
-                "Example:\n"
-                "Vitz"
-            )
+        await update.message.reply_text(
+            f"🚘 Please select your {brand} model.",
+            reply_markup=get_vehicle_model_keyboard(
+                vehicle_type,
+                brand,
+            ),
+        )
 
         return
 
@@ -130,6 +127,36 @@ async def driver_registration_handler(
     # ==========================================
 
     elif state["step"] == "vehicle_model":
+
+        # Driver selected "Other"
+        if text == "Other":
+
+            state["step"] = "custom_vehicle_model"
+
+            await update.message.reply_text(
+                f"✍ Please type your {state['vehicle_brand']} model."
+            )
+
+            return
+
+        # Driver selected a predefined model
+        state["vehicle_model"] = text
+        state["step"] = "vehicle_color"
+
+        await update.message.reply_text(
+            "🎨 Great!\n\n"
+            "Please enter your vehicle color.\n\n"
+            "Example:\n"
+            "White"
+        )
+
+        return
+    
+    # ==========================================
+    # CUSTOM VEHICLE MODEL
+    # ==========================================
+
+    elif state["step"] == "custom_vehicle_model":
 
         state["vehicle_model"] = text
         state["step"] = "vehicle_color"
