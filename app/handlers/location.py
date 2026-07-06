@@ -48,7 +48,7 @@ async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
             telegram_id=user.id,
             full_name=user.full_name,
             phone_number=state["phone_number"],
-            vehicle=state["vehicle"],
+            vehicle=f'{state["vehicle_brand"]} {state["vehicle_model"]}',
             vehicle_color=state["vehicle_color"],
             plate_number=state["plate_number"],
             latitude=latitude,
