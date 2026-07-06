@@ -1,38 +1,109 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from app.database.driver_repository import register_driver
+from app.state.driver_registration_state import driver_registration_state
+from app.keyboards.driver_location import get_driver_location_keyboard
 
 
 async def become_driver(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Register the current Telegram user as a driver.
+    Start the Driver Registration Wizard.
     """
 
-    user = update.effective_user
+    user_id = update.effective_user.id
 
-    telegram_id = user.id
-    full_name = user.full_name
+    driver_registration_state[user_id] = {
+        "step": "phone_number"
+    }
 
-    try:
-        register_driver(
-            telegram_id=telegram_id,
-            full_name=full_name,
-            phone_number="0994632089",
-            vehicle="Toyota Vitz",
-            vehicle_color="White",
-            plate_number=f"TG-{telegram_id}",
-            latitude=8.958108,
-            longitude=38.772987,
-        )
+    await update.message.reply_text(
+        "🚖 Welcome to HABESHAGO Driver Registration!\n\n"
+        "Let's get you registered.\n\n"
+        "📱 Please enter your phone number."
+    )
+
+
+async def driver_registration(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Handle every step of the Driver Registration Wizard.
+    """
+
+    user_id = update.effective_user.id
+
+    if user_id not in driver_registration_state:
+        return
+
+    state = driver_registration_state[user_id]
+    text = update.message.text
+
+    # ==========================================
+    # PHONE NUMBER
+    # ==========================================
+
+    if state["step"] == "phone_number":
+
+        state["phone_number"] = text
+        state["step"] = "vehicle"
 
         await update.message.reply_text(
-            "🎉 Congratulations!\n\n"
-            "🚖 You are now registered as a HABESHAGO driver.\n\n"
-            "You will soon begin receiving ride requests."
+            "🚗 Great!\n\n"
+            "Please enter your vehicle model.\n\n"
+            "Example:\n"
+            "Toyota Vitz"
         )
 
-    except Exception as e:
+        return
+
+    # ==========================================
+    # VEHICLE
+    # ==========================================
+
+    if state["step"] == "vehicle":
+
+        state["vehicle"] = text
+        state["step"] = "vehicle_color"
+
         await update.message.reply_text(
-            f"❌ Driver registration failed:\n\n{e}"
+            "🎨 Great!\n\n"
+            "Please enter your vehicle color.\n\n"
+            "Example:\n"
+            "White"
         )
+
+        return
+
+    # ==========================================
+    # VEHICLE COLOR
+    # ==========================================
+
+    if state["step"] == "vehicle_color":
+
+        state["vehicle_color"] = text
+        state["step"] = "plate_number"
+
+        await update.message.reply_text(
+            "🔢 Excellent!\n\n"
+            "Please enter your plate number.\n\n"
+            "Example:\n"
+            "AA-12345"
+        )
+
+        return
+
+    # ==========================================
+    # PLATE NUMBER
+    # ==========================================
+
+    if state["step"] == "plate_number":
+
+        state["plate_number"] = text
+        state["step"] = "location"
+
+        await update.message.reply_text(
+            "📍 Perfect!\n\n"
+            "Please share your current location.\n\n"
+            "This location will be used to match you with nearby passengers.",
+            reply_markup=get_driver_location_keyboard(),
+        )
+
+        return

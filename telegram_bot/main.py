@@ -12,6 +12,9 @@ from app.database.database import create_tables
 
 from app.handlers.start import start
 from app.handlers.driver import become_driver
+from app.handlers.driver_registration import (
+    driver_registration_handler,
+)
 from app.handlers.driver_response import (
     accept_ride,
     decline_ride,
@@ -115,7 +118,13 @@ def main():
             decline_ride,
         )
     )
-
+    # Driver registration conversation
+    app.add_handler(
+        MessageHandler(
+           filters.TEXT & ~filters.COMMAND,
+           driver_registration_handler,
+        )
+    )
     # GPS location
     app.add_handler(
         MessageHandler(

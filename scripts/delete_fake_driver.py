@@ -6,12 +6,12 @@ cursor = connection.cursor()
 cursor.execute(
     """
     DELETE FROM drivers
-    WHERE telegram_id = 1001
+    WHERE telegram_id = 809111423
     """
 )
 
 connection.commit()
 
-print("✅ Fake driver (telegram_id=1001) deleted.")
+print("✅ Driver (telegram_id=809111423) deleted.")
 
 connection.close()
