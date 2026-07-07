@@ -279,6 +279,69 @@ async def driver_registration_handler(
         )
 
         return
+    
+    # ==========================================
+    # ETH LETTERS
+    # ==========================================
+
+    elif state["step"] == "eth_letters":
+
+        letters = text.upper().strip()
+
+        if len(letters) != 3 or not letters.isalpha():
+
+            await update.message.reply_text(
+                "❌ Please enter exactly 3 letters.\n\n"
+                "Example:\n"
+                "ABC"
+            )
+
+            return
+
+        state["eth_letters"] = letters
+        state["step"] = "eth_numbers"
+
+        await update.message.reply_text(
+            "🔢 Please enter the four digits.\n\n"
+            "Example:\n"
+            "1234"
+        )
+
+        return
+
+    # ==========================================
+    # ETH NUMBERS
+    # ==========================================
+
+    elif state["step"] == "eth_numbers":
+
+        numbers = text.strip()
+
+        if len(numbers) != 4 or not numbers.isdigit():
+
+            await update.message.reply_text(
+                "❌ Please enter exactly 4 digits.\n\n"
+                "Example:\n"
+                "1234"
+            )
+
+            return
+
+        state["plate_number"] = (
+            f'ETH {state["eth_letters"]} {numbers}'
+        )
+
+        state["step"] = "location"
+
+        await update.message.reply_text(
+            "📍 Perfect!\n\n"
+            "Please share your current location.\n\n"
+            "This location will be used to match you with nearby passengers.",
+            reply_markup=get_driver_location_keyboard(),
+        )
+
+        return
+
 
     # ==========================================
     # PLATE NUMBER

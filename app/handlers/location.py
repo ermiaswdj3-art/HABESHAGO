@@ -44,6 +44,8 @@ async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         state = driver_registration_state[user_id]
 
+        print("Plate being saved:", state["plate_number"])
+        
         register_driver(
             telegram_id=user.id,
             full_name=user.full_name,
