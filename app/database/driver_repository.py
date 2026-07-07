@@ -6,6 +6,7 @@ def register_driver(
     full_name,
     phone_number,
     vehicle,
+    vehicle_year,
     vehicle_color,
     plate_number,
     latitude,
@@ -26,18 +27,20 @@ def register_driver(
                 full_name,
                 phone_number,
                 vehicle,
+                vehicle_year,
                 vehicle_color,
                 plate_number,
                 latitude,
                 longitude
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 telegram_id,
                 full_name,
                 phone_number,
                 vehicle,
+                vehicle_year,
                 vehicle_color,
                 plate_number,
                 latitude,

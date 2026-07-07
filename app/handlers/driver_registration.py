@@ -28,7 +28,9 @@ from app.keyboards.model_keyboard import (
 from app.keyboards.driver_location import (
     get_driver_location_keyboard,
 )
-
+from app.keyboards.vehicle_year import (
+    get_vehicle_year_keyboard,
+)
 
 async def driver_registration_handler(
     update: Update,
@@ -151,13 +153,11 @@ async def driver_registration_handler(
 
         # Driver selected a predefined model
         state["vehicle_model"] = text
-        state["step"] = "vehicle_color"
+        state["step"] = "vehicle_year"
 
         await update.message.reply_text(
-            "🎨 Great!\n\n"
-            "Please enter your vehicle color.\n\n"
-            "Example:\n"
-            "White"
+            "📅 Please select your vehicle's manufacturing year.",
+            reply_markup=get_vehicle_year_keyboard(),
         )
 
         return
@@ -169,6 +169,21 @@ async def driver_registration_handler(
     elif state["step"] == "custom_vehicle_model":
 
         state["vehicle_model"] = text
+        state["step"] = "vehicle_year"
+
+        await update.message.reply_text(
+            "📅 Please select your vehicle's manufacturing year.",
+            reply_markup=get_vehicle_year_keyboard(),
+        )
+
+        return
+    # ==========================================
+    # VEHICLE YEAR
+    # ==========================================
+
+    elif state["step"] == "vehicle_year":
+
+        state["vehicle_year"] = text
         state["step"] = "vehicle_color"
 
         await update.message.reply_text(
@@ -179,7 +194,6 @@ async def driver_registration_handler(
         )
 
         return
-
     # ==========================================
     # VEHICLE COLOR
     # ==========================================
