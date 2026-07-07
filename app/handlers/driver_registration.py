@@ -4,7 +4,16 @@ from telegram.ext import ContextTypes
 from app.state.driver_registration_state import (
     driver_registration_state,
 )
+from app.keyboards.vehicle_color import (
+    get_vehicle_color_keyboard,
+)
+from app.keyboards.plate_type import (
+    get_plate_type_keyboard,
+)
 
+from app.keyboards.plate_region import (
+    get_plate_region_keyboard,
+)
 from app.keyboards.vehicle_type import (
     get_vehicle_type_keyboard,
 )
@@ -188,9 +197,8 @@ async def driver_registration_handler(
 
         await update.message.reply_text(
             "🎨 Great!\n\n"
-            "Please enter your vehicle color.\n\n"
-            "Example:\n"
-            "White"
+            "Please choose your vehicle color.",
+            reply_markup=get_vehicle_color_keyboard(),
         )
 
         return
@@ -200,14 +208,74 @@ async def driver_registration_handler(
 
     elif state["step"] == "vehicle_color":
 
-        state["vehicle_color"] = text
+        color = (
+            text.replace("⚪ ", "")
+                .replace("⚫ ", "")
+                .replace("🔘 ", "")
+                .replace("⚙️ ", "")
+                .replace("🔵 ", "")
+                .replace("🔴 ", "")
+                .replace("🟢 ", "")
+                .replace("🟡 ", "")
+                .replace("🟤 ", "")
+                .replace("🟣 ", "")
+                .replace("🟠 ", "")
+                .replace("🚗 ", "")
+        )
+
+        state["vehicle_color"] = color
+
+        state["step"] = "plate_type"
+
+        await update.message.reply_text(
+            "🚘 Please choose your plate type.",
+            reply_markup=get_plate_type_keyboard(),
+        )
+
+        return
+
+    # ==========================================
+    # PLATE TYPE
+    # ==========================================
+
+    elif state["step"] == "plate_type":
+
+        state["plate_type"] = text
+
+        if text == "🟦 Regional Plate":
+
+            state["step"] = "plate_region"
+
+            await update.message.reply_text(
+            "🇪🇹 Please select your regional plate code.",
+            reply_markup=get_plate_region_keyboard(),
+            )
+
+        elif text == "🟩 National ETH Plate":
+
+            state["step"] = "eth_letters"
+
+            await update.message.reply_text(
+                "🔤 Please enter the three letters.\n\n"
+                "Example:\n"
+                "ABC"
+            )
+
+        return
+
+    # ==========================================
+    # REGIONAL PLATE
+    # ==========================================
+
+    elif state["step"] == "plate_region":
+
+        state["plate_region"] = text
         state["step"] = "plate_number"
 
         await update.message.reply_text(
-            "🔢 Excellent!\n\n"
-            "Please enter your plate number.\n\n"
+            "🔢 Please enter the plate number.\n\n"
             "Example:\n"
-            "AA-12345"
+            "12345"
         )
 
         return
@@ -218,7 +286,18 @@ async def driver_registration_handler(
 
     elif state["step"] == "plate_number":
 
-        state["plate_number"] = text
+        # Regional Plate
+        if state.get("plate_type") == "🟦 Regional Plate":
+
+            state["plate_number"] = (
+                f'{state["plate_region"]}-{text}'
+            )
+
+        # National ETH Plate (temporary)
+        else:
+
+            state["plate_number"] = text
+
         state["step"] = "location"
 
         await update.message.reply_text(
