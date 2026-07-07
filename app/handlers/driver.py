@@ -2,6 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from app.state.driver_registration_state import driver_registration_state
+from app.keyboards.contact import get_contact_keyboard
 from app.keyboards.driver_location import get_driver_location_keyboard
 
 
@@ -19,7 +20,8 @@ async def become_driver(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🚖 Welcome to HABESHAGO Driver Registration!\n\n"
         "Let's get you registered.\n\n"
-        "📱 Please enter your phone number."
+        "📱 Tap the button below to securely share your phone number.",
+        reply_markup=get_contact_keyboard(),
     )
 
 

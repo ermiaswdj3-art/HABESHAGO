@@ -40,7 +40,7 @@ async def driver_registration_handler(
         return
 
     state = driver_registration_state[user_id]
-    text = update.message.text
+    text = update.message.text if update.message.text else ""
 
     # ==========================================
     # PHONE NUMBER
@@ -48,7 +48,17 @@ async def driver_registration_handler(
 
     if state["step"] == "phone_number":
 
-        state["phone_number"] = text
+        # Driver didn't share a contact
+        if update.message.contact is None:
+
+            await update.message.reply_text(
+                "📱 Please use the button below to share your phone number."
+            )
+
+            return
+
+        # Save the phone number from Telegram
+        state["phone_number"] = update.message.contact.phone_number
         state["step"] = "vehicle_type"
 
         await update.message.reply_text(

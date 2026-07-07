@@ -121,8 +121,8 @@ def main():
     # Driver registration conversation
     app.add_handler(
         MessageHandler(
-           filters.TEXT & ~filters.COMMAND,
-           driver_registration_handler,
+            (filters.TEXT | filters.CONTACT) & ~filters.COMMAND,
+            driver_registration_handler,
         )
     )
     # GPS location
