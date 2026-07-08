@@ -12,6 +12,7 @@ def register_driver(
     latitude,
     longitude,
 ):
+
     """
     Register a new driver.
     """
@@ -57,6 +58,38 @@ def register_driver(
         print("❌ DRIVER REGISTRATION ERROR:")
         print(e)
         raise
+
+
+def get_driver_by_telegram_id(telegram_id):
+    """
+    Return a driver's profile using their Telegram ID.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            full_name,
+            phone_number,
+            vehicle,
+            vehicle_year,
+            vehicle_color,
+            plate_number,
+            rating,
+            is_available
+        FROM drivers
+        WHERE telegram_id = ?
+        """,
+        (telegram_id,),
+    )
+
+    driver = cursor.fetchone()
+
+    connection.close()
+
+    return driver    
 
 def get_available_drivers():
     """
@@ -130,6 +163,8 @@ def set_driver_available(telegram_id):
 
     connection.commit()
     connection.close()
+
+
 def update_driver_rating(driver_id):
     """
     Update a driver's average rating based on completed rides.
