@@ -11,6 +11,9 @@ from app.state.ride_state import ride_requests
 from app.state.driver_registration_state import driver_registration_state
 
 from app.database.driver_repository import register_driver
+from app.keyboards.availability import (
+    get_availability_keyboard,
+)
 
 
 async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -63,7 +66,8 @@ async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "🎉 Congratulations!\n\n"
             "🚖 Your driver registration is complete!\n\n"
-            "You are now available to receive ride requests."
+            "Please choose your availability.",
+            reply_markup=get_availability_keyboard(),
         )
 
         return

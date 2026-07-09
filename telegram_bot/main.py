@@ -23,6 +23,10 @@ from app.handlers.ride import request_ride
 from app.handlers.rides import show_rides
 from app.handlers.profile import show_profile
 from app.handlers.set_phone import set_phone
+from app.handlers.availability import (
+    go_online,
+    go_offline,
+)
 from app.handlers.location import receive_location
 from app.handlers.rating import rate_driver_handler
 from app.handlers.confirmation import (
@@ -54,6 +58,8 @@ def main():
     app.add_handler(CommandHandler("rides", show_rides))
     app.add_handler(CommandHandler("profile", show_profile))
     app.add_handler(CommandHandler("setphone", set_phone))
+    app.add_handler(CommandHandler("online", go_online))
+    app.add_handler(CommandHandler("offline", go_offline))
 
     # Become Driver
     app.add_handler(
@@ -118,6 +124,23 @@ def main():
             decline_ride,
         )
     )
+
+    # Driver goes online
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^🟢 Go Online$"),
+            go_online,
+        )
+    )
+
+    # Driver goes offline
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^🔴 Go Offline$"),
+            go_offline,
+        )
+    )
+
     # Driver registration conversation
     app.add_handler(
         MessageHandler(
