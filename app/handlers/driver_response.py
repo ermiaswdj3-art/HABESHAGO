@@ -3,24 +3,45 @@ from telegram.ext import ContextTypes
 
 from app.state.driver_state import pending_driver_requests
 from app.state.ride_state import ride_requests
+from app.state.active_ride_state import active_rides
+
 from app.database.driver_repository import (
     set_driver_unavailable,
     get_driver_by_id,
 )
-from app.database.ride_repository import save_ride
+
+from app.database.ride_repository import (
+    save_ride,
+    update_ride_status,
+)
+
+from app.keyboards.trip_status import (
+    get_trip_status_keyboard,
+)
+
 from app.keyboards.ride_menu import get_ride_menu
 
 
 async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Driver accepts a passenger's ride request.
+    """
+
     driver_id = update.effective_user.id
 
     if driver_id not in pending_driver_requests:
+
         await update.message.reply_text(
             "❌ No pending ride request."
         )
+
         return
 
     request = pending_driver_requests[driver_id]
+
+    # ==========================================
+    # SAVE RIDE
+    # ==========================================
 
     save_ride(
         passenger_id=request["passenger_id"],
@@ -31,11 +52,25 @@ async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
         destination_longitude=request["destination"][1],
         distance=request["distance"],
         fare=request["fare"],
-        status="Confirmed",
+        status="accepted",
     )
 
+    # ==========================================
+    # DRIVER IS NOW BUSY
+    # ==========================================
+
     set_driver_unavailable(driver_id)
+
+    active_rides[driver_id] = {
+        "passenger_id": request["passenger_id"],
+    }
+
     driver = get_driver_by_id(driver_id)
+
+    # ==========================================
+    # NOTIFY PASSENGER
+    # ==========================================
+
     await context.bot.send_message(
         chat_id=request["passenger_id"],
         text=(
@@ -50,9 +85,20 @@ async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=get_ride_menu(),
     )
 
+    # ==========================================
+    # CONFIRM TO DRIVER
+    # ==========================================
+
     await update.message.reply_text(
-    "✅ Ride accepted successfully."
+        "✅ Ride accepted successfully!\n\n"
+        "Drive safely to the passenger's pickup location.\n"
+        "When you arrive, tap 📍 Arrived.",
+        reply_markup=get_trip_status_keyboard(),
     )
+
+    # ==========================================
+    # CLEAN UP MEMORY
+    # ==========================================
 
     passenger_id = request["passenger_id"]
 
@@ -61,8 +107,12 @@ async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     del pending_driver_requests[driver_id]
 
-   
+
 async def decline_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Driver declines a passenger's ride request.
+    """
+
     driver_id = update.effective_user.id
 
     if driver_id in pending_driver_requests:

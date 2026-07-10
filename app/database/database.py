@@ -61,6 +61,7 @@ def create_tables():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS rides (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+
             passenger_id INTEGER NOT NULL,
             driver_id INTEGER NOT NULL,
 
@@ -73,7 +74,7 @@ def create_tables():
             distance REAL NOT NULL,
             fare REAL NOT NULL,
 
-            status TEXT NOT NULL,
+            status TEXT DEFAULT 'requested',
 
             driver_rating INTEGER,
             passenger_rating INTEGER,

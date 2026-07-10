@@ -205,3 +205,89 @@ def rate_passenger(ride_id, rating):
 
     connection.commit()
     connection.close()
+
+def update_ride_status(ride_id, status):
+    """
+    Update the current status of a ride.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE rides
+        SET status = ?
+        WHERE id = ?
+        """,
+        (
+            status,
+            ride_id,
+        ),
+    )
+
+    connection.commit()
+    connection.close()
+
+
+def get_ride_status(ride_id):
+    """
+    Return the current status of a ride.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT status
+        FROM rides
+        WHERE id = ?
+        """,
+        (ride_id,),
+    )
+
+    result = cursor.fetchone()
+
+    connection.close()
+
+    if result is None:
+        return None
+
+    return result[0]
+
+def get_latest_driver_ride(driver_id):
+    """
+    Return the latest active ride for a driver.
+    """
+
+    print("\n========== DRIVER LOOKUP ==========")
+    print("Searching for Driver ID:", driver_id)
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            id,
+            passenger_id,
+            driver_id,
+            status
+        FROM rides
+        WHERE driver_id = ?
+          AND status = 'accepted'
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (driver_id,),
+    )
+
+    ride = cursor.fetchone()
+
+    print("Query Result:", ride)
+    print("===================================\n")
+
+    connection.close()
+
+    return ride

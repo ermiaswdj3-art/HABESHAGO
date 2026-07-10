@@ -36,6 +36,8 @@ from app.handlers.confirmation import (
     confirm_ride,
     cancel_ride,
     complete_ride_handler,
+    arrived_handler,
+    start_trip_handler,
 )
 
 
@@ -94,6 +96,22 @@ def main():
         MessageHandler(
             filters.TEXT & filters.Regex("^❌ Cancel Ride$"),
             cancel_ride,
+        )
+    )
+
+    # Driver arrived
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^📍 Arrived$"),
+            arrived_handler,
+        )
+    )   
+
+    # Driver starts trip
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^🚕 Start Trip$"),
+            start_trip_handler,
         )
     )
 
