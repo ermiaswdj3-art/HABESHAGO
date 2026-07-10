@@ -13,12 +13,15 @@ from app.database.ride_repository import (
 from app.keyboards.driver_ride_menu import get_driver_ride_menu
 
 from app.database.driver_repository import (
-    set_driver_unavailable,
     set_driver_available,
 )
 
+from app.constants.ride_status import (
+    DRIVER_ARRIVED,
+    TRIP_STARTED,
+)
+
 from app.database.ride_repository import (
-    save_ride,
     get_latest_driver_ride,
     complete_ride,
 )
@@ -86,7 +89,6 @@ async def confirm_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📡 Ride request sent to the nearest driver.\n\n"
         "⏳ Waiting for driver response..."
     )
-
 
 
 async def complete_ride_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -169,6 +171,14 @@ async def arrived_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     passenger_id = active_rides[driver_id]["passenger_id"]
 
+    ride = get_latest_driver_ride(driver_id)
+
+    if ride is not None:
+        update_ride_status(
+            ride[0],
+            DRIVER_ARRIVED,
+        )
+
     # Notify passenger
     await context.bot.send_message(
         chat_id=passenger_id,
@@ -200,6 +210,13 @@ async def start_trip_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     passenger_id = active_rides[driver_id]["passenger_id"]
+    ride = get_latest_driver_ride(driver_id)
+
+    if ride is not None:
+        update_ride_status(
+            ride[0],
+            TRIP_STARTED,
+        )
 
     # Notify passenger
     await context.bot.send_message(

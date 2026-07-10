@@ -1,4 +1,19 @@
 from app.database.database import create_connection
+from app.constants.ride_status import (
+    REQUESTED,
+    ACCEPTED,
+    DRIVER_ARRIVING,
+    DRIVER_ARRIVED,
+    TRIP_STARTED,
+    TRIP_COMPLETED,
+    RATED,
+)
+
+ACTIVE_RIDE_STATUSES = (
+    ACCEPTED,
+    DRIVER_ARRIVED,
+    TRIP_STARTED,
+)
 
 
 def save_ride(
@@ -81,7 +96,7 @@ def get_rides_by_passenger(passenger_id):
 
 def get_latest_confirmed_ride(passenger_id):
     """
-    Return the latest confirmed ride.
+    Return the latest active ride.
     """
 
     connection = create_connection()
@@ -94,11 +109,17 @@ def get_latest_confirmed_ride(passenger_id):
             driver_id
         FROM rides
         WHERE passenger_id = ?
-        AND status = 'Confirmed'
+          AND status IN (?, ?, ?, ?)
         ORDER BY id DESC
         LIMIT 1
         """,
-        (passenger_id,),
+        (
+            passenger_id,
+            ACCEPTED,
+            DRIVER_ARRIVED,
+            TRIP_STARTED,
+            TRIP_COMPLETED,
+        ),
     )
 
     ride = cursor.fetchone()
@@ -123,12 +144,15 @@ def get_latest_completed_ride(passenger_id):
             driver_id
         FROM rides
         WHERE passenger_id = ?
-        AND status = 'Completed'
-        AND driver_rating IS NULL
+          AND status = ?
+          AND driver_rating IS NULL
         ORDER BY id DESC
         LIMIT 1
         """,
-        (passenger_id,),
+        (
+            passenger_id,
+            TRIP_COMPLETED,
+        ),
     )
 
     ride = cursor.fetchone()
@@ -149,10 +173,13 @@ def complete_ride(ride_id):
     cursor.execute(
         """
         UPDATE rides
-        SET status = 'Completed'
+        SET status = ?
         WHERE id = ?
         """,
-        (ride_id,),
+        (
+            TRIP_COMPLETED,
+            ride_id,
+        ),
     )
 
     connection.commit()
@@ -276,17 +303,51 @@ def get_latest_driver_ride(driver_id):
             status
         FROM rides
         WHERE driver_id = ?
-          AND status = 'accepted'
+          AND status IN (?, ?, ?)
         ORDER BY id DESC
         LIMIT 1
         """,
-        (driver_id,),
+        (
+            driver_id,
+            ACCEPTED,
+            DRIVER_ARRIVED,
+            TRIP_STARTED,
+        ),
     )
 
     ride = cursor.fetchone()
 
     print("Query Result:", ride)
     print("===================================\n")
+
+    connection.close()
+
+    return ride
+
+def get_latest_passenger_ride(passenger_id):
+    """
+    Return the latest ride for a passenger.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            id,
+            passenger_id,
+            driver_id,
+            status
+        FROM rides
+        WHERE passenger_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (passenger_id,),
+    )
+
+    ride = cursor.fetchone()
 
     connection.close()
 

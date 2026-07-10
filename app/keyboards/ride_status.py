@@ -1,14 +1,9 @@
 from telegram import ReplyKeyboardMarkup
 
 
-def get_main_menu():
+def get_ride_status_keyboard():
     keyboard = [
-        ["🛺 Request Ride"],
         ["📍 Ride Status"],
-        ["📦 Send Package"],
-        ["💼 Become a Driver"],
-        ["👤 My Profile"],
-        ["☎️ Contact Support"],
     ]
 
     return ReplyKeyboardMarkup(

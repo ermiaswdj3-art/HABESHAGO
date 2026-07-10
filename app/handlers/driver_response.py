@@ -19,6 +19,14 @@ from app.keyboards.trip_status import (
     get_trip_status_keyboard,
 )
 
+from app.keyboards.ride_status import (
+    get_ride_status_keyboard,
+)
+
+from app.constants.ride_status import (
+    ACCEPTED,
+)
+
 from app.keyboards.ride_menu import get_ride_menu
 
 
@@ -52,7 +60,7 @@ async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
         destination_longitude=request["destination"][1],
         distance=request["distance"],
         fare=request["fare"],
-        status="accepted",
+        status=ACCEPTED,
     )
 
     # ==========================================
@@ -82,7 +90,7 @@ async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🔢 Plate: {driver[5]}\n\n"
             "🚖 Your driver is on the way."
         ),
-        reply_markup=get_ride_menu(),
+        reply_markup=get_ride_status_keyboard(),
     )
 
     # ==========================================

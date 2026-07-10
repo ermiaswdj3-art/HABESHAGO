@@ -22,9 +22,11 @@ from app.handlers.driver_response import (
 from app.handlers.ride import request_ride
 from app.handlers.rides import show_rides
 from app.handlers.profile import show_profile
+
 from app.handlers.driver_dashboard import (
     show_driver_dashboard,
 )
+
 from app.handlers.set_phone import set_phone
 from app.handlers.availability import (
     go_online,
@@ -39,7 +41,9 @@ from app.handlers.confirmation import (
     arrived_handler,
     start_trip_handler,
 )
-
+from app.handlers.ride_status import (
+    ride_status,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -63,6 +67,7 @@ def main():
     app.add_handler(CommandHandler("rides", show_rides))
     app.add_handler(CommandHandler("profile", show_profile))
     app.add_handler(CommandHandler("driver", show_driver_dashboard))
+    app.add_handler(CommandHandler("status", ride_status))
     app.add_handler(CommandHandler("setphone", set_phone))
     app.add_handler(CommandHandler("online", go_online))
     app.add_handler(CommandHandler("offline", go_offline))
@@ -82,7 +87,12 @@ def main():
             request_ride,
         )
     )
-
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^📍 Ride Status$"),
+            ride_status,
+        )
+    )
     # Confirm ride
     app.add_handler(
         MessageHandler(
