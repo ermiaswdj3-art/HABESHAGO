@@ -27,6 +27,14 @@ from app.constants.ride_status import (
     ACCEPTED,
 )
 
+import asyncio
+
+from app.services.progress_service import (
+    send_driver_progress,
+)
+
+from app.services.eta_service import calculate_eta
+
 from app.keyboards.ride_menu import get_ride_menu
 
 
@@ -75,6 +83,8 @@ async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     driver = get_driver_by_id(driver_id)
 
+    eta = calculate_eta(request["distance"])
+
     # ==========================================
     # NOTIFY PASSENGER
     # ==========================================
@@ -88,11 +98,17 @@ async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🚗 Vehicle: {driver[3]}\n"
             f"🎨 Color: {driver[4]}\n"
             f"🔢 Plate: {driver[5]}\n\n"
-            "🚖 Your driver is on the way."
+            f"🚖 Your driver is on the way.\n\n"
+            f"⏱ Estimated arrival: {eta} minutes."
         ),
         reply_markup=get_ride_status_keyboard(),
     )
-
+    asyncio.create_task(
+        send_driver_progress(
+            context,
+            request["passenger_id"],
+        )
+    )
     # ==========================================
     # CONFIRM TO DRIVER
     # ==========================================

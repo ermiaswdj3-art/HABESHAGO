@@ -12,6 +12,10 @@ from app.database.ride_repository import (
 )
 from app.keyboards.driver_ride_menu import get_driver_ride_menu
 
+from app.keyboards.trip_status import (
+    get_trip_status_keyboard,
+)
+
 from app.database.driver_repository import (
     set_driver_available,
 )
@@ -184,14 +188,18 @@ async def arrived_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id=passenger_id,
         text=(
             "📍 Your driver has arrived!\n\n"
-            "Please meet your driver at the pickup location."
+            "🚶 Please proceed to the pickup point.\n\n"
+            "👋 Your driver is waiting for you.\n\n"
+            "We wish you a safe and pleasant trip with HABESHAGO 🇪🇹"
         ),
     )
 
     # Notify driver
     await update.message.reply_text(
-        "📍 Passenger has been notified.\n\n"
-        "When the passenger gets in, tap 🚕 Start Trip."
+        "✅ Passenger has been notified.\n\n"
+        "⏳ Please wait for the passenger to board.\n\n"
+        "Once everyone is ready, tap 🚕 Start Trip.",
+        reply_markup=get_trip_status_keyboard(),
     )
     
 async def start_trip_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -232,5 +240,5 @@ async def start_trip_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         "🚕 Trip started successfully.\n\n"
         "Drive safely to the destination.\n\n"
         "When you reach the destination, tap 🏁 Complete Ride.",
-        reply_markup=get_ride_menu(),
+        reply_markup=get_trip_status_keyboard(),
     )
