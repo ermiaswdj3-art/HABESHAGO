@@ -32,6 +32,10 @@ from app.handlers.availability import (
     go_online,
     go_offline,
 )
+
+from app.handlers.live_location import (
+    share_live_location,
+)
 from app.handlers.location import receive_location
 from app.handlers.rating import rate_driver_handler
 from app.handlers.confirmation import (
@@ -193,6 +197,14 @@ def main():
         MessageHandler(
             filters.LOCATION,
             receive_location,
+        )
+    )
+
+    # Driver live location
+    app.add_handler(
+        MessageHandler(
+            filters.LOCATION,
+            share_live_location,
         )
     )
 
