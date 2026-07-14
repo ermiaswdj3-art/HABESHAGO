@@ -93,7 +93,7 @@ def get_driver_by_telegram_id(telegram_id):
 
 def get_available_drivers():
     """
-    Return all available drivers.
+    Return all drivers that are online and available.
     """
 
     connection = create_connection()
@@ -113,10 +113,15 @@ def get_available_drivers():
             longitude
         FROM drivers
         WHERE is_available = 1
+          AND is_online = 1
         """
     )
 
     drivers = cursor.fetchall()
+
+    print("\n===== AVAILABLE DRIVERS =====")
+    print(drivers)
+    print("=============================\n")
 
     connection.close()
 
@@ -159,6 +164,47 @@ def set_driver_available(telegram_id):
         WHERE telegram_id = ?
         """,
         (telegram_id,),
+    )
+
+    connection.commit()
+    connection.close()
+
+def set_driver_online(driver_id):
+    """
+    Mark driver as online.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE drivers
+        SET is_online = 1
+        WHERE telegram_id = ?
+        """,
+        (driver_id,),
+    )
+
+    connection.commit()
+    connection.close()
+
+
+def set_driver_offline(driver_id):
+    """
+    Mark driver as offline.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE drivers
+        SET is_online = 0
+        WHERE telegram_id = ?
+        """,
+        (driver_id,),
     )
 
     connection.commit()

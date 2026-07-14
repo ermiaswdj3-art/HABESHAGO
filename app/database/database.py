@@ -46,13 +46,17 @@ def create_tables():
             full_name TEXT NOT NULL,
             phone_number TEXT,
             vehicle TEXT NOT NULL,
-            vehicle_year INTEGER NOT NULL,      
+            vehicle_year INTEGER NOT NULL,
             vehicle_color TEXT NOT NULL,
             plate_number TEXT UNIQUE NOT NULL,
             rating REAL DEFAULT 5.0,
+
             is_available INTEGER DEFAULT 1,
+            is_online INTEGER DEFAULT 0,
+
             latitude REAL NOT NULL,
             longitude REAL NOT NULL,
+
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)

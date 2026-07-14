@@ -4,6 +4,9 @@ from telegram.ext import ContextTypes
 from app.state.driver_registration_state import driver_registration_state
 from app.keyboards.contact import get_contact_keyboard
 from app.keyboards.driver_location import get_driver_location_keyboard
+from app.keyboards.availability import (
+    get_availability_keyboard,
+)
 
 
 async def become_driver(update: Update, context: ContextTypes.DEFAULT_TYPE):

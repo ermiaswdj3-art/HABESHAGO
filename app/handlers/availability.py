@@ -4,6 +4,8 @@ from telegram.ext import ContextTypes
 from app.database.driver_repository import (
     set_driver_available,
     set_driver_unavailable,
+    set_driver_online,
+    set_driver_offline,
 )
 
 from app.keyboards.availability import (
@@ -15,11 +17,12 @@ async def go_online(
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """
-    Set the driver as available.
+    Set the driver online and available.
     """
 
     user_id = update.effective_user.id
 
+    set_driver_online(user_id)
     set_driver_available(user_id)
 
     await update.message.reply_text(
@@ -38,6 +41,7 @@ async def go_offline(
 
     user_id = update.effective_user.id
 
+    set_driver_offline(user_id)
     set_driver_unavailable(user_id)
 
     await update.message.reply_text(
