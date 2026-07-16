@@ -276,4 +276,34 @@ def get_driver_by_id(telegram_id):
 
     connection.close()
 
-    return driver   
+    return driver
+
+def update_driver_location(
+    driver_id,
+    latitude,
+    longitude,
+):
+    """
+    Update a driver's current location.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE drivers
+        SET latitude = ?,
+            longitude = ?
+        WHERE telegram_id = ?
+        """,
+        (
+            latitude,
+            longitude,
+            driver_id,
+        ),
+    )
+
+    connection.commit()
+
+    connection.close()

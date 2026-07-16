@@ -12,12 +12,20 @@ from app.keyboards.availability import (
     get_availability_keyboard,
 )
 
+from app.keyboards.availability import (
+    get_availability_keyboard,
+)
+
+from app.keyboards.driver_menu import (
+    get_driver_menu,
+)
+
 async def go_online(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """
-    Set the driver online and available.
+    Set the driver as available.
     """
 
     user_id = update.effective_user.id
@@ -27,9 +35,9 @@ async def go_online(
 
     await update.message.reply_text(
         "🟢 You are now ONLINE.\n\n"
-        "Passengers can now request rides from you."
+        "Passengers can now request rides from you.",
+        reply_markup=get_driver_menu(),
     )
-
 
 async def go_offline(
     update: Update,
@@ -46,7 +54,8 @@ async def go_offline(
 
     await update.message.reply_text(
         "🔴 You are now OFFLINE.\n\n"
-        "You will no longer receive new ride requests."
+        "You will no longer receive new ride requests.",
+        reply_markup=get_driver_menu(),
     )
 
 async def show_availability_menu(

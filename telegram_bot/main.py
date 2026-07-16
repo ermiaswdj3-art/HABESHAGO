@@ -27,6 +27,14 @@ from app.handlers.driver_dashboard import (
     show_driver_dashboard,
 )
 
+from app.handlers.driver_location import (
+    update_location,
+)
+
+from app.handlers.update_driver_location import (
+    request_driver_location,
+)
+
 from app.handlers.set_phone import set_phone
 from app.handlers.availability import (
     go_online,
@@ -177,6 +185,14 @@ def main():
         )
     )
 
+    # Driver updates location
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^📍 Update My Location$"),
+            request_driver_location,
+        )
+    )
+
     # Driver Dashboard
     app.add_handler(
         MessageHandler(
@@ -197,14 +213,6 @@ def main():
         MessageHandler(
             filters.LOCATION,
             receive_location,
-        )
-    )
-
-    # Driver live location
-    app.add_handler(
-        MessageHandler(
-            filters.LOCATION,
-            share_live_location,
         )
     )
 

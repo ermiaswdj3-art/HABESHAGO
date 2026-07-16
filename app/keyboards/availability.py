@@ -6,7 +6,10 @@ def get_availability_keyboard():
         [
             "🟢 Go Online",
             "🔴 Go Offline",
-        ]
+        ],
+        [
+            "📍 Update My Location",
+        ],
     ]
 
     return ReplyKeyboardMarkup(

@@ -15,12 +15,44 @@ from app.keyboards.availability import (
     get_availability_keyboard,
 )
 
+from app.database.driver_repository import (
+    update_driver_location,
+)
 
 async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("📍 receive_location() was called")
     if update.message is None or update.message.location is None:
         return
     user_id = update.effective_user.id
+
+
+    # ==========================================
+    # DRIVER LIVE LOCATION UPDATE
+    # ==========================================
+
+    if (
+        update.message is not None
+        and update.message.location is not None
+        and context.user_data.get("driver_update_location") is True
+    ):
+        latitude = update.message.location.latitude
+        longitude = update.message.location.longitude
+
+        update_driver_location(
+            user_id,
+            latitude,
+            longitude,
+        )
+
+        context.user_data["driver_update_location"] = False
+
+        await update.message.reply_text(
+            "📍 Your location has been updated successfully.\n\n"
+            "Passengers will now find you using your latest location."
+        )
+
+        return
+
     user = update.effective_user
     location = update.message.location
 
