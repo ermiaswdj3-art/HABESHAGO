@@ -307,3 +307,35 @@ def update_driver_location(
     connection.commit()
 
     connection.close()
+
+def get_driver_profile(driver_id):
+    """
+    Return the driver's profile information.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            full_name,
+            phone_number,
+            vehicle,
+            vehicle_year,
+            vehicle_color,
+            plate_number,
+            rating,
+            is_online,
+            is_available
+        FROM drivers
+        WHERE telegram_id = ?
+        """,
+        (driver_id,),
+    )
+
+    driver = cursor.fetchone()
+
+    connection.close()
+
+    return driver   

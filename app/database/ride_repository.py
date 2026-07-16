@@ -352,3 +352,32 @@ def get_latest_passenger_ride(passenger_id):
     connection.close()
 
     return ride
+
+def get_driver_rides(driver_id):
+    """
+    Return all rides completed by a driver.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            id,
+            distance,
+            fare,
+            status,
+            driver_rating
+        FROM rides
+        WHERE driver_id = ?
+        ORDER BY id DESC
+        """,
+        (driver_id,),
+    )
+
+    rides = cursor.fetchall()
+
+    connection.close()
+
+    return rides

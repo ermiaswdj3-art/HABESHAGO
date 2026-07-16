@@ -27,10 +27,6 @@ from app.handlers.driver_dashboard import (
     show_driver_dashboard,
 )
 
-from app.handlers.driver_location import (
-    update_location,
-)
-
 from app.handlers.update_driver_location import (
     request_driver_location,
 )
@@ -41,9 +37,7 @@ from app.handlers.availability import (
     go_offline,
 )
 
-from app.handlers.live_location import (
-    share_live_location,
-)
+
 from app.handlers.location import receive_location
 from app.handlers.rating import rate_driver_handler
 from app.handlers.confirmation import (
@@ -198,6 +192,30 @@ def main():
         MessageHandler(
             filters.TEXT & filters.Regex("^🚖 Driver Dashboard$"),
             show_driver_dashboard,
+        )
+    )
+    
+    # Driver Dashboard
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^🚖 Driver Dashboard$"),
+            show_driver_dashboard,
+        )
+    )
+
+    # My Profile
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^👤 My Profile$"),
+            show_profile,
+        )
+    )
+
+    # My Rides
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^📋 My Rides$"),
+            show_rides,
         )
     )
 

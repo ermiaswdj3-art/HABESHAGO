@@ -2,17 +2,27 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from app.database.passenger_repository import get_passenger
-from app.database.driver_repository import get_driver_by_telegram_id
+
+from app.database.driver_repository import (
+    get_driver_profile,
+)
 
 
-async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def show_profile(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    """
+    Show the current user's driver or passenger profile.
+    """
+
     user_id = update.effective_user.id
 
     # ==========================================
     # DRIVER PROFILE
     # ==========================================
 
-    driver = get_driver_by_telegram_id(user_id)
+    driver = get_driver_profile(user_id)
 
     if driver is not None:
 
@@ -24,10 +34,21 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
             vehicle_color,
             plate_number,
             rating,
+            is_online,
             is_available,
         ) = driver
 
-        status = "🟢 Available" if is_available else "🔴 Offline"
+        online_status = (
+            "🟢 Online"
+            if is_online
+            else "🔴 Offline"
+        )
+
+        availability_status = (
+            "✅ Available"
+            if is_available
+            else "🚕 Busy / Unavailable"
+        )
 
         await update.message.reply_text(
             "🚖 Driver Profile\n\n"
@@ -37,8 +58,9 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📅 Year: {vehicle_year}\n"
             f"🎨 Color: {vehicle_color}\n"
             f"🔢 Plate: {plate_number}\n"
-            f"⭐ Rating: {rating}\n"
-            f"{status}"
+            f"⭐ Rating: {rating}\n\n"
+            f"📡 Status: {online_status}\n"
+            f"🚖 Availability: {availability_status}"
         )
 
         return
@@ -51,7 +73,12 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if passenger is not None:
 
-        telegram_id, full_name, phone_number, created_at = passenger
+        (
+            telegram_id,
+            full_name,
+            phone_number,
+            created_at,
+        ) = passenger
 
         if phone_number is None:
             phone_number = "Not set"
