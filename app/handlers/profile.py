@@ -7,6 +7,9 @@ from app.database.driver_repository import (
     get_driver_profile,
 )
 
+from app.database.ride_repository import (
+    get_rides_by_passenger,
+)
 
 async def show_profile(
     update: Update,
@@ -83,16 +86,36 @@ async def show_profile(
         if phone_number is None:
             phone_number = "Not set"
 
+        rides = get_rides_by_passenger(user_id)
+
+        total_rides = len(rides)
+
+        completed_rides = sum(
+            1
+            for ride in rides
+            if ride[4] in ("TRIP_COMPLETED", "RATED")
+        )
+
+        total_spent = sum(
+            ride[3]
+            for ride in rides
+            if ride[4] in ("TRIP_COMPLETED", "RATED")
+        )
+
         await update.message.reply_text(
             "👤 Passenger Profile\n\n"
             f"🆔 Telegram ID: {telegram_id}\n"
             f"👤 Name: {full_name}\n"
             f"📞 Phone: {phone_number}\n"
-            f"📅 Member Since: {created_at}"
+            f"📅 Member Since: {created_at}\n\n"
+            "📊 Ride Statistics\n"
+            f"🚖 Total Rides: {total_rides}\n"
+            f"✅ Completed Rides: {completed_rides}\n"
+            f"💰 Total Amount Spent: {total_spent:.2f} ETB"
         )
 
         return
-
+    
     # ==========================================
     # NO PROFILE FOUND
     # ==========================================

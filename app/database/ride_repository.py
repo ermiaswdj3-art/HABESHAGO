@@ -68,7 +68,7 @@ def save_ride(
 
 def get_rides_by_passenger(passenger_id):
     """
-    Return all rides for one passenger.
+    Return the passenger's complete ride history.
     """
 
     connection = create_connection()
@@ -77,9 +77,12 @@ def get_rides_by_passenger(passenger_id):
     cursor.execute(
         """
         SELECT
+            id,
+            driver_id,
             distance,
             fare,
-            status
+            status,
+            driver_rating
         FROM rides
         WHERE passenger_id = ?
         ORDER BY id DESC

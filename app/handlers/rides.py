@@ -113,18 +113,48 @@ async def show_rides(
         "RATED": "⭐ Rated",
     }
 
+    total_spent = 0.0
+    completed_rides = 0
+
     message = "📜 Passenger Ride History\n\n"
 
-    for index, ride in enumerate(rides, start=1):
-        distance, fare, status = ride
+    for ride in rides:
+        (
+            ride_id,
+            driver_id,
+            distance,
+            fare,
+            status,
+            driver_rating,
+        ) = ride
 
         display_status = status_map.get(status, status)
 
+        total_spent += fare
+
+        if status in ("TRIP_COMPLETED", "RATED"):
+            completed_rides += 1
+
+        rating_text = (
+            f"{driver_rating}/5"
+            if driver_rating is not None
+            else "Not rated"
+        )
+
         message += (
-            f"{index}.\n"
+            f"🚖 Ride #{ride_id}\n"
+            f"👤 Driver ID: {driver_id}\n"
             f"📏 Distance: {distance:.2f} km\n"
             f"💰 Fare: {fare:.2f} ETB\n"
-            f"📌 Status: {display_status}\n\n"
-        )
+            f"📌 Status: {display_status}\n"
+            f"⭐ Your Rating: {rating_text}\n\n"
+    )
+
+    message += (
+        "━━━━━━━━━━━━━━\n"
+        f"📊 Total Rides: {len(rides)}\n"
+        f"✅ Completed Rides: {completed_rides}\n"
+        f"💰 Total Amount Spent: {total_spent:.2f} ETB"
+    )
 
     await update.message.reply_text(message)
