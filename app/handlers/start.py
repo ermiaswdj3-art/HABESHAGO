@@ -18,6 +18,10 @@ from app.keyboards.main_menu import (
     get_main_menu,
 )
 
+from app.keyboards.passenger_phone import (
+    get_passenger_phone_keyboard,
+)
+
 
 async def start(
     update: Update,
@@ -27,8 +31,9 @@ async def start(
     Handle the /start command.
 
     - Registered drivers see the Driver Dashboard.
-    - Everyone else is registered as a passenger.
-    - Passengers see the main menu.
+    - New passengers are registered automatically.
+    - Passengers without a phone number are asked to share it.
+    - Passengers with a saved phone number see the main menu.
     """
 
     user = update.effective_user
@@ -41,13 +46,11 @@ async def start(
     driver = get_driver_by_telegram_id(user_id)
 
     if driver is not None:
-
         await update.message.reply_text(
             "🚖 Welcome back, Driver!\n\n"
             "Your dashboard is ready.",
             reply_markup=get_driver_dashboard_keyboard(),
         )
-
         return
 
     # ==========================================
@@ -62,20 +65,38 @@ async def start(
     passenger = get_passenger(user_id)
 
     if passenger is None:
-
         await update.message.reply_text(
             "❌ We could not create your passenger profile.\n\n"
             "Please try /start again."
         )
+        return
 
+    phone_number = passenger[2]
+
+    # ==========================================
+    # PASSENGER PHONE NUMBER
+    # ==========================================
+
+    if not phone_number:
+        context.user_data["awaiting_passenger_phone"] = True
+
+        await update.message.reply_text(
+            "🚖 Welcome to HABESHAGO!\n\n"
+            "Before requesting your first ride, please share "
+            "your phone number.\n\n"
+            "Your number helps the driver contact you when necessary.",
+            reply_markup=get_passenger_phone_keyboard(),
+        )
         return
 
     # ==========================================
     # PASSENGER MAIN MENU
     # ==========================================
 
+    context.user_data["awaiting_passenger_phone"] = False
+
     await update.message.reply_text(
-        "🚖 Welcome to HABESHAGO!\n\n"
+        "🚖 Welcome back to HABESHAGO!\n\n"
         "Your trusted Ethiopian ride and delivery platform.\n\n"
         "Please choose an option below:",
         reply_markup=get_main_menu(),

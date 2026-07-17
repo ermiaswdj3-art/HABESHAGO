@@ -6,7 +6,9 @@ from app.database.passenger_repository import (
     update_phone_number,
 )
 
-from app.keyboards.main_menu import get_main_menu
+from app.keyboards.main_menu import (
+    get_main_menu,
+)
 
 
 async def save_passenger_phone(
@@ -14,7 +16,7 @@ async def save_passenger_phone(
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """
-    Save a passenger's shared phone number.
+    Save a passenger's shared Telegram phone number.
     """
 
     if update.message is None or update.message.contact is None:
@@ -23,7 +25,7 @@ async def save_passenger_phone(
     user_id = update.effective_user.id
     contact = update.message.contact
 
-    # Prevent a user from submitting someone else's contact.
+    # Prevent users from submitting another person's contact.
     if (
         contact.user_id is not None
         and contact.user_id != user_id
@@ -36,9 +38,11 @@ async def save_passenger_phone(
     passenger = get_passenger(user_id)
 
     if passenger is None:
+        context.user_data["awaiting_passenger_phone"] = False
+
         await update.message.reply_text(
             "❌ Passenger profile not found.\n\n"
-            "Please use /start first."
+            "Please use /start and try again."
         )
         return
 
@@ -47,7 +51,10 @@ async def save_passenger_phone(
         phone_number=contact.phone_number,
     )
 
+    context.user_data["awaiting_passenger_phone"] = False
+
     await update.message.reply_text(
-        "✅ Your phone number has been saved successfully!",
+        "✅ Your phone number has been saved successfully!\n\n"
+        "You can now request rides and use the passenger services.",
         reply_markup=get_main_menu(),
     )

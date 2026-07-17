@@ -22,21 +22,20 @@ from app.handlers.driver_response import (
 from app.handlers.ride import request_ride
 from app.handlers.rides import show_rides
 from app.handlers.profile import show_profile
-
 from app.handlers.driver_dashboard import (
     show_driver_dashboard,
 )
-
+from app.handlers.contact_router import (
+    route_contact,
+)
 from app.handlers.update_driver_location import (
     request_driver_location,
 )
-
 from app.handlers.set_phone import set_phone
 from app.handlers.availability import (
     go_online,
     go_offline,
 )
-
 from app.handlers.location import receive_location
 from app.handlers.rating import rate_driver_handler
 from app.handlers.confirmation import (
@@ -50,7 +49,7 @@ from app.handlers.ride_status import (
     ride_status,
 )
 
-# Configure logging
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
@@ -61,13 +60,14 @@ def main():
     if not BOT_TOKEN:
         raise ValueError("BOT_TOKEN not found in .env")
 
-    # Create database tables
     create_tables()
 
-    # Create Telegram application
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # Commands
+    # ==========================================
+    # COMMANDS
+    # ==========================================
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("rides", show_rides))
     app.add_handler(CommandHandler("profile", show_profile))
@@ -77,28 +77,24 @@ def main():
     app.add_handler(CommandHandler("online", go_online))
     app.add_handler(CommandHandler("offline", go_offline))
 
-    # Become Driver
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & filters.Regex("^💼 Become a Driver$"),
-            become_driver,
-        )
-    )
+    # ==========================================
+    # PASSENGER MENU
+    # ==========================================
 
-    # Ride request
     app.add_handler(
         MessageHandler(
             filters.TEXT & filters.Regex("^🛺 Request Ride$"),
             request_ride,
         )
     )
+
     app.add_handler(
         MessageHandler(
             filters.TEXT & filters.Regex("^📍 Ride Status$"),
             ride_status,
         )
     )
-    # Confirm ride
+
     app.add_handler(
         MessageHandler(
             filters.TEXT & filters.Regex("^✅ Confirm Ride$"),
@@ -106,103 +102,13 @@ def main():
         )
     )
 
-    # Cancel ride
     app.add_handler(
         MessageHandler(
             filters.TEXT & filters.Regex("^❌ Cancel Ride$"),
             cancel_ride,
         )
     )
-    
-    # Passenger ride history
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & filters.Regex("^📋 My Rides$"),
-            show_rides,
-        )
-    )
 
-    # Driver arrived
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & filters.Regex("^📍 Arrived$"),
-            arrived_handler,
-        )
-    )   
-
-    # Driver starts trip
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & filters.Regex("^🚕 Start Trip$"),
-            start_trip_handler,
-        )
-    )
-
-    # Complete ride
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & filters.Regex("^🏁 Complete Ride$"),
-            complete_ride_handler,
-        )
-    )
-
-    # Driver rating
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & filters.Regex("^⭐ [1-5]$"),
-            rate_driver_handler,
-        )
-    )
-
-    # Driver accepts ride
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & filters.Regex("^✅ Accept Ride$"),
-            accept_ride,
-        )
-    )
-
-    # Driver declines ride
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & filters.Regex("^❌ Decline Ride$"),
-            decline_ride,
-        )
-    )
-
-    # Driver goes online
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & filters.Regex("^🟢 Go Online$"),
-            go_online,
-        )
-    )
-
-    # Driver goes offline
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & filters.Regex("^🔴 Go Offline$"),
-            go_offline,
-        )
-    )
-
-    # Driver updates location
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & filters.Regex("^📍 Update My Location$"),
-            request_driver_location,
-        )
-    )
-
-    # Driver Dashboard
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & filters.Regex("^🚖 Driver Dashboard$"),
-            show_driver_dashboard,
-        )
-    )
-    
-    # My Profile
     app.add_handler(
         MessageHandler(
             filters.TEXT & filters.Regex("^👤 My Profile$"),
@@ -210,7 +116,6 @@ def main():
         )
     )
 
-    # My Rides
     app.add_handler(
         MessageHandler(
             filters.TEXT & filters.Regex("^📋 My Rides$"),
@@ -218,14 +123,121 @@ def main():
         )
     )
 
-    # Driver registration conversation
     app.add_handler(
         MessageHandler(
-            (filters.TEXT | filters.CONTACT) & ~filters.COMMAND,
+            filters.TEXT & filters.Regex("^💼 Become a Driver$"),
+            become_driver,
+        )
+    )
+
+    # ==========================================
+    # DRIVER RIDE FLOW
+    # ==========================================
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^✅ Accept Ride$"),
+            accept_ride,
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^❌ Decline Ride$"),
+            decline_ride,
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^📍 Arrived$"),
+            arrived_handler,
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^🚕 Start Trip$"),
+            start_trip_handler,
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^🏁 Complete Ride$"),
+            complete_ride_handler,
+        )
+    )
+
+    # ==========================================
+    # DRIVER DASHBOARD
+    # ==========================================
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^🚖 Driver Dashboard$"),
+            show_driver_dashboard,
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^🟢 Go Online$"),
+            go_online,
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^🔴 Go Offline$"),
+            go_offline,
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^📍 Update My Location$"),
+            request_driver_location,
+        )
+    )
+
+    # ==========================================
+    # RATINGS
+    # ==========================================
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^⭐ [1-5]$"),
+            rate_driver_handler,
+        )
+    )
+
+    # ==========================================
+    # CONTACT ROUTING
+    # ==========================================
+
+    app.add_handler(
+        MessageHandler(
+            filters.CONTACT,
+            route_contact,
+        )
+    )
+
+    # ==========================================
+    # DRIVER REGISTRATION TEXT FLOW
+    # ==========================================
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
             driver_registration_handler,
         )
     )
-    # GPS location
+
+    # ==========================================
+    # LOCATION ROUTING
+    # ==========================================
+
     app.add_handler(
         MessageHandler(
             filters.LOCATION,
