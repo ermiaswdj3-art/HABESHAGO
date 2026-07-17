@@ -125,7 +125,7 @@ def main():
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT & filters.Regex("^💼 Become a Driver$"),
+            filters.TEXT & filters.Regex("^💼 Register as Driver$"),
             become_driver,
         )
     )

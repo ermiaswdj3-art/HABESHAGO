@@ -18,6 +18,14 @@ from app.keyboards.trip_status import (
     get_trip_status_keyboard,
 )
 
+from app.keyboards.main_menu import (
+    get_main_menu,
+)
+
+from app.keyboards.driver_menu import (
+    get_driver_menu,
+)
+
 from app.keyboards.ride_status import (
     get_ride_status_keyboard,
 )
@@ -136,7 +144,10 @@ async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
     del pending_driver_requests[driver_id]
 
 
-async def decline_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def decline_ride(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
     """
     Driver declines a passenger's ride request.
     """
@@ -147,16 +158,21 @@ async def decline_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         request = pending_driver_requests[driver_id]
 
+        # Notify passenger
         await context.bot.send_message(
             chat_id=request["passenger_id"],
             text=(
                 "😔 Your driver declined the ride.\n\n"
                 "Please request another ride."
             ),
+            reply_markup=get_main_menu(),
         )
 
         del pending_driver_requests[driver_id]
 
+    # Restore driver's normal dashboard
     await update.message.reply_text(
-        "❌ Ride declined."
+        "❌ Ride declined.\n\n"
+        "You are ready to receive another ride request.",
+        reply_markup=get_driver_menu(),
     )

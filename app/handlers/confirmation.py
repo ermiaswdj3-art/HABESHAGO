@@ -4,6 +4,9 @@ from telegram.ext import ContextTypes
 from app.keyboards.ride_menu import get_ride_menu
 from app.keyboards.driver_menu import get_driver_menu
 from app.keyboards.rating_menu import get_rating_menu
+from app.keyboards.main_menu import (
+    get_main_menu,
+)
 from app.state.driver_state import pending_driver_requests
 from app.state.active_ride_state import active_rides
 
@@ -151,14 +154,24 @@ async def complete_ride_handler(update: Update, context: ContextTypes.DEFAULT_TY
     )
 
 
-async def cancel_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def cancel_ride(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    """
+    Cancel the passenger's current ride request
+    and restore the passenger main menu.
+    """
+
     user_id = update.effective_user.id
 
     if user_id in ride_requests:
         del ride_requests[user_id]
 
     await update.message.reply_text(
-        "❌ Your ride request has been cancelled."
+        "❌ Your ride request has been cancelled.\n\n"
+        "You can request another ride whenever you're ready.",
+        reply_markup=get_main_menu(),
     )
 
 async def arrived_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
