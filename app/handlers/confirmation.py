@@ -64,7 +64,8 @@ async def confirm_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if driver is None:
         await update.message.reply_text(
-            "😔 Sorry, no drivers are currently available."
+            "😔 Sorry, we couldn't find an available driver nearby.\n\n"
+            "Please try again in a few minutes."
         )
         return
 
@@ -73,6 +74,7 @@ async def confirm_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "pickup": pickup,
         "destination": destination,
         "distance": distance,
+        "pickup_distance": driver["distance"],
         "fare": fare,
     }
 
@@ -82,7 +84,8 @@ async def confirm_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🚖 New Ride Request!\n\n"
             f"📍 Pickup: {pickup}\n"
             f"🏁 Destination: {destination}\n"
-            f"📏 Distance: {distance:.2f} km\n"
+            f"📍 Pickup Distance: {driver['distance']:.2f} km\n"
+            f"🛣 Trip Distance: {distance:.2f} km\n"
             f"💰 Fare: {fare:.2f} ETB\n\n"
             "Would you like to accept this ride?"
         ),

@@ -12,7 +12,6 @@ from app.database.driver_repository import (
 
 from app.database.ride_repository import (
     save_ride,
-    update_ride_status,
 )
 
 from app.keyboards.trip_status import (
@@ -35,8 +34,6 @@ from app.services.progress_service import (
 
 from app.services.eta_service import calculate_eta
 
-from app.keyboards.ride_menu import get_ride_menu
-
 
 async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -44,6 +41,13 @@ async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
 
     driver_id = update.effective_user.id
+
+    if driver_id in active_rides:
+        await update.message.reply_text(
+            "❌ You already have an active ride.\n\n"
+            "Please complete your current ride before accepting another."
+        )
+        return
 
     if driver_id not in pending_driver_requests:
 
@@ -83,7 +87,7 @@ async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     driver = get_driver_by_id(driver_id)
 
-    eta = calculate_eta(request["distance"])
+    eta = calculate_eta(request["pickup_distance"])
 
     # ==========================================
     # NOTIFY PASSENGER

@@ -1,16 +1,32 @@
-from app.database.driver_repository import get_available_drivers
-from app.services.distance_service import calculate_distance
+from app.database.driver_repository import (
+    get_available_drivers,
+)
+
+from app.services.distance_service import (
+    calculate_distance,
+)
 
 
-def find_nearest_driver(passenger_latitude, passenger_longitude):
+MAX_PICKUP_DISTANCE_KM = 10.0
+
+
+def find_nearest_driver(
+    passenger_latitude,
+    passenger_longitude,
+):
+    """
+    Find the nearest online and available driver
+    within the allowed pickup radius.
+    """
+
     print("\n========== DRIVER DEBUG ==========")
 
     drivers = get_available_drivers()
 
-    print("Available drivers:", drivers)
+    print("Eligible drivers:", drivers)
 
     if not drivers:
-        print("No available drivers found.")
+        print("No online and available drivers found.")
         return None
 
     nearest_driver = None
@@ -29,13 +45,32 @@ def find_nearest_driver(passenger_latitude, passenger_longitude):
             driver_longitude,
         )
 
-        print("Distance:", distance)
+        print(
+            f"Driver {driver[0]} distance: "
+            f"{distance:.2f} km"
+        )
 
-        if distance < shortest_distance:
+        if (
+            distance <= MAX_PICKUP_DISTANCE_KM
+            and distance < shortest_distance
+        ):
             shortest_distance = distance
             nearest_driver = driver
 
+    if nearest_driver is None:
+        print(
+            "No driver found within "
+            f"{MAX_PICKUP_DISTANCE_KM:.2f} km."
+        )
+        return None
+
     print("Selected driver:", nearest_driver)
+    print(
+        "Pickup distance:",
+        round(shortest_distance, 2),
+        "km",
+    )
+    print("==================================\n")
 
     return {
         "telegram_id": nearest_driver[0],
