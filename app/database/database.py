@@ -77,6 +77,11 @@ def create_tables():
 
             distance REAL NOT NULL,
             fare REAL NOT NULL,
+                   
+            service_type TEXT DEFAULT 'fuel',
+            commission_rate REAL DEFAULT 0.10,
+            commission_amount REAL DEFAULT 0,
+            driver_earnings REAL DEFAULT 0,       
 
             status TEXT DEFAULT 'requested',
 

@@ -9,6 +9,10 @@ from app.constants.ride_status import (
     RATED,
 )
 
+from app.services.earnings_service import (
+    calculate_earnings,
+)
+
 ACTIVE_RIDE_STATUSES = (
     ACCEPTED,
     DRIVER_ARRIVED,
@@ -26,10 +30,17 @@ def save_ride(
     distance,
     fare,
     status,
+    service_type="fuel",
 ):
     """
-    Save a new ride.
+    Save a new ride together with
+    driver earnings and HABESHAGO commission.
     """
+
+    earnings = calculate_earnings(
+        fare,
+        service_type,
+    )
 
     connection = create_connection()
     cursor = connection.cursor()
@@ -45,9 +56,13 @@ def save_ride(
             destination_longitude,
             distance,
             fare,
+            service_type,
+            commission_rate,
+            commission_amount,
+            driver_earnings,
             status
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             passenger_id,
@@ -58,6 +73,10 @@ def save_ride(
             destination_longitude,
             distance,
             fare,
+            service_type,
+            earnings["commission_rate"],
+            earnings["commission_amount"],
+            earnings["driver_earnings"],
             status,
         ),
     )
@@ -355,6 +374,34 @@ def get_latest_passenger_ride(passenger_id):
     connection.close()
 
     return ride
+
+def get_ride_earnings(ride_id):
+    """
+    Return the financial breakdown for one ride.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            fare,
+            service_type,
+            commission_rate,
+            commission_amount,
+            driver_earnings
+        FROM rides
+        WHERE id = ?
+        """,
+        (ride_id,),
+    )
+
+    earnings = cursor.fetchone()
+
+    connection.close()
+
+    return earnings
 
 def get_driver_rides(driver_id):
     """

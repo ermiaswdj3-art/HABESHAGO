@@ -1,7 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from app.keyboards.ride_menu import get_ride_menu
 from app.keyboards.driver_menu import get_driver_menu
 from app.keyboards.rating_menu import get_rating_menu
 from app.keyboards.main_menu import (
@@ -31,6 +30,7 @@ from app.constants.ride_status import (
 from app.database.ride_repository import (
     get_latest_driver_ride,
     complete_ride,
+    get_ride_earnings,
 )
 
 from app.services.driver_service import find_nearest_driver
@@ -128,6 +128,7 @@ async def complete_ride_handler(update: Update, context: ContextTypes.DEFAULT_TY
 
     # Mark ride completed
     complete_ride(ride_id)
+    earnings = get_ride_earnings(ride_id)
 
     # Driver becomes available again
     set_driver_available(driver_id)
@@ -147,8 +148,46 @@ async def complete_ride_handler(update: Update, context: ContextTypes.DEFAULT_TY
     )
 
     # Notify driver
+    if earnings is None:
+        await update.message.reply_text(
+            "✅ Ride completed successfully!\n\n"
+            "🟢 You are now available for new ride requests.",
+            reply_markup=get_driver_menu(),
+        )
+        return
+
+    (
+        fare,
+        service_type,
+        commission_rate,
+        commission_amount,
+        driver_earnings,
+    ) = earnings
+
+    commission_percentage = int(
+        commission_rate * 100
+    )
+
+    service_names = {
+        "fuel": "⛽ Fuel Ride",
+        "ev": "⚡ EV Ride",
+        "premium": "👑 Premium Ride",
+        "delivery": "🛵 Delivery",
+    }
+
+    display_service = service_names.get(
+        service_type,
+        service_type.title(),
+    )
+
     await update.message.reply_text(
         "✅ Ride completed successfully!\n\n"
+        f"🚖 Service: {display_service}\n"
+        f"💰 Ride Fare: {fare:.2f} ETB\n"
+        f"📉 HABESHAGO Commission "
+        f"({commission_percentage}%): "
+        f"{commission_amount:.2f} ETB\n"
+        f"💵 Your Earnings: {driver_earnings:.2f} ETB\n\n"
         "🟢 You are now available for new ride requests.",
         reply_markup=get_driver_menu(),
     )
