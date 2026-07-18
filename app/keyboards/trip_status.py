@@ -4,12 +4,11 @@ from telegram import ReplyKeyboardMarkup
 def get_trip_status_keyboard():
     keyboard = [
         [
+            "📞 Call Passenger",
             "📍 Arrived",
         ],
         [
             "🚕 Start Trip",
-        ],
-        [
             "🏁 Complete Ride",
         ],
     ]

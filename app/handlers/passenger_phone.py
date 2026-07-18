@@ -3,7 +3,7 @@ from telegram.ext import ContextTypes
 
 from app.database.passenger_repository import (
     get_passenger,
-    update_phone_number,
+    update_passenger_contact,
 )
 
 from app.keyboards.main_menu import (
@@ -46,8 +46,21 @@ async def save_passenger_phone(
         )
         return
 
-    update_phone_number(
+    contact_name = " ".join(
+        part
+        for part in [
+          contact.first_name,
+          contact.last_name,
+        ]
+        if part
+    ).strip()
+
+    if not contact_name:
+        contact_name = update.effective_user.full_name
+
+    update_passenger_contact(
         telegram_id=user_id,
+        full_name=contact_name,
         phone_number=contact.phone_number,
     )
 

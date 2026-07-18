@@ -36,6 +36,9 @@ from app.handlers.availability import (
     go_online,
     go_offline,
 )
+from app.handlers.call_passenger import (
+    call_passenger,
+)
 from app.handlers.location import receive_location
 from app.handlers.rating import rate_driver_handler
 from app.handlers.confirmation import (
@@ -134,6 +137,7 @@ def main():
     # DRIVER RIDE FLOW
     # ==========================================
 
+    # Driver accepts ride
     app.add_handler(
         MessageHandler(
             filters.TEXT & filters.Regex("^✅ Accept Ride$"),
@@ -141,6 +145,7 @@ def main():
         )
     )
 
+    # Driver declines ride
     app.add_handler(
         MessageHandler(
             filters.TEXT & filters.Regex("^❌ Decline Ride$"),
@@ -148,6 +153,15 @@ def main():
         )
     )
 
+    # Driver calls passenger
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^📞 Call Passenger$"),
+            call_passenger,
+        )
+    )
+
+    # Driver arrived
     app.add_handler(
         MessageHandler(
             filters.TEXT & filters.Regex("^📍 Arrived$"),
@@ -155,6 +169,7 @@ def main():
         )
     )
 
+    # Driver starts trip
     app.add_handler(
         MessageHandler(
             filters.TEXT & filters.Regex("^🚕 Start Trip$"),
@@ -162,13 +177,13 @@ def main():
         )
     )
 
+    # Driver completes trip
     app.add_handler(
         MessageHandler(
             filters.TEXT & filters.Regex("^🏁 Complete Ride$"),
             complete_ride_handler,
         )
     )
-
     # ==========================================
     # DRIVER DASHBOARD
     # ==========================================

@@ -79,3 +79,33 @@ def update_phone_number(telegram_id, phone_number):
 
     connection.commit()
     connection.close()
+
+def update_passenger_contact(
+    telegram_id,
+    full_name,
+    phone_number,
+):
+    """
+    Update the passenger's name and phone number
+    using their shared Telegram contact.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE passengers
+        SET full_name = ?,
+            phone_number = ?
+        WHERE telegram_id = ?
+        """,
+        (
+            full_name,
+            phone_number,
+            telegram_id,
+        ),
+    )
+
+    connection.commit()
+    connection.close()
