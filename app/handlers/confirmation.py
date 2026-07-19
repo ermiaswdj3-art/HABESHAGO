@@ -70,6 +70,11 @@ from app.state.ride_state import (
     ride_requests,
 )
 
+import asyncio
+
+from app.services.geocoding_service import (
+    get_location_name,
+)
 
 async def confirm_ride(
     update: Update,
@@ -93,6 +98,19 @@ async def confirm_ride(
 
     pickup = ride_requests[user_id]["pickup"]
     destination = ride_requests[user_id]["destination"]
+
+    pickup_name, destination_name = await asyncio.gather(
+        asyncio.to_thread(
+            get_location_name,
+            pickup[0],
+            pickup[1],
+        ),
+        asyncio.to_thread(
+            get_location_name,
+            destination[0],
+            destination[1],
+        ),
+    )
 
     if destination is None:
         await update.message.reply_text(
@@ -163,10 +181,9 @@ async def confirm_ride(
             "🚖 NEW RIDE REQUEST\n\n"
             "🆔 Ride Reference: Pending\n\n"
             "📍 Pickup\n"
-            f"{pickup[0]:.6f}, {pickup[1]:.6f}\n\n"
+            f"{pickup_name}\n\n"
             "🏁 Destination\n"
-            f"{destination[0]:.6f}, "
-            f"{destination[1]:.6f}\n\n"
+            f"{destination_name}\n\n"
             "📏 Distance to Pickup\n"
             f"{driver['distance']:.2f} km\n\n"
             "⏱ Pickup ETA\n"
@@ -177,8 +194,8 @@ async def confirm_ride(
             f"{trip_eta} minutes\n\n"
             "💰 Estimated Fare\n"
             f"{fare:.2f} ETB\n\n"
-            "💳 Payment\n"
-            "Cash"
+            "💳 Payment Method\n"
+            "💵 Cash"
         ),
         reply_markup=get_pickup_navigation_keyboard(
             pickup[0],
