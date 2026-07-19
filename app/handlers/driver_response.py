@@ -90,7 +90,9 @@ async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
     set_driver_unavailable(driver_id)
 
     active_rides[driver_id] = {
-        "passenger_id": request["passenger_id"],
+       "passenger_id": request["passenger_id"],
+       "pickup": request["pickup"],
+       "destination": request["destination"],
     }
 
     driver = get_driver_by_id(driver_id)
