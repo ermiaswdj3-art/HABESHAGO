@@ -23,6 +23,10 @@ from app.services.pricing_service import (
     calculate_fare,
 )
 
+from app.database.passenger_places_repository import (
+    save_recent_place,
+)
+
 from app.state.destination_search_state import (
     destination_search_state,
 )
@@ -191,6 +195,23 @@ async def select_destination(
     destination = (
         selected["latitude"],
         selected["longitude"],
+    )
+
+    # Save the selected destination automatically
+    # as one of the passenger's recent places.
+
+    save_recent_place(
+        passenger_id=user_id,
+        place_name=selected.get(
+            "short_name",
+            selected["name"],
+        ),
+        full_address=selected.get(
+            "full_name",
+            selected["name"],
+        ),
+        latitude=selected["latitude"],
+        longitude=selected["longitude"],
     )
 
     ride_requests[user_id]["destination"] = destination

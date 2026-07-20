@@ -1,54 +1,99 @@
+import asyncio
+import logging
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from app.keyboards.location import get_location_keyboard
-from app.keyboards.confirmation import get_confirmation_keyboard
+from app.database.driver_repository import (
+    register_driver,
+    update_driver_location,
+)
 
-from app.services.distance_service import calculate_distance
-from app.services.pricing_service import calculate_fare
+from app.database.passenger_places_repository import (
+    save_recent_place,
+)
 
-from app.state.ride_state import ride_requests
-from app.state.driver_registration_state import driver_registration_state
+from app.keyboards.availability import (
+    get_availability_keyboard,
+)
+
+from app.keyboards.confirmation import (
+    get_confirmation_keyboard,
+)
 
 from app.keyboards.destination_menu import (
     get_destination_menu,
 )
 
-from app.database.driver_repository import register_driver
-from app.keyboards.availability import (
-    get_availability_keyboard,
+from app.services.distance_service import (
+    calculate_distance,
 )
 
-from app.database.driver_repository import (
-    update_driver_location,
+from app.services.geocoding_service import (
+    get_location_details,
 )
 
-async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("📍 receive_location() was called")
-    if update.message is None or update.message.location is None:
+from app.services.pricing_service import (
+    calculate_fare,
+)
+
+from app.state.driver_registration_state import (
+    driver_registration_state,
+)
+
+from app.state.ride_state import (
+    ride_requests,
+)
+
+
+logger = logging.getLogger(__name__)
+
+
+async def receive_location(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    """
+    Route received Telegram locations to:
+
+    - driver location updates;
+    - driver registration;
+    - passenger pickup selection;
+    - passenger destination selection.
+    """
+
+    if (
+        update.message is None
+        or update.message.location is None
+    ):
         return
-    user_id = update.effective_user.id
 
+    user_id = update.effective_user.id
+    user = update.effective_user
+    location = update.message.location
+
+    latitude = location.latitude
+    longitude = location.longitude
 
     # ==========================================
     # DRIVER LIVE LOCATION UPDATE
     # ==========================================
 
     if (
-        update.message is not None
-        and update.message.location is not None
-        and context.user_data.get("driver_update_location") is True
+        context.user_data.get(
+            "driver_update_location"
+        )
+        is True
     ):
-        latitude = update.message.location.latitude
-        longitude = update.message.location.longitude
-
         update_driver_location(
             user_id,
             latitude,
             longitude,
         )
 
-        context.user_data["driver_update_location"] = False
+        context.user_data[
+            "driver_update_location"
+        ] = False
 
         await update.message.reply_text(
             "📍 Your location has been updated successfully.\n\n"
@@ -57,47 +102,45 @@ async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return
 
-    user = update.effective_user
-    location = update.message.location
-
-    print("\n========== LOCATION DEBUG ==========")
-    print("User ID:", user_id)
-    print("Driver registration state:", driver_registration_state)
-
-    if user_id in driver_registration_state:
-       print("Current step:", driver_registration_state[user_id]["step"])
-    else:
-       print("User is NOT in driver_registration_state")
-
-    latitude = location.latitude
-    longitude = location.longitude
-
     # ==========================================
     # DRIVER REGISTRATION LOCATION
     # ==========================================
+
     if (
         user_id in driver_registration_state
-        and driver_registration_state[user_id]["step"] == "location"
+        and driver_registration_state[user_id].get(
+            "step"
+        )
+        == "location"
     ):
-        print("✅ Driver registration detected.")
+        state = driver_registration_state[
+            user_id
+        ]
 
-        state = driver_registration_state[user_id]
-
-        print("Plate being saved:", state["plate_number"])
-        
         register_driver(
             telegram_id=user.id,
             full_name=user.full_name,
             phone_number=state["phone_number"],
-            vehicle=f'{state["vehicle_brand"]} {state["vehicle_model"]}',
-            vehicle_year=int(state["vehicle_year"]),
-            vehicle_color=state["vehicle_color"],
-            plate_number=state["plate_number"],
+            vehicle=(
+                f'{state["vehicle_brand"]} '
+                f'{state["vehicle_model"]}'
+            ),
+            vehicle_year=int(
+                state["vehicle_year"]
+            ),
+            vehicle_color=state[
+                "vehicle_color"
+            ],
+            plate_number=state[
+                "plate_number"
+            ],
             latitude=latitude,
             longitude=longitude,
         )
 
-        del driver_registration_state[user_id]
+        del driver_registration_state[
+            user_id
+        ]
 
         await update.message.reply_text(
             "🎉 Congratulations!\n\n"
@@ -109,54 +152,127 @@ async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # ==========================================
-    # PASSENGER RIDE LOCATION
+    # PASSENGER PICKUP LOCATION
     # ==========================================
 
-    # First location = Pickup
     if (
         user_id not in ride_requests
-        or ride_requests[user_id]["status"] != "waiting_for_destination"
+        or ride_requests[user_id].get(
+            "status"
+        )
+        != "waiting_for_destination"
     ):
+        pickup_details = await asyncio.to_thread(
+            get_location_details,
+            latitude,
+            longitude,
+            "en",
+        )
 
         ride_requests[user_id] = {
-            "pickup": (latitude, longitude),
+            "pickup": (
+                latitude,
+                longitude,
+            ),
+            "pickup_name": pickup_details[
+                "short_name"
+            ],
+            "pickup_full_name": pickup_details[
+                "full_name"
+            ],
             "destination": None,
+            "destination_name": None,
+            "destination_full_name": None,
             "status": "waiting_for_destination",
         }
 
         await update.message.reply_text(
             "✅ Pickup location received successfully!\n\n"
-            "📍 Where would you like to go?\n\n"
+            f"📍 Pickup\n"
+            f"{pickup_details['short_name']}\n\n"
+            "Where would you like to go?\n\n"
             "Choose one of the options below.",
             reply_markup=get_destination_menu(),
         )
 
-    # Second location = Destination
-    else:
+        return
 
-        ride_requests[user_id]["destination"] = (
-            latitude,
-            longitude,
-        )
+    # ==========================================
+    # PASSENGER DESTINATION LOCATION
+    # ==========================================
 
-        ride_requests[user_id]["status"] = "completed"
+    destination_details = await asyncio.to_thread(
+        get_location_details,
+        latitude,
+        longitude,
+        "en",
+    )
 
-        pickup = ride_requests[user_id]["pickup"]
-        destination = ride_requests[user_id]["destination"]
+    destination = (
+        latitude,
+        longitude,
+    )
 
-        distance = calculate_distance(
-            pickup[0],
-            pickup[1],
-            destination[0],
-            destination[1],
-        )
+    ride_requests[user_id][
+        "destination"
+    ] = destination
 
-        fare = calculate_fare(distance)
+    ride_requests[user_id][
+        "destination_name"
+    ] = destination_details["short_name"]
 
-        await update.message.reply_text(
-            "🚖 Ride Summary\n\n"
-            f"📏 Estimated Distance: {distance:.2f} km\n"
-            f"💰 Estimated Fare: {fare:.2f} ETB\n\n"
-            "Would you like to confirm this ride?",
-            reply_markup=get_confirmation_keyboard(),
-        )
+    ride_requests[user_id][
+        "destination_full_name"
+    ] = destination_details["full_name"]
+
+    ride_requests[user_id][
+        "status"
+    ] = "completed"
+
+    # Automatically save the manually shared
+    # destination as a recent passenger place.
+    save_recent_place(
+        passenger_id=user_id,
+        place_name=destination_details[
+            "short_name"
+        ],
+        full_address=destination_details[
+            "full_name"
+        ],
+        latitude=latitude,
+        longitude=longitude,
+    )
+
+    pickup = ride_requests[user_id][
+        "pickup"
+    ]
+
+    pickup_name = ride_requests[user_id].get(
+        "pickup_name",
+        "Pickup location",
+    )
+
+    distance = calculate_distance(
+        pickup[0],
+        pickup[1],
+        destination[0],
+        destination[1],
+    )
+
+    fare = calculate_fare(
+        distance
+    )
+
+    await update.message.reply_text(
+        "🚕 Ride Summary\n\n"
+        "📍 From\n"
+        f"{pickup_name}\n\n"
+        "🏁 To\n"
+        f"{destination_details['short_name']}\n\n"
+        "📏 Distance\n"
+        f"{distance:.2f} km\n\n"
+        "💰 Estimated Fare\n"
+        f"{fare:.2f} ETB\n\n"
+        "Would you like to confirm this ride?",
+        reply_markup=get_confirmation_keyboard(),
+    )

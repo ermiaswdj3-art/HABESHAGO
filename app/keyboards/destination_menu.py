@@ -1,4 +1,7 @@
-from telegram import ReplyKeyboardMarkup, KeyboardButton
+from telegram import (
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
 
 
 def get_destination_menu():
@@ -8,7 +11,12 @@ def get_destination_menu():
 
     keyboard = [
         [
-            KeyboardButton("🔍 Search Destination"),
+            KeyboardButton(
+                "🔍 Search Destination"
+            ),
+            KeyboardButton(
+                "🕒 Recent Places"
+            ),
         ],
         [
             KeyboardButton(
@@ -17,7 +25,9 @@ def get_destination_menu():
             ),
         ],
         [
-            KeyboardButton("❌ Cancel"),
+            KeyboardButton(
+                "❌ Cancel"
+            ),
         ],
     ]
 
