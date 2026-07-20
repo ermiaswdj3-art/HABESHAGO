@@ -7,14 +7,20 @@ from telegram.ext import (
     filters,
 )
 
+from telegram.ext import (
+    Application,
+    CallbackQueryHandler,
+    CommandHandler,
+    MessageHandler,
+    filters,
+)
+
 from app.config.settings import BOT_TOKEN
 from app.database.database import create_tables
 
 from app.handlers.start import start
 from app.handlers.driver import become_driver
-from app.handlers.driver_registration import (
-    driver_registration_handler,
-)
+
 from app.handlers.driver_response import (
     accept_ride,
     decline_ride,
@@ -31,10 +37,17 @@ from app.handlers.contact_router import (
 from app.handlers.update_driver_location import (
     request_driver_location,
 )
+from app.handlers.text_router import (
+    route_text,
+)
 from app.handlers.set_phone import set_phone
 from app.handlers.availability import (
     go_online,
     go_offline,
+)
+from app.handlers.destination_search import (
+    select_destination,
+    start_destination_search,
 )
 from app.handlers.call_passenger import (
     call_passenger,
@@ -88,6 +101,23 @@ def main():
         MessageHandler(
             filters.TEXT & filters.Regex("^🛺 Request Ride$"),
             request_ride,
+        )
+    )
+
+    # Search destination
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT
+            & filters.Regex("^🔍 Search Destination$"),
+            start_destination_search,
+        )
+    )
+
+    # Destination result selection
+    app.add_handler(
+        CallbackQueryHandler(
+            select_destination,
+            pattern=r"^destination:\d+$",
         )
     )
 
@@ -239,13 +269,13 @@ def main():
     )
 
     # ==========================================
-    # DRIVER REGISTRATION TEXT FLOW
+    # GENERAL TEXT ROUTING
     # ==========================================
 
     app.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,
-            driver_registration_handler,
+            route_text,
         )
     )
 

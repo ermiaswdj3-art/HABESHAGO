@@ -7,55 +7,80 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse"
+NOMINATIM_URL = (
+    "https://nominatim.openstreetmap.org/reverse"
+)
 
 USER_AGENT = (
     "HABESHAGO/1.0 "
-    "(Ethiopia ride-hailing development; "
-    "contact: contact@habeshago.et)"
+    "(https://github.com/ermiaswdj3-art/HABESHAGO)"
 )
 
 
-def format_coordinates(latitude, longitude):
+def _clean_text(value):
     """
-    Return coordinates in a consistent display format.
+    Return normalized text or an empty string.
     """
 
-    return f"{latitude:.6f}, {longitude:.6f}"
+    if value is None:
+        return ""
+
+    return " ".join(
+        str(value).strip().split()
+    )
+
+
+def format_coordinates(
+    latitude,
+    longitude,
+):
+    """
+    Return coordinates in a consistent
+    display format.
+    """
+
+    return (
+        f"{latitude:.6f}, "
+        f"{longitude:.6f}"
+    )
 
 
 def is_meaningful_name(value):
     """
-    Return True when a value contains at least
-    one letter or number.
+    Return True when a value contains
+    at least one letter or number.
     """
 
-    if not value:
+    clean_value = _clean_text(
+        value
+    )
+
+    if not clean_value:
         return False
 
-    value = str(value).strip()
-
-    return bool(value) and any(
+    return any(
         character.isalnum()
-        for character in value
+        for character in clean_value
     )
 
 
 def clean_city_name(value):
     """
     Normalize multilingual Addis Ababa labels
-    into a clean English display name.
+    into a clean English city name.
     """
 
-    if not value:
+    city_name = _clean_text(
+        value
+    )
+
+    if not city_name:
         return ""
 
-    value = str(value).strip()
-
-    if "Addis Ababa" in value:
+    if "Addis Ababa" in city_name:
         return "Addis Ababa"
 
-    return value
+    return city_name
 
 
 def clean_country_name(value):
@@ -64,18 +89,58 @@ def clean_country_name(value):
     internal full-address formatting.
     """
 
-    if not value:
+    country_name = _clean_text(
+        value
+    )
+
+    if not country_name:
         return ""
 
-    value = str(value).strip()
-
-    if value.casefold() in {
+    if country_name.casefold() in {
         "ethiopia",
         "ኢትዮጵያ",
     }:
         return "Ethiopia"
 
-    return value
+    return country_name
+
+
+def build_display_name(
+    primary_name,
+    city_name,
+):
+    """
+    Build a clean everyday Telegram display name.
+
+    Addis Ababa is hidden because it is the
+    current HABESHAGO MVP service city.
+
+    A location outside Addis Ababa keeps
+    its city name for clarity.
+    """
+
+    primary_name = _clean_text(
+        primary_name
+    )
+
+    city_name = clean_city_name(
+        city_name
+    )
+
+    if not primary_name:
+        return city_name
+
+    if not city_name:
+        return primary_name
+
+    if (
+        city_name == "Addis Ababa"
+        or primary_name.casefold()
+        == city_name.casefold()
+    ):
+        return primary_name
+
+    return f"{primary_name}, {city_name}"
 
 
 @lru_cache(maxsize=5000)
@@ -116,14 +181,23 @@ def get_location_details(
     language="en",
 ):
     """
-    Convert coordinates into short and full
-    human-readable location names.
+    Convert coordinates into structured
+    human-readable location information.
 
-    Example result:
+    Example:
 
         {
-            "short": "Nefas Silk, Addis Ababa",
-            "full": "Nefas Silk, Addis Ababa, Ethiopia",
+            "short": "Nefas Silk",
+            "short_name": "Nefas Silk",
+            "city": "Addis Ababa",
+            "full": (
+                "Nefas Silk, "
+                "Addis Ababa, Ethiopia"
+            ),
+            "full_name": (
+                "Nefas Silk, "
+                "Addis Ababa, Ethiopia"
+            ),
             "latitude": 8.95855,
             "longitude": 38.77134,
         }
@@ -154,25 +228,27 @@ def get_location_details(
                 language,
             )
 
-            # Nominatim may return None for these fields,
-            # so "or {}" is required.
-            address = data.get("address") or {}
-            namedetails = data.get("namedetails") or {}
+            address = (
+                data.get("address")
+                or {}
+            )
 
-            top_level_name = (
-                data.get("name") or ""
-            ).strip()
+            namedetails = (
+                data.get("namedetails")
+                or {}
+            )
 
-            localized_name = (
+            top_level_name = _clean_text(
+                data.get("name")
+            )
+
+            localized_name = _clean_text(
                 namedetails.get(
                     f"name:{language}"
                 )
                 or namedetails.get("name")
-                or ""
             )
 
-            # Prefer landmarks and familiar local areas
-            # before roads, cities, or larger districts.
             preferred_values = (
                 top_level_name,
                 localized_name,
@@ -202,9 +278,11 @@ def get_location_details(
 
             primary_name = next(
                 (
-                    str(value).strip()
+                    _clean_text(value)
                     for value in preferred_values
-                    if is_meaningful_name(value)
+                    if is_meaningful_name(
+                        value
+                    )
                 ),
                 fallback,
             )
@@ -221,32 +299,16 @@ def get_location_details(
                 address.get("country")
             )
 
-            # Create the short Telegram display name.
-            if (
-                is_meaningful_name(primary_name)
-                and is_meaningful_name(city_name)
-                and primary_name.casefold()
-                != city_name.casefold()
-            ):
-                short_name = (
-                    f"{primary_name}, {city_name}"
-                )
-            else:
-                short_name = (
-                    primary_name
-                    if is_meaningful_name(
-                        primary_name
-                    )
-                    else city_name
-                )
+            short_name = build_display_name(
+                primary_name,
+                city_name,
+            )
 
             if not is_meaningful_name(
                 short_name
             ):
                 short_name = fallback
 
-            # Keep a clean full location internally
-            # for future receipts, history and support.
             full_parts = []
 
             for part in (
@@ -254,25 +316,39 @@ def get_location_details(
                 city_name,
                 country_name,
             ):
-                if not is_meaningful_name(part):
-                    continue
+                clean_part = _clean_text(
+                    part
+                )
 
-                if any(
-                    part.casefold()
-                    == existing.casefold()
-                    for existing in full_parts
+                if not is_meaningful_name(
+                    clean_part
                 ):
                     continue
 
-                full_parts.append(part)
+                if any(
+                    clean_part.casefold()
+                    == existing.casefold()
+                    for existing
+                    in full_parts
+                ):
+                    continue
 
-            full_name = ", ".join(full_parts)
+                full_parts.append(
+                    clean_part
+                )
 
-            if not is_meaningful_name(full_name):
-                display_name = (
-                    data.get("display_name")
-                    or ""
-                ).strip()
+            full_name = ", ".join(
+                full_parts
+            )
+
+            if not is_meaningful_name(
+                full_name
+            ):
+                display_name = _clean_text(
+                    data.get(
+                        "display_name"
+                    )
+                )
 
                 full_name = (
                     display_name
@@ -283,8 +359,16 @@ def get_location_details(
                 )
 
             return {
+                # Existing keys retained for
+                # compatibility.
                 "short": short_name,
                 "full": full_name,
+
+                # New structured metadata.
+                "short_name": short_name,
+                "city": city_name,
+                "full_name": full_name,
+
                 "latitude": rounded_latitude,
                 "longitude": rounded_longitude,
             }
@@ -339,6 +423,9 @@ def get_location_details(
     return {
         "short": fallback,
         "full": fallback,
+        "short_name": fallback,
+        "city": "",
+        "full_name": fallback,
         "latitude": rounded_latitude,
         "longitude": rounded_longitude,
     }
@@ -350,8 +437,8 @@ def get_location_name(
     language="en",
 ):
     """
-    Return only the short location name
-    for Telegram messages.
+    Return only the short Telegram
+    display name.
     """
 
     location = get_location_details(
@@ -360,4 +447,4 @@ def get_location_name(
         language,
     )
 
-    return location["short"]
+    return location["short_name"]

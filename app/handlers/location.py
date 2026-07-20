@@ -10,6 +10,10 @@ from app.services.pricing_service import calculate_fare
 from app.state.ride_state import ride_requests
 from app.state.driver_registration_state import driver_registration_state
 
+from app.keyboards.destination_menu import (
+    get_destination_menu,
+)
+
 from app.database.driver_repository import register_driver
 from app.keyboards.availability import (
     get_availability_keyboard,
@@ -121,11 +125,10 @@ async def receive_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
 
         await update.message.reply_text(
-            "✅ Pickup location received!\n\n"
-            "Please share your destination location.",
-            reply_markup=get_location_keyboard(
-                "📍 Share Destination Location"
-            ),
+            "✅ Pickup location received successfully!\n\n"
+            "📍 Where would you like to go?\n\n"
+            "Choose one of the options below.",
+            reply_markup=get_destination_menu(),
         )
 
     # Second location = Destination
