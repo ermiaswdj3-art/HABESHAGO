@@ -1,0 +1,15 @@
+"""
+Financial constants used throughout HABESHAGO.
+"""
+
+DEFAULT_COMMISSION_RATE = 0.10
+
+CURRENCY = "ETB"
+
+WALLET_STATUS_AVAILABLE = "available"
+WALLET_STATUS_PENDING = "pending"
+
+TRANSACTION_RIDE = "ride"
+TRANSACTION_COMMISSION = "commission"
+TRANSACTION_WITHDRAWAL = "withdrawal"
+TRANSACTION_ADJUSTMENT = "adjustment"

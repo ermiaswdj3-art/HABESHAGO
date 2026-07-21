@@ -56,28 +56,21 @@ def save_ride(
             destination_longitude,
             distance,
             fare,
-            service_type,
-            commission_rate,
-            commission_amount,
-            driver_earnings,
-            status
+            status,
+            created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         """,
         (
-            passenger_id,
-            driver_id,
-            pickup_latitude,
-            pickup_longitude,
-            destination_latitude,
-            destination_longitude,
-            distance,
-            fare,
-            service_type,
-            earnings["commission_rate"],
-            earnings["commission_amount"],
-            earnings["driver_earnings"],
-            status,
+           passenger_id,
+           driver_id,
+           pickup_latitude,
+           pickup_longitude,
+           destination_latitude,
+           destination_longitude,
+           distance,
+           fare,
+           status,
         ),
     )
 
