@@ -99,6 +99,13 @@ async def confirm_ride(
     pickup = ride_requests[user_id]["pickup"]
     destination = ride_requests[user_id]["destination"]
 
+    if destination is None:
+        await update.message.reply_text(
+            "❌ Destination location is missing.\n\n"
+            "Please choose your destination before confirming."
+        )
+        return
+
     pickup_name, destination_name = await asyncio.gather(
         asyncio.to_thread(
             get_location_name,
@@ -109,16 +116,8 @@ async def confirm_ride(
             get_location_name,
             destination[0],
             destination[1],
-        ),
-    )
-
-    if destination is None:
-        await update.message.reply_text(
-            "❌ Destination location is missing.\n\n"
-            "Please request the ride again."
-        )
-        return
-
+    ),
+)
     # ==========================================
     # TRIP CALCULATIONS
     # ==========================================
@@ -239,17 +238,22 @@ async def complete_ride_handler(
     print("========== COMPLETE RIDE ==========")
     print("Driver ID:", driver_id)
 
-    ride = get_latest_driver_ride(driver_id)
-
-    print("Ride found:", ride)
-
-    if ride is None:
+    if driver_id not in active_rides:
         await update.message.reply_text(
             "❌ You don't have an active ride."
         )
         return
 
-    ride_id = ride[0]
+    ride_id = active_rides[driver_id]["ride_id"]
+
+    ride = get_latest_driver_ride(driver_id)
+
+    if ride is None:
+        await update.message.reply_text(
+            "❌ Ride record not found."
+        )
+        return
+
     passenger_id = ride[1]
 
     # Mark ride completed.
@@ -377,13 +381,12 @@ async def arrived_handler(
 
     passenger_id = active_rides[driver_id]["passenger_id"]
 
-    ride = get_latest_driver_ride(driver_id)
+    ride_id = active_rides[driver_id]["ride_id"]
 
-    if ride is not None:
-        update_ride_status(
-            ride[0],
-            DRIVER_ARRIVED,
-        )
+    update_ride_status(
+        ride_id,
+        DRIVER_ARRIVED,
+    )
 
     # Notify passenger.
     await context.bot.send_message(
@@ -429,13 +432,12 @@ async def start_trip_handler(
     passenger_id = active_rides[driver_id]["passenger_id"]
     destination = active_rides[driver_id].get("destination")
 
-    ride = get_latest_driver_ride(driver_id)
+    ride_id = active_rides[driver_id]["ride_id"]
 
-    if ride is not None:
-        update_ride_status(
-            ride[0],
-            TRIP_STARTED,
-        )
+    update_ride_status(
+        ride_id,
+        TRIP_STARTED,
+    )
 
     # Notify passenger.
     await context.bot.send_message(

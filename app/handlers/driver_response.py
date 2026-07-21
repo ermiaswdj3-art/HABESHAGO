@@ -1,110 +1,176 @@
+import asyncio
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from app.state.driver_state import pending_driver_requests
-from app.state.ride_state import ride_requests
-from app.state.active_ride_state import active_rides
+from app.constants.ride_status import (
+    ACCEPTED,
+)
 
 from app.database.driver_repository import (
-    set_driver_unavailable,
     get_driver_by_id,
+    set_driver_unavailable,
 )
 
 from app.database.ride_repository import (
     save_ride,
 )
 
-from app.keyboards.trip_status import (
-    get_trip_status_keyboard,
+from app.keyboards.driver_menu import (
+    get_driver_menu,
 )
 
 from app.keyboards.main_menu import (
     get_main_menu,
 )
 
-from app.keyboards.driver_menu import (
-    get_driver_menu,
-)
-
 from app.keyboards.ride_status import (
     get_ride_status_keyboard,
 )
 
-from app.constants.ride_status import (
-    ACCEPTED,
+from app.keyboards.trip_status import (
+    get_trip_status_keyboard,
 )
 
-import asyncio
+from app.services.eta_service import (
+    calculate_eta,
+)
 
 from app.services.progress_service import (
     send_driver_progress,
 )
 
-from app.services.eta_service import calculate_eta
+from app.state.active_ride_state import (
+    active_rides,
+)
+
+from app.state.driver_state import (
+    pending_driver_requests,
+)
+
+from app.state.ride_state import (
+    ride_requests,
+)
 
 
-async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def accept_ride(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
     """
     Driver accepts a passenger's ride request.
+
+    The accepted ride is saved to the database,
+    accepted_at is recorded automatically, and
+    the ride becomes active for the driver.
     """
 
+    if update.message is None:
+        return
+
     driver_id = update.effective_user.id
+
+    # ==========================================
+    # PREVENT MULTIPLE ACTIVE RIDES
+    # ==========================================
 
     if driver_id in active_rides:
         await update.message.reply_text(
             "❌ You already have an active ride.\n\n"
-            "Please complete your current ride before accepting another."
+            "Please complete your current ride "
+            "before accepting another."
         )
         return
 
-    if driver_id not in pending_driver_requests:
+    # ==========================================
+    # VERIFY PENDING REQUEST
+    # ==========================================
 
+    request = pending_driver_requests.get(
+        driver_id
+    )
+
+    if request is None:
         await update.message.reply_text(
             "❌ No pending ride request."
         )
-
         return
 
-    request = pending_driver_requests[driver_id]
+    passenger_id = request["passenger_id"]
 
     # ==========================================
-    # SAVE RIDE
+    # SAVE ACCEPTED RIDE
     # ==========================================
 
-    save_ride(
-        passenger_id=request["passenger_id"],
+    ride_id = save_ride(
+        passenger_id=passenger_id,
         driver_id=driver_id,
         pickup_latitude=request["pickup"][0],
         pickup_longitude=request["pickup"][1],
-        destination_latitude=request["destination"][0],
-        destination_longitude=request["destination"][1],
+        destination_latitude=request[
+            "destination"
+        ][0],
+        destination_longitude=request[
+            "destination"
+        ][1],
         distance=request["distance"],
         fare=request["fare"],
         status=ACCEPTED,
+        service_type=request.get(
+            "service_type",
+            "fuel",
+        ),
     )
+
+    # save_ride() records:
+    #
+    # created_at
+    # requested_at
+    # accepted_at
+    #
+    # because this ride is saved with ACCEPTED.
 
     # ==========================================
     # DRIVER IS NOW BUSY
     # ==========================================
 
-    set_driver_unavailable(driver_id)
+    set_driver_unavailable(
+        driver_id
+    )
 
     active_rides[driver_id] = {
-       "passenger_id": request["passenger_id"],
-       "pickup": request["pickup"],
-       "destination": request["destination"],
+        "ride_id": ride_id,
+        "passenger_id": passenger_id,
+        "pickup": request["pickup"],
+        "destination": request["destination"],
+        "distance": request["distance"],
+        "fare": request["fare"],
+        "service_type": request.get(
+            "service_type",
+            "fuel",
+        ),
     }
 
-    driver = get_driver_by_id(driver_id)
+    driver = get_driver_by_id(
+        driver_id
+    )
 
-    eta = calculate_eta(request["pickup_distance"])
+    if driver is None:
+        await update.message.reply_text(
+            "❌ Driver profile could not be found."
+        )
+        return
+
+    eta = calculate_eta(
+        request["pickup_distance"]
+    )
 
     # ==========================================
     # NOTIFY PASSENGER
     # ==========================================
 
     await context.bot.send_message(
-        chat_id=request["passenger_id"],
+        chat_id=passenger_id,
         text=(
             "🎉 Your ride has been accepted!\n\n"
             f"👤 Driver: {driver[1]}\n"
@@ -112,38 +178,46 @@ async def accept_ride(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🚗 Vehicle: {driver[3]}\n"
             f"🎨 Color: {driver[4]}\n"
             f"🔢 Plate: {driver[5]}\n\n"
-            f"🚖 Your driver is on the way.\n\n"
+            "🚖 Your driver is on the way.\n\n"
             f"⏱ Estimated arrival: {eta} minutes."
         ),
         reply_markup=get_ride_status_keyboard(),
     )
+
+    # Start the temporary passenger progress
+    # notification task.
     asyncio.create_task(
         send_driver_progress(
             context,
-            request["passenger_id"],
+            passenger_id,
         )
     )
+
     # ==========================================
     # CONFIRM TO DRIVER
     # ==========================================
 
     await update.message.reply_text(
         "✅ Ride accepted successfully!\n\n"
-        "Drive safely to the passenger's pickup location.\n"
+        "Drive safely to the passenger's "
+        "pickup location.\n\n"
         "When you arrive, tap 📍 Arrived.",
         reply_markup=get_trip_status_keyboard(),
     )
 
     # ==========================================
-    # CLEAN UP MEMORY
+    # CLEAN UP PENDING MEMORY
     # ==========================================
 
-    passenger_id = request["passenger_id"]
+    ride_requests.pop(
+        passenger_id,
+        None,
+    )
 
-    if passenger_id in ride_requests:
-        del ride_requests[passenger_id]
-
-    del pending_driver_requests[driver_id]
+    pending_driver_requests.pop(
+        driver_id,
+        None,
+    )
 
 
 async def decline_ride(
@@ -151,30 +225,62 @@ async def decline_ride(
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """
-    Driver declines a passenger's ride request.
+    Driver declines a passenger's pending
+    ride request.
     """
+
+    if update.message is None:
+        return
 
     driver_id = update.effective_user.id
 
-    if driver_id in pending_driver_requests:
+    request = pending_driver_requests.get(
+        driver_id
+    )
 
-        request = pending_driver_requests[driver_id]
-
-        # Notify passenger
-        await context.bot.send_message(
-            chat_id=request["passenger_id"],
-            text=(
-                "😔 Your driver declined the ride.\n\n"
-                "Please request another ride."
-            ),
-            reply_markup=get_main_menu(),
+    if request is None:
+        await update.message.reply_text(
+            "❌ No pending ride request.",
+            reply_markup=get_driver_menu(),
         )
+        return
 
-        del pending_driver_requests[driver_id]
+    passenger_id = request["passenger_id"]
 
-    # Restore driver's normal dashboard
+    # ==========================================
+    # NOTIFY PASSENGER
+    # ==========================================
+
+    await context.bot.send_message(
+        chat_id=passenger_id,
+        text=(
+            "😔 The driver declined your ride.\n\n"
+            "Please request another ride."
+        ),
+        reply_markup=get_main_menu(),
+    )
+
+    # ==========================================
+    # CLEAN UP PENDING REQUEST
+    # ==========================================
+
+    pending_driver_requests.pop(
+        driver_id,
+        None,
+    )
+
+    ride_requests.pop(
+        passenger_id,
+        None,
+    )
+
+    # ==========================================
+    # RESTORE DRIVER MENU
+    # ==========================================
+
     await update.message.reply_text(
         "❌ Ride declined.\n\n"
-        "You are ready to receive another ride request.",
+        "You are ready to receive another "
+        "ride request.",
         reply_markup=get_driver_menu(),
     )
