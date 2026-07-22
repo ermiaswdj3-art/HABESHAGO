@@ -24,6 +24,10 @@ from app.handlers.callback_router import (
     route_callback,
 )
 
+from app.handlers.system_health import (
+    system_health,
+)
+
 from app.handlers.confirmation import (
     arrived_handler,
     cancel_ride,
@@ -181,6 +185,13 @@ def main():
         CommandHandler(
             "online",
             go_online,
+        )
+    )
+
+    app.add_handler(
+        CommandHandler(
+            "health",
+            system_health,
         )
     )
 
