@@ -28,6 +28,14 @@ from app.handlers.callback_router import (
     route_callback,
 )
 
+from app.handlers.admin_dashboard import (
+    show_admin_dashboard,
+)
+
+from app.handlers.active_ride_queue import (
+    show_active_ride_queue,
+)
+
 from app.handlers.recovered_ride import (
     show_recovered_ride,
 )
@@ -83,6 +91,10 @@ from app.handlers.rating import (
 
 from app.handlers.recent_places import (
     show_recent_places,
+)
+
+from app.handlers.live_statistics import (
+    show_live_statistics,
 )
 
 from app.handlers.ride import (
@@ -213,6 +225,13 @@ def main():
 
     app.add_handler(
         CommandHandler(
+            "admin",
+            show_admin_dashboard,
+        )
+    )
+
+    app.add_handler(
+        CommandHandler(
             "recover",
            show_recovered_ride,
         )
@@ -293,6 +312,16 @@ def main():
         MessageHandler(
             filters.TEXT
             & filters.Regex(
+                "^🛠 Admin Dashboard$"
+            ),
+            show_admin_dashboard,
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT
+            & filters.Regex(
                 "^👤 My Profile$"
             ),
             show_profile,
@@ -313,9 +342,63 @@ def main():
         MessageHandler(
             filters.TEXT
             & filters.Regex(
+                "^🏠 Main Menu$"
+            ),
+            start,
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT
+            & filters.Regex(
                 "^💼 Register as Driver$"
             ),
             become_driver,
+        )
+    )
+
+    # ==========================================
+    # ADMIN OPERATIONS
+    # ==========================================
+    
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT
+            & filters.Regex(
+                "^🩺 System Health$"
+            ),
+            system_health,
+        )
+    )
+    
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT
+            & filters.Regex(
+                "^🔄 Recover Active Rides$"
+            ),
+            show_recovered_ride,
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT
+            & filters.Regex(
+                "^📊 Live Statistics$"
+            ),
+            show_live_statistics,
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT
+            & filters.Regex(
+                "^📋 Active Ride Queue$"
+            ),
+            show_active_ride_queue,
         )
     )
 
