@@ -50,6 +50,10 @@ from app.services.driver_service import (
     find_nearest_driver,
 )
 
+from app.services.idempotency_service import (
+    is_duplicate_action,
+)
+
 from app.services.eta_service import (
     calculate_eta,
 )
@@ -89,6 +93,15 @@ async def confirm_ride(
         return
 
     user_id = update.effective_user.id
+
+    if is_duplicate_action(
+        user_id,
+        "confirm_ride",
+    ):
+        await update.message.reply_text(
+            "⏳ Your ride confirmation is already being processed."
+        )
+        return
 
     if user_id not in ride_requests:
         await update.message.reply_text(
@@ -235,6 +248,15 @@ async def complete_ride_handler(
 
     driver_id = update.effective_user.id
 
+    if is_duplicate_action(
+        driver_id,
+        "arrived",
+    ):
+        await update.message.reply_text(
+            "⏳ Your arrival update is already being processed."
+        )
+        return
+
     print("========== COMPLETE RIDE ==========")
     print("Driver ID:", driver_id)
 
@@ -373,6 +395,15 @@ async def arrived_handler(
 
     driver_id = update.effective_user.id
 
+    if is_duplicate_action(
+        driver_id,
+        "start_trip",
+    ):
+        await update.message.reply_text(
+            "⏳ Your trip-start update is already being processed."
+        )
+        return
+
     if driver_id not in active_rides:
         await update.message.reply_text(
             "❌ You don't have an active ride."
@@ -422,6 +453,15 @@ async def start_trip_handler(
         return
 
     driver_id = update.effective_user.id
+
+    if is_duplicate_action(
+        driver_id,
+        "complete_ride",
+    ):
+        await update.message.reply_text(
+            "⏳ Your ride completion is already being processed."
+        )
+        return
 
     if driver_id not in active_rides:
         await update.message.reply_text(

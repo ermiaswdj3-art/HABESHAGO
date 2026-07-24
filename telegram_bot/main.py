@@ -11,6 +11,10 @@ from telegram.ext import (
 from app.config.settings import BOT_TOKEN
 from app.database.database import create_tables
 
+from app.services.recovery_service import (
+    recover_active_rides,
+)
+
 from app.handlers.availability import (
     go_offline,
     go_online,
@@ -22,6 +26,14 @@ from app.handlers.call_passenger import (
 
 from app.handlers.callback_router import (
     route_callback,
+)
+
+from app.handlers.recovered_ride import (
+    show_recovered_ride,
+)
+
+from app.handlers.error_handler import (
+    global_error_handler,
 )
 
 from app.handlers.system_health import (
@@ -119,6 +131,10 @@ def main():
 
     create_tables()
 
+    recovered_ride_count = (
+        recover_active_rides()
+    )
+
     app = (
         Application.builder()
         .token(BOT_TOKEN)
@@ -192,6 +208,13 @@ def main():
         CommandHandler(
             "health",
             system_health,
+        )
+    )
+
+    app.add_handler(
+        CommandHandler(
+            "recover",
+           show_recovered_ride,
         )
     )
 
@@ -452,12 +475,21 @@ def main():
         )
     )
 
+    # ==========================================
+    # GLOBAL ERROR HANDLING
+    # ==========================================
+
+    app.add_error_handler(
+        global_error_handler,
+    )
+
     print("=" * 50)
     print(
         "🚖 HABESHAGO Bot is running..."
     )
     print(
-        "💾 Database initialized successfully."
+        "🔄 Active rides recovered: "
+        f"{recovered_ride_count}"
     )
     print(
         "Press Ctrl + C to stop the bot."

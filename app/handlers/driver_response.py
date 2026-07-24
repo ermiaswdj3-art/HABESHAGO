@@ -16,6 +16,10 @@ from app.database.ride_repository import (
     save_ride,
 )
 
+from app.services.idempotency_service import (
+    is_duplicate_action,
+)
+
 from app.keyboards.driver_menu import (
     get_driver_menu,
 )
@@ -69,6 +73,15 @@ async def accept_ride(
         return
 
     driver_id = update.effective_user.id
+
+    if is_duplicate_action(
+        driver_id,
+        "accept_ride",
+    ):
+        await update.message.reply_text(
+            "⏳ Your ride acceptance is already being processed."
+        )
+        return
 
     # ==========================================
     # PREVENT MULTIPLE ACTIVE RIDES
