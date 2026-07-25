@@ -402,6 +402,16 @@ def main():
         )
     )
 
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT
+            & filters.Regex(
+                 "^🚖 Resume Active Ride$"
+            ),
+            show_recovered_ride,
+        )
+    )
+
     # ==========================================
     # DRIVER RIDE FLOW
     # ==========================================

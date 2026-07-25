@@ -3,12 +3,26 @@ from telegram import (
     ReplyKeyboardMarkup,
 )
 
+from app.state.user_context import (
+    get_user_context,
+)
 
-def get_admin_dashboard_keyboard():
+
+def get_admin_dashboard_keyboard(
+    user_id,
+):
     """
-    Return the HABESHAGO administrator
-    operations keyboard.
+    Return a context-aware HABESHAGO
+    administrator operations keyboard.
+
+    The Resume Active Ride button appears
+    only when the administrator currently
+    has an active driver ride.
     """
+
+    user_context = get_user_context(
+        user_id
+    )
 
     keyboard = [
         [
@@ -27,20 +41,36 @@ def get_admin_dashboard_keyboard():
                 "📋 Active Ride Queue"
             ),
         ],
-        [
-            KeyboardButton(
-                "🚖 Driver Dashboard"
-            ),
-            KeyboardButton(
-                "👤 My Profile"
-            ),
-        ],
-        [
-            KeyboardButton(
-                "🏠 Main Menu"
-            ),
-        ],
     ]
+
+    if user_context[
+        "has_active_driver_ride"
+    ]:
+        keyboard.append(
+            [
+                KeyboardButton(
+                    "🚖 Resume Active Ride"
+                )
+            ]
+        )
+
+    keyboard.extend(
+        [
+            [
+                KeyboardButton(
+                    "🚖 Driver Dashboard"
+                ),
+                KeyboardButton(
+                    "👤 My Profile"
+                ),
+            ],
+            [
+                KeyboardButton(
+                    "🏠 Main Menu"
+                ),
+            ],
+        ]
+    )
 
     return ReplyKeyboardMarkup(
         keyboard,

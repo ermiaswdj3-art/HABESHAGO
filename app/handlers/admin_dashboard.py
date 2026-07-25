@@ -41,5 +41,7 @@ async def show_admin_dashboard(
         "🛠 HABESHAGO OPERATIONS CENTER\n\n"
         "Welcome, Administrator.\n\n"
         "Choose an operation below.",
-        reply_markup=get_admin_dashboard_keyboard(),
+        reply_markup=get_admin_dashboard_keyboard(
+            user_id
+        ),
     )
