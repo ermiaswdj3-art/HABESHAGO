@@ -1,10 +1,13 @@
 from telegram import (
     KeyboardButton,
-    ReplyKeyboardMarkup,
 )
 
 from app.state.user_context import (
     get_user_context,
+)
+
+from app.keyboards.workspace_layout import (
+    build_workspace,
 )
 
 
@@ -12,19 +15,15 @@ def get_admin_dashboard_keyboard(
     user_id,
 ):
     """
-    Return a context-aware HABESHAGO
-    administrator operations keyboard.
-
-    The Resume Active Ride button appears
-    only when the administrator currently
-    has an active driver ride.
+    Return the HABESHAGO
+    Operations Center.
     """
 
-    user_context = get_user_context(
+    context = get_user_context(
         user_id
     )
 
-    keyboard = [
+    header = [
         [
             KeyboardButton(
                 "🩺 System Health"
@@ -32,7 +31,10 @@ def get_admin_dashboard_keyboard(
             KeyboardButton(
                 "📊 Live Statistics"
             ),
-        ],
+        ]
+    ]
+
+    primary = [
         [
             KeyboardButton(
                 "🔄 Recover Active Rides"
@@ -40,13 +42,15 @@ def get_admin_dashboard_keyboard(
             KeyboardButton(
                 "📋 Active Ride Queue"
             ),
-        ],
+        ]
     ]
 
-    if user_context[
+    secondary = []
+
+    if context[
         "has_active_driver_ride"
     ]:
-        keyboard.append(
+        secondary.append(
             [
                 KeyboardButton(
                     "🚖 Resume Active Ride"
@@ -54,25 +58,28 @@ def get_admin_dashboard_keyboard(
             ]
         )
 
-    keyboard.extend(
+    secondary.append(
         [
-            [
-                KeyboardButton(
-                    "🚖 Driver Dashboard"
-                ),
-                KeyboardButton(
-                    "👤 My Profile"
-                ),
-            ],
-            [
-                KeyboardButton(
-                    "🏠 Main Menu"
-                ),
-            ],
+            KeyboardButton(
+                "🚖 Driver Dashboard"
+            ),
+            KeyboardButton(
+                "👤 My Profile"
+            ),
         ]
     )
 
-    return ReplyKeyboardMarkup(
-        keyboard,
-        resize_keyboard=True,
+    footer = [
+        [
+            KeyboardButton(
+                "🏠 Main Menu"
+            ),
+        ]
+    ]
+
+    return build_workspace(
+        header_buttons=header,
+        primary_buttons=primary,
+        secondary_buttons=secondary,
+        footer_buttons=footer,
     )
