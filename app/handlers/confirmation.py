@@ -1,5 +1,11 @@
+import asyncio
+
 from telegram import Update
 from telegram.ext import ContextTypes
+
+from app.constants.ride_states import (
+    RideState,
+)
 
 from app.constants.ride_status import (
     DRIVER_ARRIVED,
@@ -14,6 +20,7 @@ from app.database.ride_repository import (
     complete_ride,
     get_latest_driver_ride,
     get_ride_earnings,
+    get_ride_status,
     update_ride_status,
 )
 
@@ -54,6 +61,10 @@ from app.services.idempotency_service import (
     is_duplicate_action,
 )
 
+from app.services.ride_state_engine import (
+    validate_transition,
+)
+
 from app.services.eta_service import (
     calculate_eta,
 )
@@ -74,8 +85,6 @@ from app.state.ride_state import (
     ride_requests,
 )
 
-import asyncio
-
 from app.services.geocoding_service import (
     get_location_name,
 )
@@ -94,6 +103,10 @@ async def confirm_ride(
 
     user_id = update.effective_user.id
 
+    # ==========================================
+    # DUPLICATE-ACTION PROTECTION
+    # ==========================================
+
     if is_duplicate_action(
         user_id,
         "confirm_ride",
@@ -103,14 +116,30 @@ async def confirm_ride(
         )
         return
 
+    # ==========================================
+    # RIDE-REQUEST VALIDATION
+    # ==========================================
+
     if user_id not in ride_requests:
         await update.message.reply_text(
             "❌ No active ride request found."
         )
         return
 
-    pickup = ride_requests[user_id]["pickup"]
-    destination = ride_requests[user_id]["destination"]
+    pickup = ride_requests[user_id].get(
+        "pickup"
+    )
+
+    destination = ride_requests[user_id].get(
+        "destination"
+    )
+
+    if pickup is None:
+        await update.message.reply_text(
+            "❌ Pickup location is missing.\n\n"
+            "Please request the ride again."
+        )
+        return
 
     if destination is None:
         await update.message.reply_text(
@@ -118,6 +147,10 @@ async def confirm_ride(
             "Please choose your destination before confirming."
         )
         return
+
+    # ==========================================
+    # LOCATION NAMES
+    # ==========================================
 
     pickup_name, destination_name = await asyncio.gather(
         asyncio.to_thread(
@@ -129,8 +162,9 @@ async def confirm_ride(
             get_location_name,
             destination[0],
             destination[1],
-    ),
-)
+        ),
+    )
+
     # ==========================================
     # TRIP CALCULATIONS
     # ==========================================
@@ -142,8 +176,13 @@ async def confirm_ride(
         destination[1],
     )
 
-    fare = calculate_fare(distance)
-    trip_eta = calculate_eta(distance)
+    fare = calculate_fare(
+        distance
+    )
+
+    trip_eta = calculate_eta(
+        distance
+    )
 
     # ==========================================
     # FIND DRIVER
@@ -162,6 +201,10 @@ async def confirm_ride(
         )
         return
 
+    driver_id = driver[
+        "telegram_id"
+    ]
+
     pickup_eta = calculate_eta(
         driver["distance"]
     )
@@ -170,7 +213,9 @@ async def confirm_ride(
     # SAVE PENDING DRIVER REQUEST
     # ==========================================
 
-    pending_driver_requests[driver["telegram_id"]] = {
+    pending_driver_requests[
+        driver_id
+    ] = {
         "passenger_id": user_id,
         "pickup": pickup,
         "destination": destination,
@@ -188,7 +233,7 @@ async def confirm_ride(
     # ==========================================
 
     await context.bot.send_message(
-        chat_id=driver["telegram_id"],
+        chat_id=driver_id,
         text=(
             "🚖 NEW RIDE REQUEST\n\n"
             "🆔 Ride Reference: Pending\n\n"
@@ -215,12 +260,13 @@ async def confirm_ride(
         ),
     )
 
-    # Telegram cannot attach an inline keyboard and a reply
-    # keyboard to the same message, so Accept/Decline is sent
-    # as a second message.
+    # Telegram cannot attach an inline keyboard
+    # and a reply keyboard to the same message.
     await context.bot.send_message(
-        chat_id=driver["telegram_id"],
-        text="Would you like to accept this ride?",
+        chat_id=driver_id,
+        text=(
+            "Would you like to accept this ride?"
+        ),
         reply_markup=get_driver_ride_menu(),
     )
 
@@ -250,10 +296,10 @@ async def complete_ride_handler(
 
     if is_duplicate_action(
         driver_id,
-        "arrived",
+        "complete_ride",
     ):
         await update.message.reply_text(
-            "⏳ Your arrival update is already being processed."
+            "⏳ Your ride completion is already being processed."
         )
         return
 
@@ -387,7 +433,8 @@ async def arrived_handler(
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """
-    Driver has arrived at the passenger's pickup location.
+    Mark the driver as arrived at the
+    passenger's pickup location.
     """
 
     if update.message is None:
@@ -395,14 +442,22 @@ async def arrived_handler(
 
     driver_id = update.effective_user.id
 
+    # ==========================================
+    # DUPLICATE-ACTION PROTECTION
+    # ==========================================
+
     if is_duplicate_action(
         driver_id,
-        "start_trip",
+        "arrived",
     ):
         await update.message.reply_text(
-            "⏳ Your trip-start update is already being processed."
+            "⏳ Your arrival update is already being processed."
         )
         return
+
+    # ==========================================
+    # ACTIVE-RIDE VALIDATION
+    # ==========================================
 
     if driver_id not in active_rides:
         await update.message.reply_text(
@@ -410,16 +465,57 @@ async def arrived_handler(
         )
         return
 
-    passenger_id = active_rides[driver_id]["passenger_id"]
+    ride = active_rides[driver_id]
 
-    ride_id = active_rides[driver_id]["ride_id"]
+    passenger_id = ride["passenger_id"]
+    ride_id = ride["ride_id"]
+
+    current_state = get_ride_status(
+        ride_id
+    )
+
+    if current_state is None:
+        await update.message.reply_text(
+            "❌ The active ride could not be found.\n\n"
+            "Please contact HABESHAGO support."
+        )
+        return
+
+    # ==========================================
+    # RIDE STATE ENGINE
+    # ==========================================
+
+    try:
+        validate_transition(
+            current_state,
+            RideState.DRIVER_ARRIVED,
+        )
+
+    except ValueError:
+        await update.message.reply_text(
+            "❌ This ride cannot be marked as arrived "
+            "from its current state.\n\n"
+            f"Current state: {current_state}"
+        )
+        return
+
+    # ==========================================
+    # PERSIST AND SYNCHRONIZE STATE
+    # ==========================================
 
     update_ride_status(
         ride_id,
-        DRIVER_ARRIVED,
+        RideState.DRIVER_ARRIVED,
     )
 
-    # Notify passenger.
+    active_rides[driver_id][
+        "status"
+    ] = RideState.DRIVER_ARRIVED
+
+    # ==========================================
+    # NOTIFY PASSENGER
+    # ==========================================
+
     await context.bot.send_message(
         chat_id=passenger_id,
         text=(
@@ -431,7 +527,10 @@ async def arrived_handler(
         ),
     )
 
-    # Notify driver.
+    # ==========================================
+    # NOTIFY DRIVER
+    # ==========================================
+
     await update.message.reply_text(
         "✅ Passenger has been notified.\n\n"
         "⏳ Please wait for the passenger to board.\n\n"
@@ -456,10 +555,10 @@ async def start_trip_handler(
 
     if is_duplicate_action(
         driver_id,
-        "complete_ride",
+        "start_trip",
     ):
         await update.message.reply_text(
-            "⏳ Your ride completion is already being processed."
+            "⏳ Your trip-start update is already being processed."
         )
         return
 
