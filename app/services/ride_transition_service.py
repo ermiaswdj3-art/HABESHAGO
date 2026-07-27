@@ -8,17 +8,29 @@ Responsibilities:
 - Validate ride transitions
 - Persist ride state
 - Synchronize in-memory ride state
+- Publish platform state-change events
 
 Future responsibilities:
-- Publish events
 - Audit logging
 - Analytics
 - Notifications
 """
 
+from app.constants.event_types import (
+    EventType,
+)
+
 from app.database.ride_repository import (
     get_ride_status,
     update_ride_status,
+)
+
+from app.models.event import (
+    Event,
+)
+
+from app.services.event_engine import (
+    publish_event,
 )
 
 from app.services.ride_state_engine import (
@@ -52,14 +64,10 @@ def transition_ride(
     # LOAD CURRENT STATE
     # ==========================================
 
-    current_state = get_ride_status(
-        ride_id
-    )
+    current_state = get_ride_status(ride_id)
 
     if current_state is None:
-        raise ValueError(
-            "Ride not found."
-        )
+        raise ValueError("Ride not found.")
 
     # ==========================================
     # VALIDATE TRANSITION
@@ -84,8 +92,28 @@ def transition_ride(
     # ==========================================
 
     if driver_id in active_rides:
-        active_rides[driver_id][
-            "status"
-        ] = next_state
+        active_rides[driver_id]["status"] = next_state
+
+    # ==========================================
+    # BUILD PLATFORM EVENT
+    # ==========================================
+
+    event = Event(
+        event_type=EventType.STATE_CHANGED,
+        entity="ride",
+        source="RideTransitionService",
+        payload={
+            "entity_id": ride_id,
+            "driver_id": driver_id,
+            "from_state": current_state,
+            "to_state": next_state,
+        },
+    )
+
+    # ==========================================
+    # PUBLISH PLATFORM EVENT
+    # ==========================================
+
+    publish_event(event)
 
     return next_state

@@ -32,6 +32,10 @@ from app.handlers.admin_dashboard import (
     show_admin_dashboard,
 )
 
+from app.listeners.register_listeners import (
+    register_event_listeners,
+)
+
 from app.handlers.active_ride_queue import (
     show_active_ride_queue,
 )
@@ -125,33 +129,23 @@ from app.handlers.update_driver_location import (
     request_driver_location,
 )
 
-
 logging.basicConfig(
-    format=(
-        "%(asctime)s - %(name)s - "
-        "%(levelname)s - %(message)s"
-    ),
+    format=("%(asctime)s - %(name)s - " "%(levelname)s - %(message)s"),
     level=logging.INFO,
 )
 
 
 def main():
     if not BOT_TOKEN:
-        raise ValueError(
-            "BOT_TOKEN not found in .env"
-        )
+        raise ValueError("BOT_TOKEN not found in .env")
 
     create_tables()
 
-    recovered_ride_count = (
-        recover_active_rides()
-    )
+    register_event_listeners()
 
-    app = (
-        Application.builder()
-        .token(BOT_TOKEN)
-        .build()
-    )
+    recovered_ride_count = recover_active_rides()
+
+    app = Application.builder().token(BOT_TOKEN).build()
 
     # ==========================================
     # CALLBACK QUERIES
@@ -233,7 +227,7 @@ def main():
     app.add_handler(
         CommandHandler(
             "recover",
-           show_recovered_ride,
+            show_recovered_ride,
         )
     )
 
@@ -250,110 +244,77 @@ def main():
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^🛺 Request Ride$"
-            ),
+            filters.TEXT & filters.Regex("^🛺 Request Ride$"),
             request_ride,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^🔍 Search Destination$"
-            ),
+            filters.TEXT & filters.Regex("^🔍 Search Destination$"),
             start_destination_search,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^🕒 Recent Places$"
-            ),
+            filters.TEXT & filters.Regex("^🕒 Recent Places$"),
             show_recent_places,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^📍 Ride Status$"
-            ),
+            filters.TEXT & filters.Regex("^📍 Ride Status$"),
             ride_status,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^✅ Confirm Ride$"
-            ),
+            filters.TEXT & filters.Regex("^✅ Confirm Ride$"),
             confirm_ride,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^❌ Cancel Ride$"
-            ),
+            filters.TEXT & filters.Regex("^❌ Cancel Ride$"),
             cancel_ride,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^🛠 Admin Dashboard$"
-            ),
+            filters.TEXT & filters.Regex("^🛠 Admin Dashboard$"),
             show_admin_dashboard,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^👤 My Profile$"
-            ),
+            filters.TEXT & filters.Regex("^👤 My Profile$"),
             show_profile,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^📋 My Rides$"
-            ),
+            filters.TEXT & filters.Regex("^📋 My Rides$"),
             show_rides,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^🏠 Main Menu$"
-            ),
+            filters.TEXT & filters.Regex("^🏠 Main Menu$"),
             start,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^💼 Register as Driver$"
-            ),
+            filters.TEXT & filters.Regex("^💼 Register as Driver$"),
             become_driver,
         )
     )
@@ -361,53 +322,38 @@ def main():
     # ==========================================
     # ADMIN OPERATIONS
     # ==========================================
-    
+
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^🩺 System Health$"
-            ),
+            filters.TEXT & filters.Regex("^🩺 System Health$"),
             system_health,
         )
     )
-    
+
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^🔄 Recover Active Rides$"
-            ),
+            filters.TEXT & filters.Regex("^🔄 Recover Active Rides$"),
             show_recovered_ride,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^📊 Live Statistics$"
-            ),
+            filters.TEXT & filters.Regex("^📊 Live Statistics$"),
             show_live_statistics,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^📋 Active Ride Queue$"
-            ),
+            filters.TEXT & filters.Regex("^📋 Active Ride Queue$"),
             show_active_ride_queue,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                 "^🚖 Resume Active Ride$"
-            ),
+            filters.TEXT & filters.Regex("^🚖 Resume Active Ride$"),
             show_recovered_ride,
         )
     )
@@ -418,60 +364,42 @@ def main():
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^✅ Accept Ride$"
-            ),
+            filters.TEXT & filters.Regex("^✅ Accept Ride$"),
             accept_ride,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^❌ Decline Ride$"
-            ),
+            filters.TEXT & filters.Regex("^❌ Decline Ride$"),
             decline_ride,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^📞 Call Passenger$"
-            ),
+            filters.TEXT & filters.Regex("^📞 Call Passenger$"),
             call_passenger,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^📍 Arrived$"
-            ),
+            filters.TEXT & filters.Regex("^📍 Arrived$"),
             arrived_handler,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^🚕 Start Trip$"
-            ),
+            filters.TEXT & filters.Regex("^🚕 Start Trip$"),
             start_trip_handler,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^🏁 Complete Ride$"
-            ),
+            filters.TEXT & filters.Regex("^🏁 Complete Ride$"),
             complete_ride_handler,
         )
     )
@@ -482,40 +410,28 @@ def main():
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^🚖 Driver Dashboard$"
-            ),
+            filters.TEXT & filters.Regex("^🚖 Driver Dashboard$"),
             show_driver_dashboard,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^🟢 Go Online$"
-            ),
+            filters.TEXT & filters.Regex("^🟢 Go Online$"),
             go_online,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^🔴 Go Offline$"
-            ),
+            filters.TEXT & filters.Regex("^🔴 Go Offline$"),
             go_offline,
         )
     )
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^📍 Update My Location$"
-            ),
+            filters.TEXT & filters.Regex("^📍 Update My Location$"),
             request_driver_location,
         )
     )
@@ -526,10 +442,7 @@ def main():
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & filters.Regex(
-                "^⭐ [1-5]$"
-            ),
+            filters.TEXT & filters.Regex("^⭐ [1-5]$"),
             rate_driver_handler,
         )
     )
@@ -551,8 +464,7 @@ def main():
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT
-            & ~filters.COMMAND,
+            filters.TEXT & ~filters.COMMAND,
             route_text,
         )
     )
@@ -577,16 +489,9 @@ def main():
     )
 
     print("=" * 50)
-    print(
-        "🚖 HABESHAGO Bot is running..."
-    )
-    print(
-        "🔄 Active rides recovered: "
-        f"{recovered_ride_count}"
-    )
-    print(
-        "Press Ctrl + C to stop the bot."
-    )
+    print("🚖 HABESHAGO Bot is running...")
+    print("🔄 Active rides recovered: " f"{recovered_ride_count}")
+    print("Press Ctrl + C to stop the bot.")
     print("=" * 50)
 
     app.run_polling(

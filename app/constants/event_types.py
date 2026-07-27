@@ -1,0 +1,57 @@
+"""
+HABESHAGO Event Types
+
+This module defines the official event
+vocabulary used across the HABESHAGO
+platform.
+
+Every significant business action should
+eventually publish one of these events.
+
+The Event Engine becomes the central
+communication layer between platform
+components.
+"""
+
+
+class EventType:
+    # ==========================================
+    # RIDE EVENTS
+    # ==========================================
+
+    RIDE_REQUESTED = "RIDE_REQUESTED"
+
+    DRIVER_ASSIGNED = "DRIVER_ASSIGNED"
+
+    DRIVER_ACCEPTED = "DRIVER_ACCEPTED"
+
+    DRIVER_ARRIVED = "DRIVER_ARRIVED"
+
+    PASSENGER_ON_BOARD = "PASSENGER_ON_BOARD"
+
+    TRIP_STARTED = "TRIP_STARTED"
+
+    TRIP_COMPLETED = "TRIP_COMPLETED"
+
+    RIDE_CANCELLED = "RIDE_CANCELLED"
+
+    # ==========================================
+    # DRIVER EVENTS
+    # ==========================================
+
+    DRIVER_ONLINE = "DRIVER_ONLINE"
+
+    DRIVER_OFFLINE = "DRIVER_OFFLINE"
+
+    # ==========================================
+    # PASSENGER EVENTS
+    # ==========================================
+
+    PASSENGER_REGISTERED = "PASSENGER_REGISTERED"
+
+    DRIVER_REGISTERED = "DRIVER_REGISTERED"
+    # ==========================================
+    # PLATFORM EVENTS
+    # ==========================================
+
+    STATE_CHANGED = "STATE_CHANGED"
