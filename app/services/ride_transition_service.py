@@ -64,10 +64,14 @@ def transition_ride(
     # LOAD CURRENT STATE
     # ==========================================
 
-    current_state = get_ride_status(ride_id)
+    current_state = get_ride_status(
+        ride_id
+    )
 
     if current_state is None:
-        raise ValueError("Ride not found.")
+        raise ValueError(
+            "Ride not found."
+        )
 
     # ==========================================
     # VALIDATE TRANSITION
@@ -77,6 +81,21 @@ def transition_ride(
         current_state,
         next_state,
     )
+
+    # ==========================================
+    # LOAD ACTIVE-RIDE PARTICIPANTS
+    # ==========================================
+
+    active_ride = active_rides.get(
+        driver_id
+    )
+
+    passenger_id = None
+
+    if active_ride is not None:
+        passenger_id = active_ride.get(
+            "passenger_id"
+        )
 
     # ==========================================
     # UPDATE DATABASE
@@ -91,8 +110,10 @@ def transition_ride(
     # SYNCHRONIZE MEMORY
     # ==========================================
 
-    if driver_id in active_rides:
-        active_rides[driver_id]["status"] = next_state
+    if active_ride is not None:
+        active_ride[
+            "status"
+        ] = next_state
 
     # ==========================================
     # BUILD PLATFORM EVENT
@@ -104,7 +125,9 @@ def transition_ride(
         source="RideTransitionService",
         payload={
             "entity_id": ride_id,
+            "ride_id": ride_id,
             "driver_id": driver_id,
+            "passenger_id": passenger_id,
             "from_state": current_state,
             "to_state": next_state,
         },
@@ -114,6 +137,8 @@ def transition_ride(
     # PUBLISH PLATFORM EVENT
     # ==========================================
 
-    publish_event(event)
+    publish_event(
+        event
+    )
 
     return next_state

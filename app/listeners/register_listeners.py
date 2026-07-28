@@ -13,6 +13,10 @@ from app.listeners.passenger_notification_listener import (
     passenger_notification_listener,
 )
 
+from app.listeners.synchronization_listener import (
+    synchronization_listener,
+)
+
 from app.services.event_bus import (
     subscribe,
 )
@@ -36,6 +40,11 @@ def register_event_listeners() -> None:
     subscribe(
         EventType.STATE_CHANGED,
         passenger_notification_listener,
+    )
+
+    subscribe(
+        EventType.STATE_CHANGED,
+        synchronization_listener,
     )
 
     _listeners_registered = True
