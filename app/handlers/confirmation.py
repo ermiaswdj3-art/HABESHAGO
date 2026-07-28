@@ -195,6 +195,28 @@ async def confirm_ride(
 
     pickup_eta = calculate_eta(driver["distance"])
 
+        # ==========================================
+    # LIVE LOCATION INFORMATION
+    # ==========================================
+
+    location_status = driver.get(
+        "location_status",
+        "UNKNOWN",
+    )
+
+    location_recorded_at = driver.get(
+        "location_recorded_at"
+    )
+
+    if location_recorded_at is not None:
+        location_updated_text = (
+            location_recorded_at.strftime(
+                "%Y-%m-%d %H:%M:%S UTC"
+            )
+        )
+    else:
+        location_updated_text = "Unknown"
+
     # ==========================================
     # SAVE PENDING DRIVER REQUEST
     # ==========================================
@@ -227,6 +249,13 @@ async def confirm_ride(
             f"{destination_name}\n\n"
             "📏 Distance to Pickup\n"
             f"{driver['distance']:.2f} km\n\n"
+
+            "📡 Live Location\n"
+            f"🟢 {location_status}\n\n"
+
+            "🕒 Location Updated\n"
+            f"{location_updated_text}\n\n"
+
             "⏱ Pickup ETA\n"
             f"{pickup_eta} minutes\n\n"
             "🛣 Trip Distance\n"

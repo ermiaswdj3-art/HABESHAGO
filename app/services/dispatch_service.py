@@ -6,6 +6,7 @@ Intelligent Dispatch Engine.
 
 Responsibilities:
 - Load eligible drivers
+- Require a fresh live driver location
 - Calculate pickup distance
 - Build dispatch candidates
 - Apply pickup-radius rules
@@ -30,6 +31,10 @@ from app.services.dispatch_engine import (
 
 from app.services.distance_service import (
     calculate_distance,
+)
+
+from app.services.live_location_service import (
+    get_usable_live_location,
 )
 
 from app.state.active_ride_state import (
@@ -79,7 +84,10 @@ def find_best_driver(
 ) -> dict | None:
     """
     Find the strongest eligible driver match
-    for the passenger's pickup location.
+    using fresh live-location data.
+
+    Drivers without a fresh usable location
+    are excluded from dispatch.
 
     Return None when no suitable driver exists.
     """
@@ -102,6 +110,8 @@ def find_best_driver(
         tuple,
     ] = {}
 
+    driver_locations = {}
+
     # ==========================================
     # BUILD DISPATCH CANDIDATES
     # ==========================================
@@ -109,24 +119,61 @@ def find_best_driver(
     for driver in drivers:
         driver_id = driver[0]
 
+        print(
+            "\nChecking dispatch candidate:",
+            driver_id,
+            driver[1],
+        )
+
         # During controlled local testing, only
         # explicitly approved driver accounts are
-        # considered. With no environment value,
-        # all eligible drivers are considered.
-        if test_driver_ids and driver_id not in test_driver_ids:
+        # considered. When no test IDs are set,
+        # every eligible driver is considered.
+        if (
+            test_driver_ids
+            and driver_id not in test_driver_ids
+        ):
+            print(
+                "Rejected: not included in "
+                "HABESHAGO_TEST_DRIVER_IDS."
+            )
             continue
 
-        driver_latitude = driver[7]
-        driver_longitude = driver[8]
+        # The database coordinates are no longer
+        # trusted for live dispatch decisions.
+        live_location = get_usable_live_location(
+            driver_id
+        )
+
+        print(
+            "Usable live location:",
+            live_location,
+        )
+
+        if live_location is None:
+            print(
+                "Rejected: no fresh usable "
+                "live location."
+            )
+            continue
 
         distance = calculate_distance(
             passenger_latitude,
             passenger_longitude,
-            driver_latitude,
-            driver_longitude,
+            live_location.latitude,
+            live_location.longitude,
+        )
+
+        print(
+            "Calculated pickup distance:",
+            f"{distance:.2f} km",
         )
 
         if distance > MAX_PICKUP_DISTANCE_KM:
+            print(
+                "Rejected: outside maximum "
+                "pickup distance."
+            )
             continue
 
         candidate = DispatchCandidate(
@@ -141,6 +188,8 @@ def find_best_driver(
         candidates.append(candidate)
 
         driver_records[driver_id] = driver
+
+        driver_locations[driver_id] = live_location
 
     if not candidates:
         return None
@@ -161,6 +210,51 @@ def find_best_driver(
     best_candidate = eligible_candidates[0]
 
     selected_driver = driver_records[best_candidate.driver_id]
+
+    selected_location = driver_locations[best_candidate.driver_id]
+
+    # ==========================================
+    # DISPATCH DECISION LOG
+    # ==========================================
+
+    print("\n========== HABESHAGO DISPATCH ==========")
+
+    print(
+        "Driver ID:",
+        selected_driver[0],
+    )
+
+    print(
+        "Driver Name:",
+        selected_driver[1],
+    )
+
+    print(
+        "Pickup Distance:",
+        f"{best_candidate.distance_km:.2f} km",
+    )
+
+    print(
+        "Dispatch Score:",
+        f"{best_candidate.score:.2f}",
+    )
+
+    print(
+        "Dispatch Reasons:",
+        best_candidate.reasons,
+    )
+
+    print(
+        "Location Status:",
+        selected_location.status,
+    )
+
+    print(
+        "Location Recorded At:",
+        selected_location.recorded_at,
+    )
+
+    print("========================================\n")
 
     # ==========================================
     # RETURN COMPATIBLE DRIVER RESULT
@@ -183,4 +277,6 @@ def find_best_driver(
             2,
         ),
         "dispatch_reasons": list(best_candidate.reasons),
+        "location_status": (selected_location.status),
+        "location_recorded_at": (selected_location.recorded_at),
     }
