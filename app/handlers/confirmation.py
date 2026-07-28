@@ -53,8 +53,8 @@ from app.services.distance_service import (
     calculate_distance,
 )
 
-from app.services.driver_service import (
-    find_nearest_driver,
+from app.services.dispatch_service import (
+    find_best_driver,
 )
 
 from app.services.idempotency_service import (
@@ -89,6 +89,7 @@ from app.services.geocoding_service import (
     get_location_name,
 )
 
+
 async def confirm_ride(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -121,23 +122,16 @@ async def confirm_ride(
     # ==========================================
 
     if user_id not in ride_requests:
-        await update.message.reply_text(
-            "❌ No active ride request found."
-        )
+        await update.message.reply_text("❌ No active ride request found.")
         return
 
-    pickup = ride_requests[user_id].get(
-        "pickup"
-    )
+    pickup = ride_requests[user_id].get("pickup")
 
-    destination = ride_requests[user_id].get(
-        "destination"
-    )
+    destination = ride_requests[user_id].get("destination")
 
     if pickup is None:
         await update.message.reply_text(
-            "❌ Pickup location is missing.\n\n"
-            "Please request the ride again."
+            "❌ Pickup location is missing.\n\n" "Please request the ride again."
         )
         return
 
@@ -176,19 +170,15 @@ async def confirm_ride(
         destination[1],
     )
 
-    fare = calculate_fare(
-        distance
-    )
+    fare = calculate_fare(distance)
 
-    trip_eta = calculate_eta(
-        distance
-    )
+    trip_eta = calculate_eta(distance)
 
     # ==========================================
     # FIND DRIVER
     # ==========================================
 
-    driver = find_nearest_driver(
+    driver = find_best_driver(
         pickup[0],
         pickup[1],
     )
@@ -201,21 +191,15 @@ async def confirm_ride(
         )
         return
 
-    driver_id = driver[
-        "telegram_id"
-    ]
+    driver_id = driver["telegram_id"]
 
-    pickup_eta = calculate_eta(
-        driver["distance"]
-    )
+    pickup_eta = calculate_eta(driver["distance"])
 
     # ==========================================
     # SAVE PENDING DRIVER REQUEST
     # ==========================================
 
-    pending_driver_requests[
-        driver_id
-    ] = {
+    pending_driver_requests[driver_id] = {
         "passenger_id": user_id,
         "pickup": pickup,
         "destination": destination,
@@ -264,9 +248,7 @@ async def confirm_ride(
     # and a reply keyboard to the same message.
     await context.bot.send_message(
         chat_id=driver_id,
-        text=(
-            "Would you like to accept this ride?"
-        ),
+        text=("Would you like to accept this ride?"),
         reply_markup=get_driver_ride_menu(),
     )
 
@@ -307,9 +289,7 @@ async def complete_ride_handler(
     print("Driver ID:", driver_id)
 
     if driver_id not in active_rides:
-        await update.message.reply_text(
-            "❌ You don't have an active ride."
-        )
+        await update.message.reply_text("❌ You don't have an active ride.")
         return
 
     ride_id = active_rides[driver_id]["ride_id"]
@@ -317,9 +297,7 @@ async def complete_ride_handler(
     ride = get_latest_driver_ride(driver_id)
 
     if ride is None:
-        await update.message.reply_text(
-            "❌ Ride record not found."
-        )
+        await update.message.reply_text("❌ Ride record not found.")
         return
 
     passenger_id = ride[1]
@@ -340,10 +318,7 @@ async def complete_ride_handler(
     # Ask passenger to rate the driver.
     await context.bot.send_message(
         chat_id=passenger_id,
-        text=(
-            "🎉 Your ride has been completed!\n\n"
-            "⭐ Please rate your driver."
-        ),
+        text=("🎉 Your ride has been completed!\n\n" "⭐ Please rate your driver."),
         reply_markup=get_rating_menu(),
     )
 
@@ -364,9 +339,7 @@ async def complete_ride_handler(
         driver_earnings,
     ) = earnings
 
-    commission_percentage = int(
-        commission_rate * 100
-    )
+    commission_percentage = int(commission_rate * 100)
 
     service_names = {
         "fuel": "⛽ Fuel Ride",
@@ -460,9 +433,7 @@ async def arrived_handler(
     # ==========================================
 
     if driver_id not in active_rides:
-        await update.message.reply_text(
-            "❌ You don't have an active ride."
-        )
+        await update.message.reply_text("❌ You don't have an active ride.")
         return
 
     ride = active_rides[driver_id]
@@ -470,9 +441,7 @@ async def arrived_handler(
     passenger_id = ride["passenger_id"]
     ride_id = ride["ride_id"]
 
-    current_state = get_ride_status(
-        ride_id
-    )
+    current_state = get_ride_status(ride_id)
 
     if current_state is None:
         await update.message.reply_text(
@@ -508,9 +477,7 @@ async def arrived_handler(
         RideState.DRIVER_ARRIVED,
     )
 
-    active_rides[driver_id][
-        "status"
-    ] = RideState.DRIVER_ARRIVED
+    active_rides[driver_id]["status"] = RideState.DRIVER_ARRIVED
 
     # ==========================================
     # NOTIFY PASSENGER
@@ -563,9 +530,7 @@ async def start_trip_handler(
         return
 
     if driver_id not in active_rides:
-        await update.message.reply_text(
-            "❌ You don't have an active ride."
-        )
+        await update.message.reply_text("❌ You don't have an active ride.")
         return
 
     passenger_id = active_rides[driver_id]["passenger_id"]
@@ -581,10 +546,7 @@ async def start_trip_handler(
     # Notify passenger.
     await context.bot.send_message(
         chat_id=passenger_id,
-        text=(
-            "🚕 Your trip has started!\n\n"
-            "Enjoy your journey with HABESHAGO 🇪🇹"
-        ),
+        text=("🚕 Your trip has started!\n\n" "Enjoy your journey with HABESHAGO 🇪🇹"),
     )
 
     # Fallback for older active-ride records that do not
