@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>
+        {% block title %}HABESHAGO{% endblock %}
+    </title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+
+    <div id="app">
+
+        <header>
+            <h1>{{ page.layout.header.title }}</h1>
+            <p>{{ page.layout.header.subtitle }}</p>
+        </header>
+
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer>
+
+            <nav>
+
+                <a href="/"
+                   class="nav-link {% if active_page == 'home' %}nav-link-active{% endif %}">
+                    🏠 Home
+                </a>
+
+                <a href="/passenger"
+                   class="nav-link {% if active_page == 'passenger' %}nav-link-active{% endif %}">
+                    🚖 My Trips
+                </a>
+
+                <a href="/driver"
+                   class="nav-link {% if active_page == 'driver' %}nav-link-active{% endif %}">
+                    👤 Profile
+                </a>
+
+            </nav>
+
+        </footer>
+
+    </div>
+
+</body>
+
+</html>

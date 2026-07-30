@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}
+HABESHAGO — Passenger Dashboard
+{% endblock %}
+
+{% block content %}
+
+<section class="dashboard-welcome card">
+    <p class="eyebrow">Passenger Dashboard</p>
+
+    <h2>
+        {{ page.layout.content.welcome.title }}
+    </h2>
+
+    <p>
+        {{ page.layout.content.welcome.subtitle }}
+    </p>
+</section>
+
+
+<section class="dashboard-section">
+
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Quick Access</p>
+            <h3>What would you like to do?</h3>
+        </div>
+    </div>
+
+    <div class="quick-action-grid">
+
+        {% for action in page.layout.content.quick_actions %}
+
+            <button
+                class="
+                    quick-action-card
+                    {% if action == '🚖 Request Ride' %}
+                        quick-action-primary
+                    {% endif %}
+                "
+                type="button"
+            >
+                <span>{{ action }}</span>
+            </button>
+
+        {% endfor %}
+
+    </div>
+
+</section>
+
+
+<section class="dashboard-section">
+
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">HABESHAGO Ecosystem</p>
+            <h3>Available Services</h3>
+        </div>
+    </div>
+
+    <div class="dashboard-service-grid">
+
+        {% for service in page.layout.content.active_services %}
+
+            <article
+                class="
+                    dashboard-service-card
+                    {% if not service.available %}
+                        service-card-disabled
+                    {% endif %}
+                "
+            >
+
+                <div class="service-icon">
+                    {% if service.title == "Ride" %}
+                        🚖
+                    {% elif service.title == "Transit" %}
+                        🚌
+                    {% elif service.title == "Logistics" %}
+                        📦
+                    {% endif %}
+                </div>
+
+                <div>
+                    <h4>{{ service.title }}</h4>
+
+                    {% if service.available %}
+                        <span class="status-badge status-available">
+                            Available
+                        </span>
+                    {% else %}
+                        <span class="status-badge status-coming-soon">
+                            Coming Soon
+                        </span>
+                    {% endif %}
+                </div>
+
+            </article>
+
+        {% endfor %}
+
+    </div>
+
+</section>
+
+{% endblock %}

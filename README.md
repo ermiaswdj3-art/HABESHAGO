@@ -280,6 +280,46 @@ Every commit represents another step toward that vision.
 
 ---
 
+## HABESHAGO Mini App
+
+HABESHAGO now includes a browser-based Mini App built with Flask.
+
+### Current Features
+
+- Ecosystem Home Screen
+- Passenger Dashboard
+- Driver Dashboard
+- Shared Design System
+- Responsive Layout
+- Navigation Between Pages
+
+### Architecture
+
+```
+Python Page Models
+        │
+        ▼
+Flask Routes
+        │
+        ▼
+Jinja Templates
+        │
+        ▼
+CSS Design System
+        │
+        ▼
+Browser
+```
+
+### Roadmap
+
+- Interactive Ride Request
+- Live Map Integration
+- Driver Tracking
+- Public Bus Tracker
+- Logistics Dashboard
+- AI-powered Features
+
 > **"Engineering Ethiopia's AI-Powered Mobility Future."**
 
 🇪🇹 Built with dedication.

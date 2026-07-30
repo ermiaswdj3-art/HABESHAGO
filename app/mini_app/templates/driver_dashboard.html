@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}
+Driver Dashboard
+{% endblock %}
+
+{% block content %}
+
+<section class="dashboard-welcome card">
+
+    <p class="eyebrow">
+        Driver Dashboard
+    </p>
+
+    <h2>
+        {{ page.layout.content.welcome.title }}
+    </h2>
+
+    <p>
+        {{ page.layout.content.welcome.subtitle }}
+    </p>
+
+</section>
+
+
+<section class="dashboard-section">
+
+    <div class="section-heading">
+
+        <div>
+
+            <p class="eyebrow">
+                Driver Status
+            </p>
+
+            <h3>
+                {{ page.layout.content.availability.label }}
+            </h3>
+
+        </div>
+
+    </div>
+
+    <button class="primary-button">
+
+        {{ page.layout.content.availability.action }}
+
+    </button>
+
+</section>
+
+
+<section class="dashboard-section">
+
+    <div class="section-heading">
+
+        <div>
+
+            <p class="eyebrow">
+                Today's Summary
+            </p>
+
+            <h3>
+                Performance
+            </h3>
+
+        </div>
+
+    </div>
+
+    <div class="dashboard-service-grid">
+
+        <article class="dashboard-service-card">
+
+            <h4>Trips</h4>
+
+            <p>{{ page.layout.content.summary.today_trips }}</p>
+
+        </article>
+
+        <article class="dashboard-service-card">
+
+            <h4>Earnings</h4>
+
+            <p>{{ page.layout.content.summary.today_earnings }}</p>
+
+        </article>
+
+        <article class="dashboard-service-card">
+
+            <h4>Rating</h4>
+
+            <p>{{ page.layout.content.summary.rating }}</p>
+
+        </article>
+
+    </div>
+
+</section>
+
+{% endblock %}

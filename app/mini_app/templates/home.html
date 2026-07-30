@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}
+HABESHAGO — Home
+{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+    <p class="eyebrow">Your mobility ecosystem</p>
+
+    <h2>
+        {{ page.layout.content.hero.title }}
+    </h2>
+
+    <p class="hero-subtitle">
+        {{ page.layout.content.hero.subtitle }}
+    </p>
+</section>
+
+
+<section class="services-section">
+
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">HABESHAGO Services</p>
+
+            <h3>
+                {{ page.layout.content.services_section.title }}
+            </h3>
+        </div>
+    </div>
+
+
+    <div class="service-grid">
+
+        {% for service in page.layout.content.services_section.services %}
+
+            <article
+                class="
+                    service-card
+                    {% if not service.available %}
+                        service-card-disabled
+                    {% endif %}
+                "
+            >
+
+                <div class="service-icon">
+                    {% if service.title == "Ride" %}
+                        🚖
+                    {% elif service.title == "Transit" %}
+                        🚌
+                    {% elif service.title == "Logistics" %}
+                        📦
+                    {% endif %}
+                </div>
+
+
+                <div class="service-content">
+
+                    <div class="service-title-row">
+                        <h4>{{ service.title }}</h4>
+
+                        {% if service.available %}
+                            <span class="status-badge status-available">
+                                Available
+                            </span>
+                        {% else %}
+                            <span class="status-badge status-coming-soon">
+                                Coming Soon
+                            </span>
+                        {% endif %}
+                    </div>
+
+
+                    {% if service.title == "Ride" %}
+
+                        <p>
+                            Request a safe and convenient ride
+                            through HABESHAGO.
+                        </p>
+
+                        <button
+                            class="primary-button"
+                            type="button"
+                        >
+                            Request Ride
+                        </button>
+
+                    {% elif service.title == "Transit" %}
+
+                        <p>
+                            View public transport routes,
+                            live buses and arrival information.
+                        </p>
+
+                    {% elif service.title == "Logistics" %}
+
+                        <p>
+                            Send packages and manage local
+                            deliveries from one platform.
+                        </p>
+
+                    {% endif %}
+
+                </div>
+
+            </article>
+
+        {% endfor %}
+
+    </div>
+
+</section>
+
+
+<section class="status-card card">
+    <span class="status-card-icon">🇪🇹</span>
+
+    <p>
+        {{ page.layout.content.status_message }}
+    </p>
+</section>
+
+{% endblock %}
