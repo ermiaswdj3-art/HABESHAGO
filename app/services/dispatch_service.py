@@ -129,21 +129,13 @@ def find_best_driver(
         # explicitly approved driver accounts are
         # considered. When no test IDs are set,
         # every eligible driver is considered.
-        if (
-            test_driver_ids
-            and driver_id not in test_driver_ids
-        ):
-            print(
-                "Rejected: not included in "
-                "HABESHAGO_TEST_DRIVER_IDS."
-            )
+        if test_driver_ids and driver_id not in test_driver_ids:
+            print("Rejected: not included in " "HABESHAGO_TEST_DRIVER_IDS.")
             continue
 
         # The database coordinates are no longer
         # trusted for live dispatch decisions.
-        live_location = get_usable_live_location(
-            driver_id
-        )
+        live_location = get_usable_live_location(driver_id)
 
         print(
             "Usable live location:",
@@ -151,10 +143,7 @@ def find_best_driver(
         )
 
         if live_location is None:
-            print(
-                "Rejected: no fresh usable "
-                "live location."
-            )
+            print("Rejected: no fresh usable " "live location.")
             continue
 
         distance = calculate_distance(
@@ -170,10 +159,7 @@ def find_best_driver(
         )
 
         if distance > MAX_PICKUP_DISTANCE_KM:
-            print(
-                "Rejected: outside maximum "
-                "pickup distance."
-            )
+            print("Rejected: outside maximum " "pickup distance.")
             continue
 
         candidate = DispatchCandidate(

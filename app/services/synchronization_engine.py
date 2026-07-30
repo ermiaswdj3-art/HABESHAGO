@@ -37,10 +37,7 @@ def build_synchronization_update(
 
     targets: tuple[str, ...]
 
-    if (
-        event.event_type
-        == EventType.STATE_CHANGED
-    ):
+    if event.event_type == EventType.STATE_CHANGED:
         targets = (
             SynchronizationTarget.PASSENGER,
             SynchronizationTarget.DRIVER,
@@ -54,9 +51,7 @@ def build_synchronization_update(
         event_id=event.event_id,
         event_type=event.event_type,
         entity=event.entity,
-        entity_id=event.payload.get(
-            "entity_id"
-        ),
+        entity_id=event.payload.get("entity_id"),
         targets=targets,
         payload=event.payload,
         source="SynchronizationEngine",

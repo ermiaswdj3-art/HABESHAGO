@@ -38,13 +38,9 @@ class SynchronizationTarget:
     # FUTURE CLIENTS
     # ==========================================
 
-    TELEGRAM_MINI_APP = (
-        "TELEGRAM_MINI_APP"
-    )
+    TELEGRAM_MINI_APP = "TELEGRAM_MINI_APP"
 
-    WEB_PLATFORM = (
-        "WEB_PLATFORM"
-    )
+    WEB_PLATFORM = "WEB_PLATFORM"
 
     ANDROID = "ANDROID"
 

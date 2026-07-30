@@ -64,14 +64,10 @@ def transition_ride(
     # LOAD CURRENT STATE
     # ==========================================
 
-    current_state = get_ride_status(
-        ride_id
-    )
+    current_state = get_ride_status(ride_id)
 
     if current_state is None:
-        raise ValueError(
-            "Ride not found."
-        )
+        raise ValueError("Ride not found.")
 
     # ==========================================
     # VALIDATE TRANSITION
@@ -86,16 +82,12 @@ def transition_ride(
     # LOAD ACTIVE-RIDE PARTICIPANTS
     # ==========================================
 
-    active_ride = active_rides.get(
-        driver_id
-    )
+    active_ride = active_rides.get(driver_id)
 
     passenger_id = None
 
     if active_ride is not None:
-        passenger_id = active_ride.get(
-            "passenger_id"
-        )
+        passenger_id = active_ride.get("passenger_id")
 
     # ==========================================
     # UPDATE DATABASE
@@ -111,9 +103,7 @@ def transition_ride(
     # ==========================================
 
     if active_ride is not None:
-        active_ride[
-            "status"
-        ] = next_state
+        active_ride["status"] = next_state
 
     # ==========================================
     # BUILD PLATFORM EVENT
@@ -137,8 +127,6 @@ def transition_ride(
     # PUBLISH PLATFORM EVENT
     # ==========================================
 
-    publish_event(
-        event
-    )
+    publish_event(event)
 
     return next_state

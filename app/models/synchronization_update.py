@@ -18,11 +18,7 @@ class SynchronizationUpdate:
     delivery across HABESHAGO interfaces.
     """
 
-    update_id: str = field(
-        default_factory=lambda: str(
-            uuid.uuid4()
-        )
-    )
+    update_id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     event_id: str = ""
 
@@ -32,20 +28,12 @@ class SynchronizationUpdate:
 
     entity_id: int | str | None = None
 
-    targets: tuple[str, ...] = field(
-        default_factory=tuple
-    )
+    targets: tuple[str, ...] = field(default_factory=tuple)
 
-    payload: dict[str, Any] = field(
-        default_factory=dict
-    )
+    payload: dict[str, Any] = field(default_factory=dict)
 
     source: str = ""
 
     version: int = 1
 
-    created_at: datetime = field(
-        default_factory=lambda: datetime.now(
-            timezone.utc
-        )
-    )
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
