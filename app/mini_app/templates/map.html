@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+>
+{% endblock %}
+
+{% block content %}
+<section class="map-page">
+
+    <header class="map-page-header">
+        <a
+            class="map-back-button"
+            href="{{ url_for('home') }}"
+            aria-label="Return to home"
+        >
+            ←
+        </a>
+
+        <div>
+            <p class="home-section-eyebrow">
+                Pickup step
+            </p>
+
+            <h1>
+                {{ page.layout.content.title }}
+            </h1>
+
+            <p class="map-page-subtitle">
+                {{ page.layout.content.subtitle }}
+            </p>
+        </div>
+    </header>
+
+    <section class="map-workspace">
+        <div
+            id="habeshago-map"
+            class="habeshago-map"
+            data-latitude="{{ page.layout.content.map.center.latitude }}"
+            data-longitude="{{ page.layout.content.map.center.longitude }}"
+            data-zoom="{{ page.layout.content.map.zoom }}"
+        ></div>
+
+        <div
+            class="map-center-marker"
+            aria-hidden="true"
+        >
+            📍
+        </div>
+    </section>
+
+    <section class="pickup-location-card">
+        <div class="pickup-location-icon">
+            📍
+        </div>
+
+        <div class="pickup-location-content">
+            <p class="selected-destination-label">
+                Pickup location
+            </p>
+
+            <h2 data-pickup-location-name>
+                Move the map to choose pickup
+            </h2>
+
+            <p data-pickup-coordinates>
+                Coordinates will appear here.
+            </p>
+        </div>
+    </section>
+
+    <button
+        class="confirm-pickup-button"
+        type="button"
+        data-confirm-pickup
+        disabled
+    >
+        Confirm Pickup Location
+    </button>
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+
+<script src="{{ url_for('static', filename='map.js') }}"></script>
+{% endblock %}

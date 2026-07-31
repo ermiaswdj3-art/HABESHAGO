@@ -498,3 +498,477 @@ footer nav button:active {
     background: rgba(10,143,61,.12);
     color: var(--color-primary);
 }
+
+/* =====================================================
+   COMMIT #63 — SMART HOME EXPERIENCE
+===================================================== */
+
+.smart-home {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.home-greeting-text {
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.home-headline {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.destination-search {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: white;
+    border-radius: 16px;
+    padding: 0.9rem 1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+
+.destination-search-icon {
+    font-size: 1.2rem;
+}
+
+.destination-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 1rem;
+    background: transparent;
+}
+
+.destination-search-button {
+    border: none;
+    cursor: pointer;
+    border-radius: 12px;
+    padding: 0.7rem 1rem;
+    font-size: 1rem;
+}
+
+.home-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.home-section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.home-section-eyebrow {
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    opacity: .7;
+    margin: 0;
+}
+
+.home-section-heading h2 {
+    margin: .25rem 0 0;
+}
+
+.home-section-link {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.recent-places-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.recent-place-card {
+    border: none;
+    border-radius: 16px;
+    padding: 1rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    align-items: center;
+    transition: transform .2s ease;
+}
+
+.recent-place-card:hover {
+    transform: translateY(-3px);
+}
+
+.recent-place-icon {
+    font-size: 1.8rem;
+}
+
+.recent-place-name {
+    font-weight: 600;
+}
+
+.platform-status-grid {
+    display: grid;
+    gap: .75rem;
+}
+
+.platform-status-card {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .9rem 1rem;
+    border-radius: 14px;
+}
+
+.platform-status-title {
+    font-weight: 600;
+}
+
+.demo-data-note {
+    font-size: .85rem;
+    opacity: .7;
+    margin: 0;
+}
+
+.insights-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.insight-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 16px;
+    transition: transform .2s ease;
+}
+
+.insight-card:hover {
+    transform: translateY(-2px);
+}
+
+.insight-icon {
+    font-size: 1.8rem;
+}
+
+.insight-content {
+    flex: 1;
+}
+
+.insight-content h3 {
+    margin: 0 0 .25rem;
+    font-size: 1rem;
+}
+
+.insight-content p {
+    margin: 0;
+    font-size: .9rem;
+    opacity: .8;
+}
+
+.insight-arrow {
+    font-size: 1.3rem;
+    opacity: .5;
+}
+
+/* ==========================================
+   DESTINATION SUGGESTIONS
+========================================== */
+
+.destination-suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.destination-suggestions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.destination-suggestion-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.2s ease;
+}
+
+.destination-suggestion-card:hover {
+    transform: translateY(-2px);
+}
+
+.destination-suggestion-icon {
+    font-size: 1.8rem;
+}
+
+.destination-suggestion-content {
+    flex: 1;
+}
+
+.destination-suggestion-content h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.destination-suggestion-content p {
+    margin: 0.25rem 0 0;
+    font-size: 0.9rem;
+    opacity: 0.75;
+}
+
+.destination-suggestion-arrow {
+    font-size: 1.2rem;
+    opacity: 0.5;
+}
+
+/* =====================================================
+   COMMIT #63 — INTERACTIVE DESTINATION SEARCH
+===================================================== */
+
+.selected-destination-panel {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 18px;
+    background: #eefaf2;
+    border: 1px solid #cdebd8;
+}
+
+.selected-destination-icon {
+    font-size: 2rem;
+}
+
+.selected-destination-content {
+    flex: 1;
+}
+
+.selected-destination-label {
+    margin: 0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    opacity: .7;
+}
+
+.selected-destination-content h2 {
+    margin: .2rem 0;
+    font-size: 1.2rem;
+}
+
+.selected-destination-content p {
+    margin: 0;
+    opacity: .8;
+    font-size: .9rem;
+}
+
+.clear-destination-button {
+    border: none;
+    cursor: pointer;
+    padding: .6rem .8rem;
+    border-radius: 10px;
+    font-size: 1rem;
+}
+
+.destination-empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    border-radius: 16px;
+    border: 2px dashed #d9d9d9;
+}
+
+.destination-empty-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: .75rem;
+}
+
+.recent-place-description {
+    font-size: .8rem;
+    opacity: .7;
+    text-align: center;
+}
+
+/* =====================================================
+   HABESHAGO VISIBILITY CONTROL
+===================================================== */
+
+[hidden],
+.is-hidden {
+    display: none !important;
+}
+
+.destination-suggestion-card:not([hidden]) {
+    display: flex;
+}
+
+.destination-suggestions:not([hidden]) {
+    display: block;
+}
+
+.selected-destination-panel:not([hidden]) {
+    display: flex;
+}
+
+/* =====================================================
+   HABESHAGO MAP FOUNDATION v2
+===================================================== */
+
+.map-page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.map-page-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.map-back-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    width: 44px;
+    height: 44px;
+
+    text-decoration: none;
+
+    border-radius: 12px;
+
+    background: white;
+
+    color: black;
+
+    font-size: 20px;
+
+    box-shadow: var(--shadow-card);
+}
+
+.map-page-subtitle {
+    margin-top: 6px;
+    color: var(--color-text-secondary);
+}
+
+.map-workspace {
+
+    position: relative;
+
+    width: 100%;
+
+    height: 500px;
+
+    border-radius: 20px;
+
+    overflow: hidden;
+
+    box-shadow: var(--shadow-card);
+
+    background: white;
+}
+
+.habeshago-map {
+
+    width: 100%;
+
+    height: 100%;
+}
+
+.map-center-marker {
+
+    position: absolute;
+
+    top: 50%;
+
+    left: 50%;
+
+    transform: translate(-50%, -100%);
+
+    z-index: 600;
+
+    font-size: 36px;
+
+    pointer-events: none;
+}
+
+.pickup-location-card {
+
+    display: flex;
+
+    gap: 16px;
+
+    padding: 18px;
+
+    background: white;
+
+    border-radius: 18px;
+
+    box-shadow: var(--shadow-card);
+}
+
+.pickup-location-icon {
+
+    font-size: 32px;
+}
+
+.pickup-location-content {
+
+    flex: 1;
+}
+
+.confirm-pickup-button {
+
+    width: 100%;
+
+    height: 54px;
+
+    border: none;
+
+    border-radius: 16px;
+
+    background: var(--color-primary);
+
+    color: white;
+
+    font-weight: 700;
+
+    font-size: 16px;
+}
+
+/* =====================================================
+   MAP PAGE — BOTTOM NAVIGATION SPACING FIX
+===================================================== */
+
+.map-page {
+    padding-bottom: 120px;
+}
+
+.pickup-location-card {
+    position: relative;
+    z-index: 1;
+}
+
+.confirm-pickup-button {
+    position: relative;
+    z-index: 1;
+}
+
+footer {
+    z-index: 1000;
+}

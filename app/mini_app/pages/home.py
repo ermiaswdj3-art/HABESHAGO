@@ -1,53 +1,89 @@
 """
-HABESHAGO Ecosystem Home Screen
+HABESHAGO Intelligent Home Page
 
-Defines the main entry screen for the HABESHAGO
-Telegram Mini App.
+Builds the destination-first Home experience for the Mini App.
 """
 
-from app.mini_app.components.service_card import ServiceCard
 from app.mini_app.pages.app_shell import get_app_shell
+from app.mini_app.services.destination_service import (
+    get_destination_suggestions,
+)
 
 
 def get_home_page(mode="light"):
-    """
-    Build the HABESHAGO ecosystem home page.
-    """
+    page = get_app_shell(mode)
 
-    app_shell = get_app_shell(mode)
+    page["layout"]["content"] = {
+        "greeting": "Good Morning, Ermias 👋",
+        "headline": "Where are you going today?",
+        "search_placeholder": "Search destination...",
 
-    app_shell["layout"]["content"] = {
-        "hero": {
-            "title": "Move with HABESHAGO",
-            "subtitle": (
-                "One platform for rides, public transport, "
-                "and delivery services."
-            ),
-        },
-        "services_section": {
-            "title": "Choose a Service",
-            "services": [
-                ServiceCard(
-                    title="Ride",
-                    available=True,
-                ).to_dict(),
-                ServiceCard(
-                    title="Transit",
-                    available=False,
-                ).to_dict(),
-                ServiceCard(
-                    title="Logistics",
-                    available=False,
-                ).to_dict(),
-            ],
-        },
-        "status_message": (
-            "Ride is available now. "
-            "Transit and Logistics are coming soon."
-        ),
+        "destination_suggestions": get_destination_suggestions(),
+
+        "recent_places": [
+            {
+                "icon": "🏠",
+                "name": "Home",
+                "description": "Your saved home location",
+                "destination": "Home",
+            },
+            {
+                "icon": "🏢",
+                "name": "Office",
+                "description": "Your saved workplace",
+                "destination": "Office",
+            },
+            {
+                "icon": "✈️",
+                "name": "Airport",
+                "description": "Bole International Airport",
+                "destination": "Bole International Airport",
+            },
+            {
+                "icon": "⭐",
+                "name": "Saved Places",
+                "description": "View all favorite destinations",
+                "destination": "Saved Places",
+            },
+        ],
+
+        "platform_status": [
+            {
+                "icon": "🟢",
+                "title": "Ride Available",
+            },
+            {
+                "icon": "🟢",
+                "title": "Transit Active",
+            },
+            {
+                "icon": "🟢",
+                "title": "Delivery Available",
+            },
+        ],
+
+        "insights": [
+            {
+                "icon": "🌧️",
+                "title": "Rain expected today",
+                "subtitle": "Demand may increase this afternoon.",
+            },
+            {
+                "icon": "🎉",
+                "title": "5% Ride Cashback",
+                "subtitle": "Available today.",
+            },
+            {
+                "icon": "🏆",
+                "title": "Rewards",
+                "subtitle": (
+                    "Ride three times this week to earn bonus points."
+                ),
+            },
+        ],
     }
 
-    return app_shell
+    return page
 
 
 if __name__ == "__main__":

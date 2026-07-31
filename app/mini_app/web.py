@@ -15,6 +15,8 @@ from app.mini_app.pages.driver_dashboard import (
     get_driver_dashboard,
 )
 
+from app.mini_app.pages.map import get_map_page
+
 app = Flask(
     __name__,
     template_folder="templates",
@@ -63,6 +65,20 @@ def driver_dashboard():
         "driver_dashboard.html",
         page=page,
         active_page="driver",
+    )
+
+@app.route("/map")
+def map_page():
+    """
+    Render the HABESHAGO interactive pickup map.
+    """
+
+    page = get_map_page()
+
+    return render_template(
+        "map.html",
+        page=page,
+        active_page="home",
     )
 
 if __name__ == "__main__":

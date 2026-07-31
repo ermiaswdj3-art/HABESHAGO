@@ -1,125 +1,273 @@
 {% extends "base.html" %}
 
-{% block title %}
-HABESHAGO — Home
-{% endblock %}
-
 {% block content %}
+<section class="smart-home">
 
-<section class="hero">
-    <p class="eyebrow">Your mobility ecosystem</p>
+    <div class="home-greeting">
+        <p class="home-greeting-text">
+            {{ page.layout.content.greeting }}
+        </p>
 
-    <h2>
-        {{ page.layout.content.hero.title }}
-    </h2>
-
-    <p class="hero-subtitle">
-        {{ page.layout.content.hero.subtitle }}
-    </p>
-</section>
-
-
-<section class="services-section">
-
-    <div class="section-heading">
-        <div>
-            <p class="eyebrow">HABESHAGO Services</p>
-
-            <h3>
-                {{ page.layout.content.services_section.title }}
-            </h3>
-        </div>
+        <h1 class="home-headline">
+            {{ page.layout.content.headline }}
+        </h1>
     </div>
 
+    <form class="destination-search" action="#" method="get">
+        <span class="destination-search-icon">🔍</span>
 
-    <div class="service-grid">
+        <input
+            id="destination-search-input"
+            class="destination-search-input"
+            type="text"
+            name="destination"
+            placeholder="{{ page.layout.content.search_placeholder }}"
+            autocomplete="off"
+            aria-label="Search destination"
+        >
 
-        {% for service in page.layout.content.services_section.services %}
+        <button
+            class="destination-search-button"
+            type="submit"
+            aria-label="Search"
+        >
+            →
+        </button>
+    </form>
 
-            <article
-                class="
-                    service-card
-                    {% if not service.available %}
-                        service-card-disabled
-                    {% endif %}
-                "
+    <section class="destination-suggestions" hidden>
+
+        <div class="home-section-heading">
+            <div>
+                <p class="home-section-eyebrow">
+                    Search results
+                </p>
+
+                <h2>Suggested Destinations</h2>
+            </div>
+        </div>
+
+        <div class="destination-suggestions-list">
+
+            {% for destination in page.layout.content.destination_suggestions %}
+
+            <button
+                class="destination-suggestion-card"
+                type="button"
+                data-destination-name="{{ destination.name }}"
+                data-destination-description="{{ destination.description }}"
             >
-
-                <div class="service-icon">
-                    {% if service.title == "Ride" %}
-                        🚖
-                    {% elif service.title == "Transit" %}
-                        🚌
-                    {% elif service.title == "Logistics" %}
-                        📦
-                    {% endif %}
+                <div class="destination-suggestion-icon">
+                    {{ destination.icon }}
                 </div>
 
+                <div class="destination-suggestion-content">
+                    <h3>
+                        {{ destination.name }}
+                    </h3>
 
-                <div class="service-content">
-
-                    <div class="service-title-row">
-                        <h4>{{ service.title }}</h4>
-
-                        {% if service.available %}
-                            <span class="status-badge status-available">
-                                Available
-                            </span>
-                        {% else %}
-                            <span class="status-badge status-coming-soon">
-                                Coming Soon
-                            </span>
-                        {% endif %}
-                    </div>
-
-
-                    {% if service.title == "Ride" %}
-
-                        <p>
-                            Request a safe and convenient ride
-                            through HABESHAGO.
-                        </p>
-
-                        <button
-                            class="primary-button"
-                            type="button"
-                        >
-                            Request Ride
-                        </button>
-
-                    {% elif service.title == "Transit" %}
-
-                        <p>
-                            View public transport routes,
-                            live buses and arrival information.
-                        </p>
-
-                    {% elif service.title == "Logistics" %}
-
-                        <p>
-                            Send packages and manage local
-                            deliveries from one platform.
-                        </p>
-
-                    {% endif %}
-
+                    <p>
+                        {{ destination.description }}
+                    </p>
                 </div>
 
+                <div
+                    class="destination-suggestion-arrow"
+                    aria-hidden="true"
+                >
+                    →
+                </div>
+            </button>
+
+            {% endfor %}
+
+            <div
+                class="destination-empty-state"
+                data-destination-empty-state
+                hidden
+            >
+                <span class="destination-empty-icon">
+                    🔍
+                </span>
+
+                <h3>
+                    No destination found
+                </h3>
+
+                <p>
+                    Try another place name or choose a recent place.
+                </p>
+            </div>
+
+        </div>
+
+    </section>
+
+    <section
+        class="selected-destination-panel"
+        data-selected-destination
+        hidden
+    >
+        <div class="selected-destination-icon">
+            📍
+        </div>
+
+        <div class="selected-destination-content">
+            <p class="selected-destination-label">
+                Selected destination
+            </p>
+
+            <h2 data-selected-destination-name>
+                Destination
+            </h2>
+
+            <p>
+                Ready to continue to pickup and route selection.
+            </p>
+        </div>
+
+        <button
+            class="clear-destination-button"
+            type="button"
+            data-clear-destination
+            aria-label="Clear selected destination"
+        >
+            ✕
+        </button>
+    </section>
+
+    <section class="home-section">
+        <div class="home-section-heading">
+            <div>
+                <p class="home-section-eyebrow">
+                    Quick access
+                </p>
+
+                <h2>
+                    Recent Places
+                </h2>
+            </div>
+
+            <button
+                class="home-section-link"
+                type="button"
+            >
+                View all
+            </button>
+        </div>
+
+        <div class="recent-places-grid">
+
+            {% for place in page.layout.content.recent_places %}
+
+            <button
+                class="recent-place-card"
+                type="button"
+                aria-label="Select {{ place.name }}"
+                data-recent-destination="{{ place.destination }}"
+            >
+                <span class="recent-place-icon">
+                    {{ place.icon }}
+                </span>
+
+                <span class="recent-place-name">
+                    {{ place.name }}
+                </span>
+
+                <span class="recent-place-description">
+                    {{ place.description }}
+                </span>
+            </button>
+
+            {% endfor %}
+
+        </div>
+    </section>
+
+    <section class="home-section">
+        <div class="home-section-heading">
+            <div>
+                <p class="home-section-eyebrow">
+                    Live overview
+                </p>
+
+                <h2>
+                    Available Now
+                </h2>
+            </div>
+        </div>
+
+        <div class="platform-status-grid">
+
+            {% for status in page.layout.content.platform_status %}
+
+            <article class="platform-status-card">
+                <span class="platform-status-icon">
+                    {{ status.icon }}
+                </span>
+
+                <span class="platform-status-title">
+                    {{ status.title }}
+                </span>
             </article>
 
-        {% endfor %}
+            {% endfor %}
 
-    </div>
+        </div>
+
+        <p class="demo-data-note">
+            Demonstration status — live platform data will be connected later.
+        </p>
+    </section>
+
+    <section class="home-section">
+        <div class="home-section-heading">
+            <div>
+                <p class="home-section-eyebrow">
+                    Useful today
+                </p>
+
+                <h2>
+                    Helpful Insights
+                </h2>
+            </div>
+        </div>
+
+        <div class="insights-list">
+
+            {% for insight in page.layout.content.insights %}
+
+            <article class="insight-card">
+                <div class="insight-icon">
+                    {{ insight.icon }}
+                </div>
+
+                <div class="insight-content">
+                    <h3>
+                        {{ insight.title }}
+                    </h3>
+
+                    <p>
+                        {{ insight.subtitle }}
+                    </p>
+                </div>
+
+                <span
+                    class="insight-arrow"
+                    aria-hidden="true"
+                >
+                    ›
+                </span>
+            </article>
+
+            {% endfor %}
+
+        </div>
+    </section>
 
 </section>
+{% endblock %}
 
-
-<section class="status-card card">
-    <span class="status-card-icon">🇪🇹</span>
-
-    <p>
-        {{ page.layout.content.status_message }}
-    </p>
-</section>
-
+{% block scripts %}
+<script src="{{ url_for('static', filename='home.js') }}"></script>
 {% endblock %}
