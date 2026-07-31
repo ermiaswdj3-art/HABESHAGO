@@ -972,3 +972,289 @@ footer nav button:active {
 footer {
     z-index: 1000;
 }
+
+/* =========================================================
+   HABESHAGO TRIP PLANNER
+   ========================================================= */
+
+.trip-planner-page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding-bottom: 120px;
+}
+
+.trip-planner-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.trip-planner-eyebrow {
+    margin: 0;
+    color: #0a8f3d;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.trip-planner-header h1 {
+    margin: 0;
+    font-size: 32px;
+    line-height: 1.2;
+}
+
+.trip-planner-subtitle {
+    margin: 0;
+    color: #667085;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.trip-summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 20px;
+    background: #ffffff;
+    border: 1px solid #e6eae8;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.trip-summary-location {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.trip-summary-marker {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    place-items: center;
+    background: #eef8f2;
+    border-radius: 14px;
+    font-size: 19px;
+}
+
+.trip-summary-location div:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.trip-summary-label {
+    color: #667085;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.trip-summary-location strong {
+    color: #111827;
+    font-size: 15px;
+}
+
+.trip-summary-line {
+    width: 2px;
+    height: 24px;
+    margin: 4px 0 4px 20px;
+    background: #d4ddd8;
+}
+
+.mobility-options-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.mobility-options-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.mobility-options-heading h2 {
+    margin: 0 0 4px;
+    font-size: 21px;
+}
+
+.mobility-options-heading p {
+    margin: 0;
+    color: #667085;
+    font-size: 14px;
+}
+
+.mobility-option-count {
+    flex-shrink: 0;
+    padding: 7px 11px;
+    color: #0a8f3d;
+    background: #e9f7ef;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.mobility-options {
+    display: grid;
+    gap: 16px;
+}
+
+.mobility-card {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px;
+    background: #ffffff;
+    border: 1px solid #e6eae8;
+    border-radius: 22px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    transition:
+        border-color 180ms ease,
+        transform 180ms ease,
+        box-shadow 180ms ease;
+}
+
+.mobility-card:hover {
+    border-color: #b9d8c5;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.09);
+    transform: translateY(-2px);
+}
+
+.mobility-card.is-selected {
+    border-color: #0a8f3d;
+    box-shadow: 0 0 0 3px rgba(10, 143, 61, 0.12);
+}
+
+.mobility-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.mobility-title-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.mobility-icon {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    place-items: center;
+    background: #eef8f2;
+    border-radius: 16px;
+    font-size: 24px;
+}
+
+.mobility-title-group h3 {
+    margin: 0 0 5px;
+    color: #111827;
+    font-size: 20px;
+}
+
+.mobility-description {
+    margin: 0;
+    color: #667085;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.mobility-badge {
+    flex-shrink: 0;
+    padding: 7px 10px;
+    color: #0a8f3d;
+    background: #e9f7ef;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.mobility-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.mobility-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 14px;
+    background: #f7f9f8;
+    border-radius: 15px;
+}
+
+.mobility-metric-label {
+    color: #667085;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.mobility-metric strong {
+    color: #111827;
+    font-size: 17px;
+}
+
+.choose-option-button {
+    width: 100%;
+    padding: 14px 18px;
+    color: #ffffff;
+    background: #0a8f3d;
+    border: 0;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+    transition:
+        background 180ms ease,
+        transform 180ms ease;
+}
+
+.choose-option-button:hover {
+    background: #087a35;
+}
+
+.choose-option-button:active {
+    transform: scale(0.99);
+}
+
+.choose-option-button:focus-visible {
+    outline: 3px solid rgba(10, 143, 61, 0.25);
+    outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+    .trip-planner-header h1 {
+        font-size: 28px;
+    }
+
+    .mobility-card-top {
+        flex-direction: column;
+    }
+
+    .mobility-badge {
+        align-self: flex-start;
+    }
+
+    .mobility-metrics {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Prevent fixed bottom navigation from covering Trip Planner content */
+
+.trip-planner-page {
+    padding-bottom: 180px;
+}
+
+.mobility-options {
+    padding-bottom: 24px;
+}

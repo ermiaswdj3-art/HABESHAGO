@@ -15,6 +15,10 @@ from app.mini_app.pages.driver_dashboard import (
     get_driver_dashboard,
 )
 
+from app.mini_app.pages.trip_planner import (
+    get_trip_planner_page,
+)
+
 from app.mini_app.pages.map import get_map_page
 
 app = Flask(
@@ -81,9 +85,23 @@ def map_page():
         active_page="home",
     )
 
+@app.route("/trip-planner")
+def trip_planner():
+    """
+    Render the HABESHAGO Trip Planner.
+    """
+
+    page = get_trip_planner_page()
+
+    return render_template(
+        "trip_planner.html",
+        page=page,
+        active_page="home",
+    )
+
 if __name__ == "__main__":
     app.run(
         host="127.0.0.1",
         port=5000,
         debug=True,
-    )
+    )  

@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}
+Trip Planner • HABESHAGO
+{% endblock %}
+
+{% block content %}
+
+<section class="trip-planner-page">
+
+    <header class="trip-planner-header">
+
+        <p class="trip-planner-eyebrow">
+            HABESHAGO Journey
+        </p>
+
+        <h1>{{ page.title }}</h1>
+
+        <p class="trip-planner-subtitle">
+            {{ page.subtitle }}
+        </p>
+
+    </header>
+
+    <section class="trip-summary-card">
+
+        <div class="trip-summary-location">
+
+            <div class="trip-summary-marker pickup-marker">
+                📍
+            </div>
+
+            <div>
+                <span class="trip-summary-label">
+                    Pickup
+                </span>
+
+                <strong>
+                    {{ page.trip.pickup_name }}
+                </strong>
+            </div>
+
+        </div>
+
+        <div class="trip-summary-line"></div>
+
+        <div class="trip-summary-location">
+
+            <div class="trip-summary-marker destination-marker">
+                🏁
+            </div>
+
+            <div>
+                <span class="trip-summary-label">
+                    Destination
+                </span>
+
+                <strong>
+                    {{ page.trip.destination }}
+                </strong>
+            </div>
+
+        </div>
+
+    </section>
+
+    <section class="mobility-options-section">
+
+        <div class="mobility-options-heading">
+
+            <div>
+                <h2>Available Options</h2>
+
+                <p>
+                    Compare travel time, price, and convenience.
+                </p>
+            </div>
+
+            <span class="mobility-option-count">
+                {{ page.mobility_options | length }} options
+            </span>
+
+        </div>
+
+        <div class="mobility-options">
+
+            {% for option in page.mobility_options %}
+
+            <article
+                class="mobility-card"
+                data-mobility-card="{{ option.id }}"
+            >
+
+                <div class="mobility-card-top">
+
+                    <div class="mobility-title-group">
+
+                        <span class="mobility-icon">
+                            {{ option.icon }}
+                        </span>
+
+                        <div>
+                            <h3>{{ option.title }}</h3>
+
+                            <p class="mobility-description">
+                                {{ option.description }}
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <span class="mobility-badge">
+                        {{ option.badge }}
+                    </span>
+
+                </div>
+
+                <div class="mobility-metrics">
+
+                    <div class="mobility-metric">
+
+                        <span class="mobility-metric-label">
+                            Estimated time
+                        </span>
+
+                        <strong>
+                            {{ option.eta }}
+                        </strong>
+
+                    </div>
+
+                    <div class="mobility-metric">
+
+                        <span class="mobility-metric-label">
+                            Estimated price
+                        </span>
+
+                        <strong>
+                            {{ option.price }}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="choose-option-button"
+                    data-option="{{ option.id }}"
+                    data-option-title="{{ option.title }}"
+                >
+                    Choose {{ option.title }}
+                </button>
+
+            </article>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script
+    src="{{ url_for('static', filename='trip_planner.js') }}"
+></script>
+
+{% endblock %}
