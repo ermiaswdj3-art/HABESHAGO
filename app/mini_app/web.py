@@ -6,6 +6,8 @@ Serves the HABESHAGO Mini App locally using Flask.
 
 from flask import Flask, jsonify, render_template, request
 
+from datetime import datetime, timezone
+
 from app.mini_app.pages.home import get_home_page
 from app.mini_app.pages.passenger_dashboard import (
     get_passenger_dashboard,
@@ -25,6 +27,10 @@ from app.mini_app.context import (
     reset_trip,
     set_destination,
     set_pickup,
+)
+
+from app.mini_app.pages.booking_summary import (
+    get_booking_summary_page,
 )
 
 from app.mini_app.pages.trip_planner import (
@@ -196,6 +202,20 @@ def trip_planner():
         active_page="home",
     )
 
+@app.route("/booking-summary")
+def booking_summary():
+    """
+    Render the HABESHAGO Booking Summary.
+    """
+
+    page = get_booking_summary_page()
+
+    return render_template(
+        "booking_summary.html",
+        page=page,
+        active_page="home",
+    )
+
 @app.route("/api/trip/destination", methods=["POST"])
 def update_trip_destination():
     """
@@ -317,6 +337,243 @@ def read_active_trip():
                 "estimated_fare": trip.estimated_fare,
                 "estimated_eta": trip.estimated_eta,
                 "recommendation": trip.recommendation,
+                "selected_route": trip.selected_route,
+                "booking_status": trip.booking_status,
+                "created_at": trip.created_at,
+            },
+        }
+    )
+
+@app.route("/api/trip/service", methods=["POST"])
+def update_trip_service():
+    """
+    Store the passenger's selected mobility service
+    and its current planner estimates.
+    """
+
+    payload = request.get_json(silent=True) or {}
+
+    service = str(
+        payload.get("service", "")
+    ).strip()
+
+    estimated_eta = str(
+        payload.get("estimated_eta", "")
+    ).strip()
+
+    recommendation = str(
+        payload.get("recommendation", "")
+    ).strip()
+
+    try:
+        estimated_fare = float(
+            payload.get("estimated_fare")
+        )
+    except (TypeError, ValueError):
+        return jsonify(
+            {
+                "success": False,
+                "message": "A valid estimated fare is required.",
+            }
+        ), 400
+
+    allowed_services = {
+        "ride",
+        "transit",
+        "walk_transit",
+    }
+
+    if service not in allowed_services:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Invalid mobility service.",
+            }
+        ), 400
+
+    trip = get_trip()
+
+    if not trip.is_ready_for_planning():
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "Complete the destination and pickup "
+                    "before selecting a service."
+                ),
+            }
+        ), 409
+
+    trip.service = service
+    trip.estimated_fare = estimated_fare
+    trip.estimated_eta = estimated_eta
+    trip.recommendation = recommendation
+    trip.category = None
+    trip.set_booking_status("service_selected")
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Mobility service selected.",
+            "trip": {
+                "service": trip.service,
+                "category": trip.category,
+                "estimated_fare": trip.estimated_fare,
+                "estimated_eta": trip.estimated_eta,
+                "recommendation": trip.recommendation,
+                "selected_route": trip.selected_route,
+                "booking_status": trip.booking_status,
+                "created_at": trip.created_at,
+            },
+        }
+    )
+
+@app.route("/api/trip/category", methods=["POST"])
+def update_trip_category():
+    """
+    Store the passenger's selected ride category.
+    """
+
+    payload = request.get_json(silent=True) or {}
+
+    category = str(
+        payload.get("category", "")
+    ).strip()
+
+    allowed_categories = {
+        "economy",
+        "standard",
+        "premium",
+        "ev",
+    }
+
+    if category not in allowed_categories:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Invalid ride category.",
+            }
+        ), 400
+
+    trip = get_trip()
+
+    if trip.service != "ride":
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "Ride categories are available only "
+                    "when Ride is selected."
+                ),
+            }
+        ), 409
+
+    if trip.booking_status != "service_selected":
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "Select Ride before choosing "
+                    "a ride category."
+                ),
+            }
+        ), 409
+
+    trip.category = category
+    trip.set_booking_status("category_selected")
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Ride category selected.",
+            "trip": {
+                "service": trip.service,
+                "category": trip.category,
+                "estimated_fare": trip.estimated_fare,
+                "estimated_eta": trip.estimated_eta,
+                "booking_status": trip.booking_status,
+            },
+        }
+    )
+
+@app.route("/api/trip/confirm", methods=["POST"])
+def confirm_trip_booking():
+    """
+    Validate and confirm the active passenger booking.
+
+    The confirmed booking is then marked as ready
+    for the future Dispatch Engine.
+    """
+
+    trip = get_trip()
+
+    if not trip.is_ready_for_booking():
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "The trip is incomplete and cannot "
+                    "be confirmed."
+                ),
+            }
+        ), 409
+
+    if trip.service == "ride" and not trip.category:
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "Choose a ride category before "
+                    "confirming the booking."
+                ),
+            }
+        ), 409
+
+    allowed_confirmation_states = {
+        "service_selected",
+        "category_selected",
+        "summary_ready",
+    }
+
+    if trip.booking_status not in allowed_confirmation_states:
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "This booking cannot be confirmed "
+                    "from its current state."
+                ),
+            }
+        ), 409
+
+    trip.set_booking_status("summary_ready")
+
+    trip.created_at = datetime.now(
+        timezone.utc
+    ).isoformat()
+
+    trip.set_booking_status("booking_confirmed")
+
+    # Commit #67 will begin processing bookings
+    # that have reached this state.
+    trip.set_booking_status("dispatch_pending")
+
+    return jsonify(
+        {
+            "success": True,
+            "message": (
+                "Booking confirmed and prepared "
+                "for driver dispatch."
+            ),
+            "trip": {
+                "destination": trip.destination,
+                "pickup_name": trip.pickup_name,
+                "service": trip.service,
+                "category": trip.category,
+                "estimated_fare": trip.estimated_fare,
+                "estimated_eta": trip.estimated_eta,
+                "booking_status": trip.booking_status,
+                "created_at": trip.created_at,
             },
         }
     )

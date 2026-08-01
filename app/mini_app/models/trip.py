@@ -14,7 +14,6 @@ from typing import Optional
 
 @dataclass
 class Trip:
-
     # Destination chosen by the passenger
     destination: Optional[str] = None
 
@@ -41,9 +40,18 @@ class Trip:
     # AI recommendation
     recommendation: Optional[str] = None
 
+    # Selected route (future routing engine)
+    selected_route: Optional[str] = None
+
+    # Booking lifecycle
+    booking_status: str = "planning"
+
+    # Booking creation timestamp
+    created_at: Optional[str] = None
+
     def is_ready_for_planning(self) -> bool:
         """
-        Returns True when enough information exists
+        Return True when enough information exists
         to generate mobility options.
         """
 
@@ -52,3 +60,38 @@ class Trip:
             and self.pickup_latitude is not None
             and self.pickup_longitude is not None
         )
+
+    def is_ready_for_booking(self) -> bool:
+        """
+        Return True when the trip contains enough
+        information to create a booking.
+        """
+
+        return (
+            self.is_ready_for_planning()
+            and self.service is not None
+        )
+
+    def set_booking_status(
+        self,
+        status: str,
+    ) -> None:
+        """
+        Update the booking lifecycle state.
+        """
+
+        allowed_statuses = {
+            "planning",
+            "service_selected",
+            "category_selected",
+            "summary_ready",
+            "booking_confirmed",
+            "dispatch_pending",
+        }
+
+        if status not in allowed_statuses:
+            raise ValueError(
+                f"Invalid booking status: {status}"
+            )
+
+        self.booking_status = status

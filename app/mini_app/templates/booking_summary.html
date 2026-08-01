@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}
+Booking Summary &#8226; HABESHAGO
+{% endblock %}
+
+{% block content %}
+<section class="booking-summary-page">
+
+    <header class="booking-summary-header">
+        <p class="trip-planner-eyebrow">
+            Final review
+        </p>
+
+        <h1>{{ page.title }}</h1>
+
+        <p class="booking-summary-subtitle">
+            {{ page.subtitle }}
+        </p>
+    </header>
+
+    <section class="booking-review-card">
+
+        <div class="booking-review-row">
+            <span class="booking-review-icon">
+                &#128205;
+            </span>
+
+            <div class="booking-review-content">
+                <span class="booking-review-label">
+                    Pickup
+                </span>
+
+                <strong>
+                    {{ page.trip.pickup_name }}
+                </strong>
+            </div>
+        </div>
+
+        <div class="booking-review-divider"></div>
+
+        <div class="booking-review-row">
+            <span class="booking-review-icon">
+                &#127937;
+            </span>
+
+            <div class="booking-review-content">
+                <span class="booking-review-label">
+                    Destination
+                </span>
+
+                <strong>
+                    {{ page.trip.destination }}
+                </strong>
+            </div>
+        </div>
+
+    </section>
+
+    <section class="booking-details-card">
+
+        <div class="booking-details-heading">
+            <div>
+                <p class="trip-planner-eyebrow">
+                    Booking details
+                </p>
+
+                <h2>Your Selection</h2>
+            </div>
+
+            <span class="booking-status-badge">
+                {{ page.trip.booking_status | replace("_", " ") | title }}
+            </span>
+        </div>
+
+        <div class="booking-details-grid">
+
+            <article class="booking-detail-item">
+                <span class="booking-detail-label">
+                    Service
+                </span>
+
+                <strong>
+                    {{ page.trip.service | replace("_", " ") | title }}
+                </strong>
+            </article>
+
+            <article class="booking-detail-item">
+                <span class="booking-detail-label">
+                    Category
+                </span>
+
+                <strong>
+                    {% if page.trip.category %}
+                        {{ page.trip.category | title }}
+                    {% else %}
+                        Not required
+                    {% endif %}
+                </strong>
+            </article>
+
+            <article class="booking-detail-item">
+                <span class="booking-detail-label">
+                    Estimated time
+                </span>
+
+                <strong>
+                    {{ page.trip.estimated_eta }}
+                </strong>
+            </article>
+
+            <article class="booking-detail-item">
+                <span class="booking-detail-label">
+                    Estimated fare
+                </span>
+
+                <strong>
+                    {{ "%.0f"|format(page.trip.estimated_fare) }} ETB
+                </strong>
+            </article>
+
+            <article class="booking-detail-item">
+                <span class="booking-detail-label">
+                    Passengers
+                </span>
+
+                <strong>
+                    {{ page.trip.passengers }}
+                </strong>
+            </article>
+
+            <article class="booking-detail-item">
+                <span class="booking-detail-label">
+                    Payment
+                </span>
+
+                <strong>
+                    Cash
+                </strong>
+            </article>
+
+        </div>
+
+    </section>
+
+    {% if page.trip.recommendation %}
+    <section class="booking-recommendation-card">
+        <span class="booking-recommendation-icon">
+            &#128161;
+        </span>
+
+        <div>
+            <span class="booking-review-label">
+                HABESHAGO Recommendation
+            </span>
+
+            <strong>
+                {{ page.trip.recommendation }}
+            </strong>
+        </div>
+    </section>
+    {% endif %}
+
+    <div class="booking-summary-actions">
+
+        <a
+            class="booking-edit-button"
+            href="{{ url_for('trip_planner') }}"
+        >
+            Change Selection
+        </a>
+
+        <button
+            type="button"
+            class="confirm-booking-button"
+            data-confirm-booking
+        >
+            Confirm Booking
+        </button>
+
+    </div>
+
+    <p
+        class="booking-confirmation-feedback"
+        data-booking-confirmation-feedback
+        aria-live="polite"
+    ></p>
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script
+    src="{{ url_for('static', filename='booking_summary.js') }}"
+></script>
+{% endblock %}

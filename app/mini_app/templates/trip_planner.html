@@ -1,15 +1,13 @@
 {% extends "base.html" %}
 
 {% block title %}
-Trip Planner • HABESHAGO
+Trip Planner &#8226; HABESHAGO
 {% endblock %}
 
 {% block content %}
-
 <section class="trip-planner-page">
 
     <header class="trip-planner-header">
-
         <p class="trip-planner-eyebrow">
             HABESHAGO Journey
         </p>
@@ -19,15 +17,13 @@ Trip Planner • HABESHAGO
         <p class="trip-planner-subtitle">
             {{ page.subtitle }}
         </p>
-
     </header>
 
     <section class="trip-summary-card">
 
         <div class="trip-summary-location">
-
             <div class="trip-summary-marker pickup-marker">
-                📍
+                &#128205;
             </div>
 
             <div>
@@ -39,15 +35,13 @@ Trip Planner • HABESHAGO
                     {{ page.trip.pickup_name }}
                 </strong>
             </div>
-
         </div>
 
         <div class="trip-summary-line"></div>
 
         <div class="trip-summary-location">
-
             <div class="trip-summary-marker destination-marker">
-                🏁
+                &#127937;
             </div>
 
             <div>
@@ -59,7 +53,6 @@ Trip Planner • HABESHAGO
                     {{ page.trip.destination }}
                 </strong>
             </div>
-
         </div>
 
     </section>
@@ -67,7 +60,6 @@ Trip Planner • HABESHAGO
     <section class="mobility-options-section">
 
         <div class="mobility-options-heading">
-
             <div>
                 <h2>Available Options</h2>
 
@@ -79,7 +71,6 @@ Trip Planner • HABESHAGO
             <span class="mobility-option-count">
                 {{ page.mobility_options | length }} options
             </span>
-
         </div>
 
         <div class="mobility-options">
@@ -99,7 +90,6 @@ Trip Planner • HABESHAGO
                 <div class="mobility-card-top">
 
                     <div class="mobility-title-group">
-
                         <span class="mobility-icon">
                             {{ option.icon }}
                         </span>
@@ -111,25 +101,23 @@ Trip Planner • HABESHAGO
                                 {{ option.description }}
                             </p>
                         </div>
-
                     </div>
 
                     <span class="mobility-badge">
                         {{ option.badge }}
                     </span>
 
-                    {% if option.recommendation_reason %}
-                    <p class="mobility-recommendation-reason">
-                        {{ option.recommendation_reason }}
-                    </p>
-                    {% endif %}
-
                 </div>
+
+                {% if option.recommendation_reason %}
+                <p class="mobility-recommendation-reason">
+                    {{ option.recommendation_reason }}
+                </p>
+                {% endif %}
 
                 <div class="mobility-metrics">
 
                     <div class="mobility-metric">
-
                         <span class="mobility-metric-label">
                             Estimated time
                         </span>
@@ -137,11 +125,9 @@ Trip Planner • HABESHAGO
                         <strong>
                             {{ option.eta }}
                         </strong>
-
                     </div>
 
                     <div class="mobility-metric">
-
                         <span class="mobility-metric-label">
                             Estimated price
                         </span>
@@ -149,7 +135,6 @@ Trip Planner • HABESHAGO
                         <strong>
                             {{ option.price }}
                         </strong>
-
                     </div>
 
                 </div>
@@ -159,9 +144,136 @@ Trip Planner • HABESHAGO
                     class="choose-option-button"
                     data-option="{{ option.id }}"
                     data-option-title="{{ option.title }}"
+                    data-option-fare="{{ option.price_etb }}"
+                    data-option-eta="{{ option.eta }}"
+                    data-option-recommendation="{{ option.recommendation_reason }}"
                 >
                     Choose {{ option.title }}
                 </button>
+
+                {% if option.id == "ride" %}
+                <section
+                    class="ride-category-selector"
+                    data-ride-category-selector
+                    hidden
+                >
+                    <div class="ride-category-heading">
+                        <div>
+                            <p class="ride-category-eyebrow">
+                                Ride preference
+                            </p>
+
+                            <h4>Choose a Ride Category</h4>
+                        </div>
+
+                        <span class="ride-category-count">
+                            4 categories
+                        </span>
+                    </div>
+
+                    <div class="ride-category-grid">
+
+                        <button
+                            type="button"
+                            class="ride-category-card"
+                            data-ride-category="economy"
+                            data-category-title="Economy"
+                        >
+                            <span class="ride-category-icon">
+                                &#128663;
+                            </span>
+
+                            <span class="ride-category-content">
+                                <strong>Economy</strong>
+
+                                <small>
+                                    Lowest-priced private ride
+                                </small>
+                            </span>
+
+                            <span class="ride-category-tag">
+                                Best value
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="ride-category-card"
+                            data-ride-category="standard"
+                            data-category-title="Standard"
+                        >
+                            <span class="ride-category-icon">
+                                &#128661;
+                            </span>
+
+                            <span class="ride-category-content">
+                                <strong>Standard</strong>
+
+                                <small>
+                                    Comfortable everyday travel
+                                </small>
+                            </span>
+
+                            <span class="ride-category-tag">
+                                Popular
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="ride-category-card"
+                            data-ride-category="premium"
+                            data-category-title="Premium"
+                        >
+                            <span class="ride-category-icon">
+                                &#10024;
+                            </span>
+
+                            <span class="ride-category-content">
+                                <strong>Premium</strong>
+
+                                <small>
+                                    Higher-comfort vehicle experience
+                                </small>
+                            </span>
+
+                            <span class="ride-category-tag">
+                                Comfort
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="ride-category-card"
+                            data-ride-category="ev"
+                            data-category-title="EV"
+                        >
+                            <span class="ride-category-icon">
+                                &#9889;
+                            </span>
+
+                            <span class="ride-category-content">
+                                <strong>EV</strong>
+
+                                <small>
+                                    Lower-emission electric ride
+                                </small>
+                            </span>
+
+                            <span class="ride-category-tag">
+                                Green
+                            </span>
+                        </button>
+
+                    </div>
+
+                    <p
+                        class="ride-category-feedback"
+                        data-ride-category-feedback
+                        aria-live="polite"
+                    ></p>
+                </section>
+                {% endif %}
 
             </article>
 
@@ -172,13 +284,10 @@ Trip Planner • HABESHAGO
     </section>
 
 </section>
-
 {% endblock %}
 
 {% block scripts %}
-
 <script
     src="{{ url_for('static', filename='trip_planner.js') }}"
 ></script>
-
 {% endblock %}
