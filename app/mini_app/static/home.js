@@ -6,9 +6,9 @@
  * Features:
  * - Shows destination suggestions when search receives focus
  * - Filters destinations while typing
- * - Selects a suggestion
- * - Displays a selected-destination panel
- * - Clears the current selection
+ * - Saves the selected destination to the Flask Trip Context
+ * - Opens the pickup map after a successful save
+ * - Clears the current visual selection
  * - Supports Recent Places
  */
 
@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log("HABESHAGO home.js loaded successfully.");
 
     const searchForm = document.querySelector(".destination-search");
+
     const searchInput = document.querySelector(
         "#destination-search-input"
     );
@@ -63,12 +64,16 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (!suggestionSection) {
-        console.error("Destination suggestions section was not found.");
+        console.error(
+            "Destination suggestions section was not found."
+        );
         return;
     }
 
     if (suggestionCards.length === 0) {
-        console.error("No destination suggestion cards were found.");
+        console.error(
+            "No destination suggestion cards were found."
+        );
         return;
     }
 
@@ -144,7 +149,33 @@ document.addEventListener("DOMContentLoaded", function () {
         showSuggestions();
     }
 
-    function selectDestination(destinationName) {
+    async function saveDestination(destinationName) {
+        const response = await fetch(
+            "/api/trip/destination",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    destination: destinationName,
+                }),
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(
+                result.message ||
+                "Destination could not be saved."
+            );
+        }
+
+        return result;
+    }
+
+    async function selectDestination(destinationName) {
         const cleanDestinationName =
             String(destinationName || "").trim();
 
@@ -163,9 +194,32 @@ document.addEventListener("DOMContentLoaded", function () {
         hideSuggestions();
 
         console.log(
-            "Destination selected:",
+            "Saving destination:",
             cleanDestinationName
         );
+
+        try {
+            await saveDestination(
+                cleanDestinationName
+            );
+
+            console.log(
+                "Destination saved successfully:",
+                cleanDestinationName
+            );
+
+            window.location.href = "/map";
+        } catch (error) {
+            console.error(
+                "Destination save failed:",
+                error
+            );
+
+            alert(
+                "We could not save your destination. " +
+                "Please try again."
+            );
+        }
     }
 
     function clearDestination() {

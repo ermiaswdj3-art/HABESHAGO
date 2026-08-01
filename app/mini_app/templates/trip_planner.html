@@ -87,7 +87,12 @@ Trip Planner • HABESHAGO
             {% for option in page.mobility_options %}
 
             <article
-                class="mobility-card"
+                class="
+                    mobility-card
+                    {% if option.is_recommended %}
+                        mobility-card-recommended
+                    {% endif %}
+                "
                 data-mobility-card="{{ option.id }}"
             >
 
@@ -112,6 +117,12 @@ Trip Planner • HABESHAGO
                     <span class="mobility-badge">
                         {{ option.badge }}
                     </span>
+
+                    {% if option.recommendation_reason %}
+                    <p class="mobility-recommendation-reason">
+                        {{ option.recommendation_reason }}
+                    </p>
+                    {% endif %}
 
                 </div>
 

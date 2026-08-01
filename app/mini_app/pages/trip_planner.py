@@ -7,7 +7,7 @@ selects a destination and pickup location.
 
 from pprint import pprint
 
-from app.mini_app.context import load_demo_trip
+from app.mini_app.context import get_trip
 from app.mini_app.pages.app_shell import get_app_shell
 from app.mini_app.services.decision_service import (
     generate_mobility_options,
@@ -21,7 +21,7 @@ def get_trip_planner_page():
 
     page = get_app_shell("home")
 
-    trip = load_demo_trip()
+    trip = get_trip()
 
     page["title"] = "Trip Planner"
 

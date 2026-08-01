@@ -3,5 +3,4 @@ from .trip_context import (
     reset_trip,
     set_destination,
     set_pickup,
-    load_demo_trip,
 )
