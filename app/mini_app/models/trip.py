@@ -49,6 +49,19 @@ class Trip:
     # Booking creation timestamp
     created_at: Optional[str] = None
 
+        # Assigned driver information
+    assigned_driver_id: Optional[str] = None
+    assigned_driver_name: Optional[str] = None
+    assigned_driver_rating: Optional[float] = None
+
+    # Assigned vehicle information
+    assigned_vehicle: Optional[str] = None
+    assigned_vehicle_color: Optional[str] = None
+    assigned_plate_number: Optional[str] = None
+
+    # Driver arrival estimate
+    driver_eta_minutes: Optional[int] = None
+
     def is_ready_for_planning(self) -> bool:
         """
         Return True when enough information exists
@@ -87,6 +100,9 @@ class Trip:
             "summary_ready",
             "booking_confirmed",
             "dispatch_pending",
+            "driver_searching",
+            "driver_assigned",
+            "dispatch_failed",
         }
 
         if status not in allowed_statuses:

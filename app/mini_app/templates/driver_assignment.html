@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}
+Driver Found &#8226; HABESHAGO
+{% endblock %}
+
+{% block content %}
+<section class="driver-assignment-page">
+
+    <header class="driver-assignment-header">
+        <p class="trip-planner-eyebrow">
+            Dispatch complete
+        </p>
+
+        <h1>{{ page.title }}</h1>
+
+        <p class="driver-assignment-subtitle">
+            {{ page.subtitle }}
+        </p>
+    </header>
+
+    <section class="driver-found-card">
+
+        <div class="driver-found-status">
+            <span class="driver-found-status-icon">
+                &#10003;
+            </span>
+
+            <div>
+                <span class="driver-found-status-label">
+                    Driver assigned
+                </span>
+
+                <strong>
+                    Arriving in
+                    {{ page.trip.driver_eta_minutes }}
+                    minute{% if page.trip.driver_eta_minutes != 1 %}s{% endif %}
+                </strong>
+            </div>
+        </div>
+
+        <div class="driver-profile-section">
+
+            <div class="driver-avatar" aria-hidden="true">
+                {{ page.trip.assigned_driver_name[0] }}
+            </div>
+
+            <div class="driver-profile-content">
+                <h2>
+                    {{ page.trip.assigned_driver_name }}
+                </h2>
+
+                <p>
+                    &#11088;
+                    {{ page.trip.assigned_driver_rating }}
+                    driver rating
+                </p>
+            </div>
+
+        </div>
+
+        <div class="driver-assignment-divider"></div>
+
+        <div class="assigned-vehicle-grid">
+
+            <article class="assigned-vehicle-item">
+                <span class="assigned-vehicle-label">
+                    Vehicle
+                </span>
+
+                <strong>
+                    {{ page.trip.assigned_vehicle }}
+                </strong>
+            </article>
+
+            <article class="assigned-vehicle-item">
+                <span class="assigned-vehicle-label">
+                    Color
+                </span>
+
+                <strong>
+                    {{ page.trip.assigned_vehicle_color }}
+                </strong>
+            </article>
+
+            <article class="assigned-vehicle-item">
+                <span class="assigned-vehicle-label">
+                    Plate number
+                </span>
+
+                <strong>
+                    {{ page.trip.assigned_plate_number }}
+                </strong>
+            </article>
+
+            <article class="assigned-vehicle-item">
+                <span class="assigned-vehicle-label">
+                    Trip status
+                </span>
+
+                <strong>
+                    {{ page.trip.booking_status
+                        | replace("_", " ")
+                        | title }}
+                </strong>
+            </article>
+
+        </div>
+
+    </section>
+
+    <section class="driver-trip-card">
+
+        <div class="driver-trip-row">
+            <span class="driver-trip-icon">
+                &#128205;
+            </span>
+
+            <div>
+                <span class="driver-trip-label">
+                    Pickup
+                </span>
+
+                <strong>
+                    {{ page.trip.pickup_name }}
+                </strong>
+            </div>
+        </div>
+
+        <div class="driver-trip-line"></div>
+
+        <div class="driver-trip-row">
+            <span class="driver-trip-icon">
+                &#127937;
+            </span>
+
+            <div>
+                <span class="driver-trip-label">
+                    Destination
+                </span>
+
+                <strong>
+                    {{ page.trip.destination }}
+                </strong>
+            </div>
+        </div>
+
+    </section>
+
+    <section class="driver-arrival-message">
+        <span class="driver-arrival-message-icon">
+            &#128663;
+        </span>
+
+        <div>
+            <strong>Your driver is heading to the pickup.</strong>
+
+            <p>
+                Live tracking will be introduced in Commit #68.
+            </p>
+        </div>
+    </section>
+
+</section>
+{% endblock %}

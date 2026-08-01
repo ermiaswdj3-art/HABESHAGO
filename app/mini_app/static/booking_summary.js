@@ -31,7 +31,31 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
-    async function confirmBooking() {
+    async function sendPostRequest(url) {
+        const response = await fetch(
+            url,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({}),
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(
+                result.message ||
+                "The request could not be completed."
+            );
+        }
+
+        return result;
+    }
+
+    async function confirmAndDispatchBooking() {
         confirmButton.disabled = true;
         confirmButton.textContent =
             "Confirming Booking...";
@@ -39,48 +63,55 @@ document.addEventListener("DOMContentLoaded", function () {
         setFeedback("", false);
 
         try {
-            const response = await fetch(
-                "/api/trip/confirm",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({}),
-                }
-            );
-
-            const result = await response.json();
-
-            if (!response.ok || !result.success) {
-                throw new Error(
-                    result.message ||
-                    "The booking could not be confirmed."
+            const confirmationResult =
+                await sendPostRequest(
+                    "/api/trip/confirm"
                 );
-            }
-
-            confirmButton.textContent =
-                "Booking Confirmed";
-
-            setFeedback(
-                "Booking confirmed. HABESHAGO is ready " +
-                "to begin driver dispatch.",
-                true
-            );
 
             console.log(
                 "Booking confirmed:",
-                result.trip
+                confirmationResult.trip
             );
+
+            confirmButton.textContent =
+                "Searching for Driver...";
+
+            setFeedback(
+                "Booking confirmed. Searching for " +
+                "the best available driver...",
+                true
+            );
+
+            const dispatchResult =
+                await sendPostRequest(
+                    "/api/trip/dispatch"
+                );
+
+            console.log(
+                "Driver assigned:",
+                dispatchResult.trip
+            );
+
+            confirmButton.textContent =
+                "Driver Found";
+
+            setFeedback(
+                "Driver assigned successfully. " +
+                "Opening driver details...",
+                true
+            );
+
+            window.location.href =
+                "/driver-assignment";
         } catch (error) {
             console.error(
-                "Booking confirmation failed:",
+                "Booking or dispatch failed:",
                 error
             );
 
             setFeedback(
                 error.message ||
-                "We could not confirm your booking.",
+                "We could not complete the booking.",
                 false
             );
 
@@ -92,6 +123,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     confirmButton.addEventListener(
         "click",
-        confirmBooking
+        confirmAndDispatchBooking
     );
 });

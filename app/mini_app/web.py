@@ -17,6 +17,14 @@ from app.mini_app.pages.driver_dashboard import (
     get_driver_dashboard,
 )
 
+from app.mini_app.pages.driver_assignment import (
+    get_driver_assignment_page,
+)
+
+from app.mini_app.services.dispatch_service import (
+    find_best_driver,
+)
+
 import json
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -212,6 +220,20 @@ def booking_summary():
 
     return render_template(
         "booking_summary.html",
+        page=page,
+        active_page="home",
+    )
+
+@app.route("/driver-assignment")
+def driver_assignment():
+    """
+    Render the assigned-driver result.
+    """
+
+    page = get_driver_assignment_page()
+
+    return render_template(
+        "driver_assignment.html",
         page=page,
         active_page="home",
     )
@@ -574,6 +596,78 @@ def confirm_trip_booking():
                 "estimated_eta": trip.estimated_eta,
                 "booking_status": trip.booking_status,
                 "created_at": trip.created_at,
+            },
+        }
+    )
+
+@app.route("/api/trip/dispatch", methods=["POST"])
+def dispatch_trip():
+    """
+    Find and assign the best available driver
+    to the active passenger booking.
+    """
+
+    trip = get_trip()
+
+    if trip.booking_status != "dispatch_pending":
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "The booking must be dispatch pending "
+                    "before driver search can begin."
+                ),
+            }
+        ), 409
+
+    trip.set_booking_status("driver_searching")
+
+    driver = find_best_driver(trip)
+
+    if driver is None:
+        trip.set_booking_status("dispatch_failed")
+
+        return jsonify(
+            {
+                "success": False,
+                "message": "No available driver was found.",
+                "trip": {
+                    "booking_status": trip.booking_status,
+                },
+            }
+        ), 404
+
+    trip.assigned_driver_id = driver.driver_id
+    trip.assigned_driver_name = driver.name
+    trip.assigned_driver_rating = driver.rating
+    trip.assigned_vehicle = driver.vehicle
+    trip.assigned_vehicle_color = driver.vehicle_color
+    trip.assigned_plate_number = driver.plate_number
+    trip.driver_eta_minutes = driver.eta_minutes
+
+    trip.set_booking_status("driver_assigned")
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Driver assigned successfully.",
+            "trip": {
+                "booking_status": trip.booking_status,
+                "assigned_driver_id": trip.assigned_driver_id,
+                "assigned_driver_name": trip.assigned_driver_name,
+                "assigned_driver_rating": (
+                    trip.assigned_driver_rating
+                ),
+                "assigned_vehicle": trip.assigned_vehicle,
+                "assigned_vehicle_color": (
+                    trip.assigned_vehicle_color
+                ),
+                "assigned_plate_number": (
+                    trip.assigned_plate_number
+                ),
+                "driver_eta_minutes": (
+                    trip.driver_eta_minutes
+                ),
             },
         }
     )
