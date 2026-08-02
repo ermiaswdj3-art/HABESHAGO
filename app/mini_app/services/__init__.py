@@ -10,3 +10,8 @@ from .tracking_service import (
     estimate_eta_minutes,
     move_driver_toward_pickup,
 )
+
+from .pickup_verification_service import (
+    generate_pickup_pin,
+    verify_pickup_pin,
+)

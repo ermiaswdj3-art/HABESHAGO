@@ -163,13 +163,104 @@ Driver Found &#8226; HABESHAGO
         </div>
     </section>
 
-            <p
-                class="driver-tracking-feedback"
-                data-driver-tracking-feedback
-                aria-live="polite"
-            ></p>
+    <section
+        class="pickup-verification-panel"
+        data-pickup-verification-panel
+        hidden
+    >
+        <div class="pickup-verification-heading">
+            <div>
+                <p class="trip-planner-eyebrow">
+                    Secure pickup
+                </p>
+
+                <h2>Your Pickup PIN</h2>
+            </div>
+
+            <span class="pickup-verification-lock">
+                &#128274;
+            </span>
+        </div>
+
+        <p class="pickup-verification-instruction">
+            Confirm the driver, vehicle, and plate number first.
+            Then share this PIN with your driver.
+        </p>
+
+        <div
+            class="pickup-pin-display"
+            data-pickup-pin-display
+            aria-label="Pickup verification PIN"
+        >
+            ----
+        </div>
+
+        <form
+            class="pickup-verification-form"
+            data-pickup-verification-form
+        >
+            <label for="pickup-pin-input">
+                Enter the PIN to simulate driver verification
+            </label>
+
+            <div class="pickup-verification-controls">
+                <input
+                    id="pickup-pin-input"
+                    class="pickup-pin-input"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    maxlength="4"
+                    autocomplete="one-time-code"
+                    placeholder="4-digit PIN"
+                    data-pickup-pin-input
+                    required
+                >
+
+                <button
+                    class="verify-pickup-button"
+                    type="submit"
+                    data-verify-pickup
+                >
+                    Verify Passenger
+                </button>
+            </div>
+        </form>
+
+        <p
+            class="pickup-verification-feedback"
+            data-pickup-verification-feedback
+            aria-live="polite"
+        ></p>
+    </section>
+
+    <section
+        class="pickup-verification-success"
+        data-pickup-verification-success
+        hidden
+    >
+        <span class="pickup-verification-success-icon">
+            &#10003;
+        </span>
+
+        <div>
+            <h2>Passenger Verified</h2>
+
+            <p>
+                Identity handoff is complete. The trip is ready to start.
+            </p>
+        </div>
+    </section>
+
+    <p
+        class="driver-tracking-feedback"
+        data-driver-tracking-feedback
+        aria-live="polite"
+    ></p>
+
 </section>
 {% endblock %}
+
 {% block scripts %}
 <script
     src="{{ url_for('static', filename='driver_assignment.js') }}"

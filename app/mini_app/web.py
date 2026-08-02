@@ -28,6 +28,11 @@ from app.mini_app.services.tracking_service import (
     move_driver_toward_pickup,
 )
 
+from app.mini_app.services.pickup_verification_service import (
+    generate_pickup_pin,
+    verify_pickup_pin,
+)
+
 from app.mini_app.services.dispatch_service import (
     find_best_driver,
 )
@@ -769,6 +774,129 @@ def update_driver_tracking():
                 "booking_status": trip.booking_status,
                 "has_arrived": (
                     trip.booking_status == "driver_arrived"
+                ),
+            },
+        }
+    )
+
+@app.route(
+    "/api/trip/pickup-verification/start",
+    methods=["POST"],
+)
+def start_pickup_verification():
+    """
+    Generate a pickup PIN after the assigned driver arrives.
+    """
+
+    trip = get_trip()
+
+    if trip.booking_status == "pickup_verification_pending":
+        return jsonify(
+            {
+                "success": True,
+                "message": "Pickup verification is already active.",
+                "verification": {
+                    "pickup_pin": trip.pickup_pin,
+                    "booking_status": trip.booking_status,
+                    "pickup_pin_generated_at": (
+                        trip.pickup_pin_generated_at
+                    ),
+                },
+            }
+        )
+
+    try:
+        pickup_pin = generate_pickup_pin(trip)
+    except ValueError as error:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(error),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Pickup PIN generated successfully.",
+            "verification": {
+                "pickup_pin": pickup_pin,
+                "booking_status": trip.booking_status,
+                "pickup_pin_generated_at": (
+                    trip.pickup_pin_generated_at
+                ),
+            },
+        }
+    )
+
+@app.route(
+    "/api/trip/pickup-verification/verify",
+    methods=["POST"],
+)
+def verify_trip_pickup():
+    """
+    Verify the pickup PIN before the ride begins.
+    """
+
+    payload = request.get_json(silent=True) or {}
+
+    submitted_pin = str(
+        payload.get("pickup_pin", "")
+    ).strip()
+
+    if not submitted_pin:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Pickup PIN is required.",
+            }
+        ), 400
+
+    try:
+        is_verified = verify_pickup_pin(
+            trip=get_trip(),
+            submitted_pin=submitted_pin,
+        )
+    except ValueError as error:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(error),
+            }
+        ), 409
+
+    trip = get_trip()
+
+    if not is_verified:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Incorrect pickup PIN.",
+                "verification": {
+                    "booking_status": trip.booking_status,
+                    "pickup_verification_attempts": (
+                        trip.pickup_verification_attempts
+                    ),
+                },
+            }
+        ), 401
+
+    return jsonify(
+        {
+            "success": True,
+            "message": (
+                "Passenger verified. The trip is ready to start."
+            ),
+            "verification": {
+                "booking_status": trip.booking_status,
+                "pickup_pin_verified": (
+                    trip.pickup_pin_verified
+                ),
+                "pickup_verified_at": (
+                    trip.pickup_verified_at
+                ),
+                "pickup_verification_attempts": (
+                    trip.pickup_verification_attempts
                 ),
             },
         }

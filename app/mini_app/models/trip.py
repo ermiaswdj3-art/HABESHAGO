@@ -37,7 +37,7 @@ class Trip:
     estimated_fare: Optional[float] = None
     estimated_eta: Optional[str] = None
 
-    # AI recommendation
+    # HABESHAGO recommendation
     recommendation: Optional[str] = None
 
     # Selected route (future routing engine)
@@ -49,7 +49,7 @@ class Trip:
     # Booking creation timestamp
     created_at: Optional[str] = None
 
-        # Assigned driver information
+    # Assigned driver information
     assigned_driver_id: Optional[str] = None
     assigned_driver_name: Optional[str] = None
     assigned_driver_rating: Optional[float] = None
@@ -61,6 +61,13 @@ class Trip:
 
     # Driver arrival estimate
     driver_eta_minutes: Optional[int] = None
+
+    # Pickup verification
+    pickup_pin: Optional[str] = None
+    pickup_pin_generated_at: Optional[str] = None
+    pickup_pin_verified: bool = False
+    pickup_verified_at: Optional[str] = None
+    pickup_verification_attempts: int = 0
 
     def is_ready_for_planning(self) -> bool:
         """
@@ -85,6 +92,22 @@ class Trip:
             and self.service is not None
         )
 
+    def is_ready_for_pickup_verification(self) -> bool:
+        """
+        Return True when a driver has arrived and the
+        trip can begin pickup verification.
+        """
+
+        return (
+            self.booking_status
+            in {
+                "driver_arrived",
+                "pickup_verification_pending",
+            }
+            and self.assigned_driver_id is not None
+            and self.pickup_pin is not None
+        )
+
     def set_booking_status(
         self,
         status: str,
@@ -104,6 +127,9 @@ class Trip:
             "driver_assigned",
             "driver_arriving",
             "driver_arrived",
+            "pickup_verification_pending",
+            "passenger_verified",
+            "ready_to_start",
             "dispatch_failed",
         }
 
