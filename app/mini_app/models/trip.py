@@ -62,6 +62,18 @@ class Trip:
     # Driver arrival estimate
     driver_eta_minutes: Optional[int] = None
 
+        # ==================================================
+    # Trip lifecycle
+    # ==================================================
+
+    trip_started_at: Optional[str] = None
+
+    trip_completed_at: Optional[str] = None
+
+    trip_progress_percent: int = 0
+
+    destination_reached: bool = False
+
     # Pickup verification
     pickup_pin: Optional[str] = None
     pickup_pin_generated_at: Optional[str] = None
@@ -90,6 +102,16 @@ class Trip:
         return (
             self.is_ready_for_planning()
             and self.service is not None
+        )
+
+    def is_ready_to_start_trip(self) -> bool:
+        """
+        Returns True when the passenger has been
+        securely verified and the ride may begin.
+        """
+
+        return (
+            self.booking_status == "ready_to_start"
         )
 
     def is_ready_for_pickup_verification(self) -> bool:
@@ -130,6 +152,10 @@ class Trip:
             "pickup_verification_pending",
             "passenger_verified",
             "ready_to_start",
+            "trip_started",
+            "trip_in_progress",
+            "arriving_destination",
+            "trip_completed",
             "dispatch_failed",
         }
 

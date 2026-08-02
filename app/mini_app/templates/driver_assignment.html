@@ -100,8 +100,8 @@ Driver Found &#8226; HABESHAGO
 
                 <strong data-driver-trip-status>
                     {{ page.trip.booking_status
-                        | replace("_", " ")
-                        | title }}
+                    | replace("_", " ")
+                    | title }}
                 </strong>
             </article>
 
@@ -163,11 +163,7 @@ Driver Found &#8226; HABESHAGO
         </div>
     </section>
 
-    <section
-        class="pickup-verification-panel"
-        data-pickup-verification-panel
-        hidden
-    >
+    <section class="pickup-verification-panel" data-pickup-verification-panel hidden>
         <div class="pickup-verification-heading">
             <div>
                 <p class="trip-planner-eyebrow">
@@ -187,58 +183,29 @@ Driver Found &#8226; HABESHAGO
             Then share this PIN with your driver.
         </p>
 
-        <div
-            class="pickup-pin-display"
-            data-pickup-pin-display
-            aria-label="Pickup verification PIN"
-        >
+        <div class="pickup-pin-display" data-pickup-pin-display aria-label="Pickup verification PIN">
             ----
         </div>
 
-        <form
-            class="pickup-verification-form"
-            data-pickup-verification-form
-        >
+        <form class="pickup-verification-form" data-pickup-verification-form>
             <label for="pickup-pin-input">
                 Enter the PIN to simulate driver verification
             </label>
 
             <div class="pickup-verification-controls">
-                <input
-                    id="pickup-pin-input"
-                    class="pickup-pin-input"
-                    type="text"
-                    inputmode="numeric"
-                    pattern="[0-9]*"
-                    maxlength="4"
-                    autocomplete="one-time-code"
-                    placeholder="4-digit PIN"
-                    data-pickup-pin-input
-                    required
-                >
+                <input id="pickup-pin-input" class="pickup-pin-input" type="text" inputmode="numeric" pattern="[0-9]*"
+                    maxlength="4" autocomplete="one-time-code" placeholder="4-digit PIN" data-pickup-pin-input required>
 
-                <button
-                    class="verify-pickup-button"
-                    type="submit"
-                    data-verify-pickup
-                >
+                <button class="verify-pickup-button" type="submit" data-verify-pickup>
                     Verify Passenger
                 </button>
             </div>
         </form>
 
-        <p
-            class="pickup-verification-feedback"
-            data-pickup-verification-feedback
-            aria-live="polite"
-        ></p>
+        <p class="pickup-verification-feedback" data-pickup-verification-feedback aria-live="polite"></p>
     </section>
 
-    <section
-        class="pickup-verification-success"
-        data-pickup-verification-success
-        hidden
-    >
+    <section class="pickup-verification-success" data-pickup-verification-success hidden>
         <span class="pickup-verification-success-icon">
             &#10003;
         </span>
@@ -247,22 +214,21 @@ Driver Found &#8226; HABESHAGO
             <h2>Passenger Verified</h2>
 
             <p>
-                Identity handoff is complete. The trip is ready to start.
+                Identity handoff is complete.
+                The trip is ready to start.
             </p>
         </div>
+
+        <button type="button" class="start-trip-button" data-start-trip>
+            Start Trip
+        </button>
     </section>
 
-    <p
-        class="driver-tracking-feedback"
-        data-driver-tracking-feedback
-        aria-live="polite"
-    ></p>
+    <p class="driver-tracking-feedback" data-driver-tracking-feedback aria-live="polite"></p>
 
 </section>
 {% endblock %}
 
 {% block scripts %}
-<script
-    src="{{ url_for('static', filename='driver_assignment.js') }}"
-></script>
+<script src="{{ url_for('static', filename='driver_assignment.js') }}"></script>
 {% endblock %}

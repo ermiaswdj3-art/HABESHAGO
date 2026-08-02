@@ -45,6 +45,10 @@ document.addEventListener("DOMContentLoaded", function () {
         "[data-verify-pickup]"
     );
 
+    const startTripButton = document.querySelector(
+        "[data-start-trip]"
+    );
+
     const verificationFeedback = document.querySelector(
         "[data-pickup-verification-feedback]"
     );
@@ -279,6 +283,54 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    async function startPassengerTrip() {
+    if (!startTripButton) {
+        return;
+    }
+
+    startTripButton.disabled = true;
+    startTripButton.textContent =
+        "Starting Trip...";
+
+    try {
+        const result = await sendPostRequest(
+            "/api/trip/start",
+            {}
+        );
+
+        console.log(
+            "Trip started:",
+            result.trip
+        );
+
+        startTripButton.textContent =
+            "Trip Started";
+
+        if (trackingFeedback) {
+            trackingFeedback.textContent =
+                "Trip started successfully.";
+        }
+
+        window.location.href =
+            "/active-trip";
+    } catch (error) {
+        console.error(
+            "Trip could not start:",
+            error
+        );
+
+        if (trackingFeedback) {
+            trackingFeedback.textContent =
+                error.message ||
+                "The trip could not be started.";
+        }
+
+        startTripButton.disabled = false;
+        startTripButton.textContent =
+            "Start Trip";
+    }
+}
+
     async function verifyPassengerPickup(event) {
         event.preventDefault();
 
@@ -382,6 +434,13 @@ document.addEventListener("DOMContentLoaded", function () {
         verificationForm.addEventListener(
             "submit",
             verifyPassengerPickup
+        );
+    }
+
+    if (startTripButton) {
+       startTripButton.addEventListener(
+           "click",
+           startPassengerTrip
         );
     }
 

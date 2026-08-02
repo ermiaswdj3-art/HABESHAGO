@@ -2042,3 +2042,268 @@ footer {
         min-height: 48px;
     }
 }
+
+/* =========================================================
+   COMMIT #70 — TRIP LIFECYCLE
+   ========================================================= */
+
+.start-trip-button {
+    min-width: 150px;
+    min-height: 48px;
+    margin-left: auto;
+    padding: 13px 18px;
+    color: #ffffff;
+    background: var(--color-primary);
+    border: 0;
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.start-trip-button:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
+.active-trip-page {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    padding-bottom: 180px;
+}
+
+.active-trip-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.active-trip-header h1 {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 32px;
+}
+
+.active-trip-subtitle {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 15px;
+}
+
+.active-trip-status-card,
+.active-trip-route-card,
+.active-trip-driver-card,
+.active-trip-message,
+.trip-completion-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 22px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.active-trip-status-card {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 22px;
+}
+
+.active-trip-status-heading {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.active-trip-status-icon {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    place-items: center;
+    color: #ffffff;
+    background: var(--color-primary);
+    border-radius: 15px;
+    font-size: 22px;
+}
+
+.active-trip-status-heading div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.active-trip-status-label,
+.active-trip-route-label {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.active-trip-progress-track {
+    height: 12px;
+    overflow: hidden;
+    background: var(--color-background);
+    border-radius: var(--radius-pill);
+}
+
+.active-trip-progress-fill {
+    height: 100%;
+    background: var(--color-primary);
+    border-radius: inherit;
+    transition: width 0.5s ease;
+}
+
+.active-trip-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}
+
+.active-trip-progress-meta strong {
+    color: var(--color-primary);
+}
+
+.active-trip-route-card {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.active-trip-route-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.active-trip-route-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    place-items: center;
+    background: rgba(10, 143, 61, 0.08);
+    border-radius: 14px;
+    font-size: 19px;
+}
+
+.active-trip-route-row div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.active-trip-route-line {
+    width: 2px;
+    height: 24px;
+    margin: 4px 0 4px 20px;
+    background: var(--color-border);
+}
+
+.active-trip-driver-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+}
+
+.active-trip-driver-avatar {
+    display: grid;
+    width: 58px;
+    height: 58px;
+    flex-shrink: 0;
+    place-items: center;
+    color: #ffffff;
+    background: var(--color-primary);
+    border-radius: 18px;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.active-trip-driver-card h2 {
+    margin: 3px 0 5px;
+    font-size: 20px;
+}
+
+.active-trip-driver-card p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}
+
+.active-trip-message,
+.trip-completion-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    border-left: 4px solid var(--color-primary);
+}
+
+.active-trip-message-icon {
+    font-size: 26px;
+}
+
+.active-trip-message div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.active-trip-message p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}
+
+.trip-completion-icon {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    place-items: center;
+    color: #ffffff;
+    background: var(--color-primary);
+    border-radius: 50%;
+    font-size: 21px;
+    font-weight: 800;
+}
+
+.trip-completion-card h2 {
+    margin: 0 0 5px;
+    color: var(--color-primary);
+    font-size: 21px;
+}
+
+.trip-completion-card p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+}
+
+.active-trip-feedback {
+    min-height: 20px;
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+}
+
+@media (max-width: 640px) {
+    .pickup-verification-success {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .start-trip-button {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .active-trip-header h1 {
+        font-size: 28px;
+    }
+}

@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}
+Active Trip &#8226; HABESHAGO
+{% endblock %}
+
+{% block content %}
+<section class="active-trip-page">
+
+    <header class="active-trip-header">
+        <p class="trip-planner-eyebrow">
+            Live journey
+        </p>
+
+        <h1>{{ page.title }}</h1>
+
+        <p class="active-trip-subtitle">
+            {{ page.subtitle }}
+        </p>
+    </header>
+
+    <section class="active-trip-status-card">
+
+        <div class="active-trip-status-heading">
+            <span class="active-trip-status-icon">
+                &#128663;
+            </span>
+
+            <div>
+                <span class="active-trip-status-label">
+                    Trip status
+                </span>
+
+                <strong data-active-trip-status>
+                    {{ page.trip.booking_status
+                        | replace("_", " ")
+                        | title }}
+                </strong>
+            </div>
+        </div>
+
+        <div class="active-trip-progress-track">
+            <div
+                class="active-trip-progress-fill"
+                data-active-trip-progress-fill
+                style="width: {{ page.trip.trip_progress_percent }}%;"
+            ></div>
+        </div>
+
+        <div class="active-trip-progress-meta">
+            <span>
+                Journey progress
+            </span>
+
+            <strong data-active-trip-progress-text>
+                {{ page.trip.trip_progress_percent }}%
+            </strong>
+        </div>
+
+    </section>
+
+    <section class="active-trip-route-card">
+
+        <div class="active-trip-route-row">
+            <span class="active-trip-route-icon">
+                &#128205;
+            </span>
+
+            <div>
+                <span class="active-trip-route-label">
+                    Pickup
+                </span>
+
+                <strong>
+                    {{ page.trip.pickup_name }}
+                </strong>
+            </div>
+        </div>
+
+        <div class="active-trip-route-line"></div>
+
+        <div class="active-trip-route-row">
+            <span class="active-trip-route-icon">
+                &#127937;
+            </span>
+
+            <div>
+                <span class="active-trip-route-label">
+                    Destination
+                </span>
+
+                <strong>
+                    {{ page.trip.destination }}
+                </strong>
+            </div>
+        </div>
+
+    </section>
+
+    <section class="active-trip-driver-card">
+        <div class="active-trip-driver-avatar">
+            {{ page.trip.assigned_driver_name[0] }}
+        </div>
+
+        <div>
+            <span class="active-trip-route-label">
+                Your driver
+            </span>
+
+            <h2>{{ page.trip.assigned_driver_name }}</h2>
+
+            <p>
+                {{ page.trip.assigned_vehicle }}
+                &#8226;
+                {{ page.trip.assigned_vehicle_color }}
+                &#8226;
+                {{ page.trip.assigned_plate_number }}
+            </p>
+        </div>
+    </section>
+
+    <section class="active-trip-message">
+        <span class="active-trip-message-icon">
+            &#128506;
+        </span>
+
+        <div>
+            <strong data-active-trip-message-title>
+                Your trip is underway.
+            </strong>
+
+            <p data-active-trip-message-text>
+                HABESHAGO is tracking progress toward your destination.
+            </p>
+        </div>
+    </section>
+
+    <section
+        class="trip-completion-card"
+        data-trip-completion-card
+        hidden
+    >
+        <span class="trip-completion-icon">
+            &#10003;
+        </span>
+
+        <div>
+            <h2>Trip Completed</h2>
+
+            <p>
+                You have reached {{ page.trip.destination }} safely.
+            </p>
+        </div>
+    </section>
+
+    <p
+        class="active-trip-feedback"
+        data-active-trip-feedback
+        aria-live="polite"
+    ></p>
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script
+    src="{{ url_for('static', filename='active_trip.js') }}"
+></script>
+{% endblock %}

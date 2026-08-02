@@ -19,6 +19,10 @@ from app.mini_app.pages.driver_dashboard import (
     get_driver_dashboard,
 )
 
+from app.mini_app.pages.active_trip import (
+    get_active_trip_page,
+)
+
 from app.mini_app.pages.driver_assignment import (
     get_driver_assignment_page,
 )
@@ -31,6 +35,12 @@ from app.mini_app.services.tracking_service import (
 from app.mini_app.services.pickup_verification_service import (
     generate_pickup_pin,
     verify_pickup_pin,
+)
+
+from app.mini_app.services.trip_lifecycle_service import (
+    advance_trip_progress,
+    complete_trip,
+    start_trip,
 )
 
 from app.mini_app.services.dispatch_service import (
@@ -250,6 +260,20 @@ def driver_assignment():
         active_page="home",
     )
 
+@app.route("/active-trip")
+def active_trip():
+    """
+    Render the active passenger trip.
+    """
+
+    page = get_active_trip_page()
+
+    return render_template(
+        "active_trip.html",
+        page=page,
+        active_page="home",
+    )
+
 @app.route("/api/trip/destination", methods=["POST"])
 def update_trip_destination():
     """
@@ -287,6 +311,10 @@ def update_trip_destination():
                 "pickup_name": trip.pickup_name,
                 "pickup_latitude": trip.pickup_latitude,
                 "pickup_longitude": trip.pickup_longitude,
+                "trip_started_at": trip.trip_started_at,
+                "trip_completed_at": trip.trip_completed_at,
+                "trip_progress_percent": trip.trip_progress_percent,
+                "destination_reached": trip.destination_reached,
             },
         }
     )
@@ -897,6 +925,138 @@ def verify_trip_pickup():
                 ),
                 "pickup_verification_attempts": (
                     trip.pickup_verification_attempts
+                ),
+            },
+        }
+    )
+
+@app.route("/api/trip/start", methods=["POST"])
+def start_active_trip():
+    """
+    Start the active trip after pickup verification.
+    """
+
+    trip = get_trip()
+
+    try:
+        start_trip(trip)
+    except ValueError as error:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(error),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Trip started successfully.",
+            "trip": {
+                "booking_status": trip.booking_status,
+                "trip_started_at": trip.trip_started_at,
+                "trip_progress_percent": (
+                    trip.trip_progress_percent
+                ),
+                "destination_reached": (
+                    trip.destination_reached
+                ),
+            },
+        }
+    )
+
+@app.route(
+    "/api/trip/progress",
+    methods=["POST"],
+)
+def update_trip_progress():
+    """
+    Advance the active trip toward its destination.
+    """
+
+    payload = request.get_json(silent=True) or {}
+
+    try:
+        progress_increment = int(
+            payload.get("progress_increment", 20)
+        )
+    except (TypeError, ValueError):
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "A valid progress increment is required."
+                ),
+            }
+        ), 400
+
+    trip = get_trip()
+
+    try:
+        advance_trip_progress(
+            trip=trip,
+            progress_increment=progress_increment,
+        )
+    except ValueError as error:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(error),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Trip progress updated.",
+            "trip": {
+                "booking_status": trip.booking_status,
+                "trip_progress_percent": (
+                    trip.trip_progress_percent
+                ),
+                "destination_reached": (
+                    trip.destination_reached
+                ),
+            },
+        }
+    )
+
+@app.route(
+    "/api/trip/complete",
+    methods=["POST"],
+)
+def complete_active_trip():
+    """
+    Complete the active trip after reaching
+    the destination.
+    """
+
+    trip = get_trip()
+
+    try:
+        complete_trip(trip)
+    except ValueError as error:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(error),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Trip completed successfully.",
+            "trip": {
+                "booking_status": trip.booking_status,
+                "trip_progress_percent": (
+                    trip.trip_progress_percent
+                ),
+                "destination_reached": (
+                    trip.destination_reached
+                ),
+                "trip_completed_at": (
+                    trip.trip_completed_at
                 ),
             },
         }
