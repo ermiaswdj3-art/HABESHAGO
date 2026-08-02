@@ -8,6 +8,8 @@ from flask import Flask, jsonify, render_template, request
 
 from datetime import datetime, timezone
 
+from app.mini_app.repositories import get_driver_by_id
+
 from app.mini_app.pages.home import get_home_page
 from app.mini_app.pages.passenger_dashboard import (
     get_passenger_dashboard,
@@ -19,6 +21,11 @@ from app.mini_app.pages.driver_dashboard import (
 
 from app.mini_app.pages.driver_assignment import (
     get_driver_assignment_page,
+)
+
+from app.mini_app.services.tracking_service import (
+    calculate_distance_km as calculate_tracking_distance_km,
+    move_driver_toward_pickup,
 )
 
 from app.mini_app.services.dispatch_service import (
@@ -667,6 +674,101 @@ def dispatch_trip():
                 ),
                 "driver_eta_minutes": (
                     trip.driver_eta_minutes
+                ),
+            },
+        }
+    )
+
+@app.route("/api/trip/tracking/update", methods=["POST"])
+def update_driver_tracking():
+    """
+    Move the assigned driver toward the passenger pickup
+    and return the latest tracking state.
+    """
+
+    trip = get_trip()
+
+    allowed_tracking_states = {
+        "driver_assigned",
+        "driver_arriving",
+    }
+
+    if trip.booking_status not in allowed_tracking_states:
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "The trip must have an assigned driver "
+                    "before tracking can begin."
+                ),
+            }
+        ), 409
+
+    if not trip.assigned_driver_id:
+        return jsonify(
+            {
+                "success": False,
+                "message": "No assigned driver was found.",
+            }
+        ), 409
+
+    driver = get_driver_by_id(
+        trip.assigned_driver_id
+    )
+
+    if driver is None:
+        return jsonify(
+            {
+                "success": False,
+                "message": "The assigned driver record was not found.",
+            }
+        ), 404
+
+    move_driver_toward_pickup(
+        driver=driver,
+        trip=trip,
+        progress_ratio=0.25,
+    )
+
+    remaining_distance_km = calculate_tracking_distance_km(
+        driver.latitude,
+        driver.longitude,
+        trip.pickup_latitude,
+        trip.pickup_longitude,
+    )
+
+    arrival_threshold_km = 0.02
+
+    if remaining_distance_km <= arrival_threshold_km:
+        driver.latitude = trip.pickup_latitude
+        driver.longitude = trip.pickup_longitude
+        driver.eta_minutes = 0
+        driver.set_driver_status("waiting")
+
+        trip.driver_eta_minutes = 0
+        trip.set_booking_status("driver_arrived")
+    else:
+        trip.driver_eta_minutes = driver.eta_minutes
+        trip.set_booking_status("driver_arriving")
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Driver tracking updated.",
+            "tracking": {
+                "driver_id": driver.driver_id,
+                "driver_name": driver.name,
+                "latitude": driver.latitude,
+                "longitude": driver.longitude,
+                "remaining_distance_km": round(
+                    remaining_distance_km,
+                    3,
+                ),
+                "eta_minutes": driver.eta_minutes,
+                "driver_status": driver.driver_status,
+                "booking_status": trip.booking_status,
+                "has_arrived": (
+                    trip.booking_status == "driver_arrived"
                 ),
             },
         }

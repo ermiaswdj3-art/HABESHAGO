@@ -4,3 +4,9 @@ from .dispatch_service import (
     find_best_driver,
     rank_available_drivers,
 )
+
+from .tracking_service import (
+    calculate_distance_km as calculate_tracking_distance_km,
+    estimate_eta_minutes,
+    move_driver_toward_pickup,
+)

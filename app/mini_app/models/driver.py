@@ -43,6 +43,9 @@ class Driver:
 
     is_available: bool = True
 
+    # Driver journey state
+    driver_status: str = "available"
+
     # Estimated arrival to passenger
     eta_minutes: Optional[int] = None
 
@@ -56,3 +59,27 @@ class Driver:
             self.is_online
             and self.is_available
         )
+
+    def set_driver_status(
+        self,
+        status: str,
+    ) -> None:
+        """
+        Update the driver's lifecycle state.
+        """
+
+        allowed_statuses = {
+            "available",
+            "assigned",
+            "arriving",
+            "waiting",
+            "on_trip",
+            "offline",
+        }
+
+        if status not in allowed_statuses:
+            raise ValueError(
+                f"Invalid driver status: {status}"
+            )
+
+        self.driver_status = status

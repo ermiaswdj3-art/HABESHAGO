@@ -1865,3 +1865,16 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+/* =========================================================
+   COMMIT #68 — LIVE DRIVER TRACKING
+   ========================================================= */
+
+.driver-tracking-feedback {
+    min-height: 20px;
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+}

@@ -31,7 +31,7 @@ Driver Found &#8226; HABESHAGO
                     Driver assigned
                 </span>
 
-                <strong>
+                <strong data-driver-arrival-text>
                     Arriving in
                     {{ page.trip.driver_eta_minutes }}
                     minute{% if page.trip.driver_eta_minutes != 1 %}s{% endif %}
@@ -98,7 +98,7 @@ Driver Found &#8226; HABESHAGO
                     Trip status
                 </span>
 
-                <strong>
+                <strong data-driver-trip-status>
                     {{ page.trip.booking_status
                         | replace("_", " ")
                         | title }}
@@ -153,13 +153,25 @@ Driver Found &#8226; HABESHAGO
         </span>
 
         <div>
-            <strong>Your driver is heading to the pickup.</strong>
+            <strong data-driver-progress-title>
+                Your driver is heading to the pickup.
+            </strong>
 
-            <p>
-                Live tracking will be introduced in Commit #68.
+            <p data-driver-progress-message>
+                Live tracking is active.
             </p>
         </div>
     </section>
 
+            <p
+                class="driver-tracking-feedback"
+                data-driver-tracking-feedback
+                aria-live="polite"
+            ></p>
 </section>
+{% endblock %}
+{% block scripts %}
+<script
+    src="{{ url_for('static', filename='driver_assignment.js') }}"
+></script>
 {% endblock %}

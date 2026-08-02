@@ -102,6 +102,8 @@ class Trip:
             "dispatch_pending",
             "driver_searching",
             "driver_assigned",
+            "driver_arriving",
+            "driver_arrived",
             "dispatch_failed",
         }
 
