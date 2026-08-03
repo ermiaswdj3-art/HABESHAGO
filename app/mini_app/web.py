@@ -19,6 +19,25 @@ from app.mini_app.pages.driver_dashboard import (
     get_driver_dashboard,
 )
 
+from app.mini_app.pages.payment import (
+    get_payment_page,
+)
+
+from app.mini_app.services.fare_breakdown_service import (
+    calculate_fare_breakdown,
+)
+
+from app.mini_app.services.payment_service import (
+    process_payment,
+    select_payment_method,
+)
+
+from app.mini_app.services.payment_service import (
+    SUPPORTED_PAYMENT_METHODS,
+    process_payment,
+    select_payment_method,
+)
+
 from app.mini_app.pages.active_trip import (
     get_active_trip_page,
 )
@@ -30,6 +49,12 @@ from app.mini_app.pages.driver_assignment import (
 from app.mini_app.services.tracking_service import (
     calculate_distance_km as calculate_tracking_distance_km,
     move_driver_toward_pickup,
+)
+
+from app.mini_app.services.payment_service import (
+    SUPPORTED_PAYMENT_METHODS,
+    process_payment,
+    select_payment_method,
 )
 
 from app.mini_app.services.pickup_verification_service import (
@@ -1057,6 +1082,255 @@ def complete_active_trip():
                 ),
                 "trip_completed_at": (
                     trip.trip_completed_at
+                ),
+            },
+        }
+    )
+
+@app.route(
+    "/api/trip/payment/prepare",
+    methods=["POST"],
+)
+def prepare_trip_payment():
+    """
+    Calculate the completed trip's final fare and
+    prepare it for payment-method selection.
+
+    Commit #71 currently uses controlled distance and
+    duration values. Real route measurements will replace
+    them in a later pricing integration.
+    """
+
+    trip = get_trip()
+
+    if trip.booking_status != "trip_completed":
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "Payment can be prepared only after "
+                    "the trip is completed."
+                ),
+            }
+        ), 409
+
+    try:
+        fare_result = calculate_fare_breakdown(
+            trip=trip,
+            distance_km=4.0,
+            duration_minutes=12.0,
+            waiting_minutes=0.0,
+            airport_fee=0.0,
+            toll_fee=0.0,
+            discount=0.0,
+        )
+    except ValueError as error:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(error),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Payment prepared successfully.",
+            "payment": {
+                "final_fare": trip.final_fare,
+                "currency": trip.fare_currency,
+                "fare_breakdown": trip.fare_breakdown,
+                "payment_status": trip.payment_status,
+                "supported_payment_methods": sorted(
+                    SUPPORTED_PAYMENT_METHODS
+                ),
+                "pricing_inputs": {
+                    "distance_km": (
+                        fare_result["distance_km"]
+                    ),
+                    "duration_minutes": (
+                        fare_result["duration_minutes"]
+                    ),
+                    "waiting_minutes": (
+                        fare_result["waiting_minutes"]
+                    ),
+                },
+            },
+        }
+    )
+
+
+@app.route(
+    "/api/trip/fare/finalize",
+    methods=["POST"],
+)
+def finalize_trip_fare():
+    """
+    Calculate and store the final post-trip fare.
+    """
+
+    payload = request.get_json(silent=True) or {}
+
+    try:
+        distance_km = float(
+            payload.get("distance_km", 4.0)
+        )
+
+        duration_minutes = float(
+            payload.get("duration_minutes", 12.0)
+        )
+
+        waiting_minutes = float(
+            payload.get("waiting_minutes", 0.0)
+        )
+
+        airport_fee = float(
+            payload.get("airport_fee", 0.0)
+        )
+
+        toll_fee = float(
+            payload.get("toll_fee", 0.0)
+        )
+
+        discount = float(
+            payload.get("discount", 0.0)
+        )
+    except (TypeError, ValueError):
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "Valid numeric fare inputs are required."
+                ),
+            }
+        ), 400
+
+    trip = get_trip()
+
+    try:
+        fare_result = calculate_fare_breakdown(
+            trip=trip,
+            distance_km=distance_km,
+            duration_minutes=duration_minutes,
+            waiting_minutes=waiting_minutes,
+            airport_fee=airport_fee,
+            toll_fee=toll_fee,
+            discount=discount,
+        )
+    except ValueError as error:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(error),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Final fare calculated successfully.",
+            "fare": fare_result,
+            "payment_status": trip.payment_status,
+        }
+    )
+
+@app.route(
+    "/api/trip/payment/method",
+    methods=["POST"],
+)
+def choose_trip_payment_method():
+    """
+    Store the passenger's selected payment method.
+    """
+
+    payload = request.get_json(silent=True) or {}
+
+    payment_method = str(
+        payload.get("payment_method", "")
+    ).strip().lower()
+
+    trip = get_trip()
+
+    try:
+        select_payment_method(
+            trip=trip,
+            payment_method=payment_method,
+        )
+    except ValueError as error:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(error),
+                "supported_methods": sorted(
+                    SUPPORTED_PAYMENT_METHODS
+                ),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Payment method selected.",
+            "payment": {
+                "payment_method": trip.payment_method,
+                "payment_status": trip.payment_status,
+                "final_fare": trip.final_fare,
+                "currency": trip.fare_currency,
+            },
+        }
+    )
+
+@app.route("/payment")
+def payment_page():
+    """
+    Render the HABESHAGO Payment page.
+    """
+
+    page = get_payment_page()
+
+    return render_template(
+        "payment.html",
+        page=page,
+        active_page="home",
+    )
+
+@app.route(
+    "/api/trip/payment/process",
+    methods=["POST"],
+)
+def process_trip_payment():
+    """
+    Process the selected payment method and create
+    a receipt-ready transaction record.
+    """
+
+    trip = get_trip()
+
+    try:
+        process_payment(trip)
+    except ValueError as error:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(error),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Payment completed successfully.",
+            "payment": {
+                "payment_method": trip.payment_method,
+                "payment_status": trip.payment_status,
+                "final_fare": trip.final_fare,
+                "currency": trip.fare_currency,
+                "payment_transaction_id": (
+                    trip.payment_transaction_id
+                ),
+                "receipt_id": trip.receipt_id,
+                "payment_completed_at": (
+                    trip.payment_completed_at
                 ),
             },
         }

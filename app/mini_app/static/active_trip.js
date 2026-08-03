@@ -174,6 +174,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
         showElement(completionCard);
 
+        window.setTimeout(
+            function () {
+                window.location.href = "/payment";
+            },
+            2000
+        );
+
         console.log(
             "Trip completed:",
             trip

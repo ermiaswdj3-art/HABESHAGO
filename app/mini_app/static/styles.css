@@ -2307,3 +2307,212 @@ footer {
         font-size: 28px;
     }
 }
+
+/* =========================================================
+   COMMIT #71 — PAYMENT PLATFORM
+   ========================================================= */
+
+.payment-page {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    padding-bottom: 180px;
+}
+
+.payment-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.payment-header h1 {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 32px;
+}
+
+.payment-subtitle {
+    margin: 0;
+    color: var(--color-text-secondary);
+}
+
+.payment-fare-card,
+.payment-methods-card,
+.payment-success-card {
+    padding: 22px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 22px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.payment-fare-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.payment-label {
+    display: block;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+
+.payment-fare-heading strong {
+    display: block;
+    margin-top: 5px;
+    color: var(--color-primary);
+    font-size: 28px;
+}
+
+.payment-status-badge {
+    align-self: flex-start;
+    padding: 7px 11px;
+    color: var(--color-primary);
+    background: rgba(10, 143, 61, 0.1);
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.fare-breakdown-list {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    margin-top: 20px;
+}
+
+.fare-breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.payment-methods-heading h2 {
+    margin: 0;
+}
+
+.payment-method-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.payment-method-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    text-align: left;
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    cursor: pointer;
+}
+
+.payment-method-card.is-selected {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(10, 143, 61, 0.12);
+}
+
+.payment-method-icon {
+    font-size: 25px;
+}
+
+.payment-method-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.payment-method-content small {
+    color: var(--color-text-secondary);
+}
+
+.process-payment-button {
+    min-height: 52px;
+    padding: 14px 18px;
+    color: #ffffff;
+    background: var(--color-primary);
+    border: 0;
+    border-radius: 15px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.process-payment-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.payment-success-card {
+    display: flex;
+    gap: 16px;
+    border-left: 4px solid var(--color-primary);
+}
+
+.payment-success-icon {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    place-items: center;
+    color: #ffffff;
+    background: var(--color-primary);
+    border-radius: 50%;
+    font-weight: 800;
+}
+
+.payment-success-card h2 {
+    margin: 0 0 5px;
+    color: var(--color-primary);
+}
+
+.payment-success-card p {
+    margin: 0;
+    color: var(--color-text-secondary);
+}
+
+.payment-receipt-details {
+    display: grid;
+    gap: 10px;
+    margin: 16px 0 0;
+}
+
+.payment-receipt-details div {
+    display: grid;
+    gap: 3px;
+}
+
+.payment-receipt-details dt {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+
+.payment-receipt-details dd {
+    margin: 0;
+    font-weight: 700;
+    word-break: break-word;
+}
+
+.payment-feedback {
+    min-height: 20px;
+    margin: 0;
+    color: var(--color-primary);
+    font-weight: 700;
+    text-align: center;
+}
+
+@media (max-width: 640px) {
+    .payment-method-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-header h1 {
+        font-size: 28px;
+    }
+}

@@ -21,3 +21,13 @@ from .trip_lifecycle_service import (
     complete_trip,
     start_trip,
 )
+
+from .fare_breakdown_service import (
+    calculate_fare_breakdown,
+)
+
+from .payment_service import (
+    SUPPORTED_PAYMENT_METHODS,
+    process_payment,
+    select_payment_method,
+)

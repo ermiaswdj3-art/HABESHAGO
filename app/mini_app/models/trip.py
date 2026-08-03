@@ -8,7 +8,7 @@ Every service (Ride, Transit, Logistics, AI, Wallet, Rewards)
 will work with this same model.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 
@@ -62,16 +62,10 @@ class Trip:
     # Driver arrival estimate
     driver_eta_minutes: Optional[int] = None
 
-        # ==================================================
     # Trip lifecycle
-    # ==================================================
-
     trip_started_at: Optional[str] = None
-
     trip_completed_at: Optional[str] = None
-
     trip_progress_percent: int = 0
-
     destination_reached: bool = False
 
     # Pickup verification
@@ -80,6 +74,22 @@ class Trip:
     pickup_pin_verified: bool = False
     pickup_verified_at: Optional[str] = None
     pickup_verification_attempts: int = 0
+
+    # Final pricing
+    final_fare: Optional[float] = None
+    fare_currency: str = "ETB"
+    fare_breakdown: dict[str, float] = field(
+        default_factory=dict
+    )
+
+    # Payment platform
+    payment_method: Optional[str] = None
+    payment_status: str = "not_started"
+    payment_transaction_id: Optional[str] = None
+    payment_completed_at: Optional[str] = None
+
+    # Receipt
+    receipt_id: Optional[str] = None
 
     def is_ready_for_planning(self) -> bool:
         """
@@ -106,13 +116,11 @@ class Trip:
 
     def is_ready_to_start_trip(self) -> bool:
         """
-        Returns True when the passenger has been
+        Return True when the passenger has been
         securely verified and the ride may begin.
         """
 
-        return (
-            self.booking_status == "ready_to_start"
-        )
+        return self.booking_status == "ready_to_start"
 
     def is_ready_for_pickup_verification(self) -> bool:
         """
@@ -130,12 +138,24 @@ class Trip:
             and self.pickup_pin is not None
         )
 
+    def is_ready_for_payment(self) -> bool:
+        """
+        Return True when the completed trip has a
+        calculated final fare.
+        """
+
+        return (
+            self.booking_status == "trip_completed"
+            and self.final_fare is not None
+            and self.final_fare >= 0
+        )
+
     def set_booking_status(
         self,
         status: str,
     ) -> None:
         """
-        Update the booking lifecycle state.
+        Update the booking and trip lifecycle state.
         """
 
         allowed_statuses = {
@@ -165,3 +185,28 @@ class Trip:
             )
 
         self.booking_status = status
+
+    def set_payment_status(
+        self,
+        status: str,
+    ) -> None:
+        """
+        Update the payment lifecycle state.
+        """
+
+        allowed_statuses = {
+            "not_started",
+            "payment_pending",
+            "payment_method_selected",
+            "payment_processing",
+            "payment_completed",
+            "payment_failed",
+            "payment_refunded",
+        }
+
+        if status not in allowed_statuses:
+            raise ValueError(
+                f"Invalid payment status: {status}"
+            )
+
+        self.payment_status = status

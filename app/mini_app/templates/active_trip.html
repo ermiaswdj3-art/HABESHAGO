@@ -43,7 +43,10 @@ Active Trip &#8226; HABESHAGO
             <div
                 class="active-trip-progress-fill"
                 data-active-trip-progress-fill
-                style="width: {{ page.trip.trip_progress_percent }}%;"
+                style="
+                    width:
+                    {{ page.trip.trip_progress_percent }}%;
+                "
             ></div>
         </div>
 
@@ -98,6 +101,7 @@ Active Trip &#8226; HABESHAGO
     </section>
 
     <section class="active-trip-driver-card">
+
         <div class="active-trip-driver-avatar">
             {{ page.trip.assigned_driver_name[0] }}
         </div>
@@ -107,7 +111,9 @@ Active Trip &#8226; HABESHAGO
                 Your driver
             </span>
 
-            <h2>{{ page.trip.assigned_driver_name }}</h2>
+            <h2>
+                {{ page.trip.assigned_driver_name }}
+            </h2>
 
             <p>
                 {{ page.trip.assigned_vehicle }}
@@ -117,9 +123,11 @@ Active Trip &#8226; HABESHAGO
                 {{ page.trip.assigned_plate_number }}
             </p>
         </div>
+
     </section>
 
     <section class="active-trip-message">
+
         <span class="active-trip-message-icon">
             &#128506;
         </span>
@@ -130,9 +138,11 @@ Active Trip &#8226; HABESHAGO
             </strong>
 
             <p data-active-trip-message-text>
-                HABESHAGO is tracking progress toward your destination.
+                HABESHAGO is tracking progress toward
+                your destination.
             </p>
         </div>
+
     </section>
 
     <section
@@ -148,8 +158,131 @@ Active Trip &#8226; HABESHAGO
             <h2>Trip Completed</h2>
 
             <p>
-                You have reached {{ page.trip.destination }} safely.
+                You have reached
+                {{ page.trip.destination }}
+                safely.
             </p>
+        </div>
+    </section>
+
+    <section
+        class="payment-card"
+        data-payment-card
+        hidden
+    >
+        <div class="payment-card-heading">
+            <div>
+                <p class="trip-planner-eyebrow">
+                    Payment
+                </p>
+
+                <h2>Choose Payment Method</h2>
+            </div>
+
+            <span class="payment-status-badge">
+                Payment Pending
+            </span>
+        </div>
+
+        <div class="payment-amount-summary">
+            <span>Amount due</span>
+
+            <strong data-payment-amount>
+                {% if page.trip.final_fare is not none %}
+                    {{ "%.2f"|format(
+                        page.trip.final_fare
+                    ) }}
+                {% else %}
+                    Calculating...
+                {% endif %}
+
+                {{ page.trip.fare_currency }}
+            </strong>
+        </div>
+
+        <div class="payment-method-grid">
+
+            <button
+                type="button"
+                class="payment-method-button"
+                data-payment-method="cash"
+            >
+                &#128181; Cash
+            </button>
+
+            <button
+                type="button"
+                class="payment-method-button"
+                data-payment-method="telebirr"
+            >
+                &#128241; Telebirr
+            </button>
+
+            <button
+                type="button"
+                class="payment-method-button"
+                data-payment-method="cbe_birr"
+            >
+                &#127974; CBE Birr
+            </button>
+
+            <button
+                type="button"
+                class="payment-method-button"
+                data-payment-method="chapa"
+            >
+                &#128179; Chapa
+            </button>
+
+            <button
+                type="button"
+                class="payment-method-button"
+                data-payment-method="arifpay"
+            >
+                &#127760; ArifPay
+            </button>
+
+        </div>
+
+        <p
+            class="payment-feedback"
+            data-payment-feedback
+            aria-live="polite"
+        ></p>
+    </section>
+
+    <section
+        class="payment-success-card"
+        data-payment-success-card
+        hidden
+    >
+        <span class="payment-success-icon">
+            &#10003;
+        </span>
+
+        <div>
+            <h2>Payment Completed</h2>
+
+            <p data-payment-success-message>
+                Your HABESHAGO payment was completed
+                successfully.
+            </p>
+
+            <div class="payment-reference-list">
+                <span>
+                    Transaction:
+                    <strong data-payment-transaction-id>
+                        &#8212;
+                    </strong>
+                </span>
+
+                <span>
+                    Receipt:
+                    <strong data-payment-receipt-id>
+                        &#8212;
+                    </strong>
+                </span>
+            </div>
         </div>
     </section>
 
@@ -164,6 +297,9 @@ Active Trip &#8226; HABESHAGO
 
 {% block scripts %}
 <script
-    src="{{ url_for('static', filename='active_trip.js') }}"
+    src="{{ url_for(
+        'static',
+        filename='active_trip.js'
+    ) }}"
 ></script>
 {% endblock %}

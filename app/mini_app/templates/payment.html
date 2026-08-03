@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}
+Payment &#8226; HABESHAGO
+{% endblock %}
+
+{% block content %}
+<section class="payment-page">
+
+    <header class="payment-header">
+        <p class="trip-planner-eyebrow">
+            Final settlement
+        </p>
+
+        <h1>{{ page.title }}</h1>
+
+        <p class="payment-subtitle">
+            {{ page.subtitle }}
+        </p>
+    </header>
+
+    <section class="payment-fare-card">
+        <div class="payment-fare-heading">
+            <div>
+                <span class="payment-label">
+                    Final fare
+                </span>
+
+                <strong data-final-fare>
+                    {% if page.trip.final_fare is not none %}
+                        {{ "%.2f"|format(page.trip.final_fare) }}
+                    {% else %}
+                        --
+                    {% endif %}
+                    {{ page.trip.fare_currency }}
+                </strong>
+            </div>
+
+            <span
+                class="payment-status-badge"
+                data-payment-status
+            >
+                {{ page.trip.payment_status
+                    | replace("_", " ")
+                    | title }}
+            </span>
+        </div>
+
+        <div
+            class="fare-breakdown-list"
+            data-fare-breakdown-list
+        >
+            <p>
+                Calculating transparent fare breakdown...
+            </p>
+        </div>
+    </section>
+
+    <section class="payment-methods-card">
+        <div class="payment-methods-heading">
+            <div>
+                <p class="trip-planner-eyebrow">
+                    Payment method
+                </p>
+
+                <h2>How would you like to pay?</h2>
+            </div>
+        </div>
+
+        <div class="payment-method-grid">
+            {% for method in page.payment_methods %}
+            <button
+                type="button"
+                class="payment-method-card"
+                data-payment-method="{{ method.id }}"
+                data-payment-title="{{ method.title }}"
+            >
+                <span class="payment-method-icon">
+                    {{ method.icon }}
+                </span>
+
+                <span class="payment-method-content">
+                    <strong>{{ method.title }}</strong>
+                    <small>{{ method.description }}</small>
+                </span>
+            </button>
+            {% endfor %}
+        </div>
+    </section>
+
+    <button
+        type="button"
+        class="process-payment-button"
+        data-process-payment
+        disabled
+    >
+        Complete Payment
+    </button>
+
+    <section
+        class="payment-success-card"
+        data-payment-success
+        hidden
+    >
+        <span class="payment-success-icon">
+            &#10003;
+        </span>
+
+        <div>
+            <h2>Payment Completed</h2>
+
+            <p>
+                Your HABESHAGO payment was processed successfully.
+            </p>
+
+            <dl class="payment-receipt-details">
+                <div>
+                    <dt>Transaction</dt>
+                    <dd data-transaction-id>--</dd>
+                </div>
+
+                <div>
+                    <dt>Receipt</dt>
+                    <dd data-receipt-id>--</dd>
+                </div>
+            </dl>
+        </div>
+    </section>
+
+    <p
+        class="payment-feedback"
+        data-payment-feedback
+        aria-live="polite"
+    ></p>
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script
+    src="{{ url_for('static', filename='payment.js') }}"
+></script>
+{% endblock %}
