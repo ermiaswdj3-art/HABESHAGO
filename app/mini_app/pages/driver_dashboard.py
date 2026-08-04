@@ -1,11 +1,11 @@
 """
 HABESHAGO Mini App Driver Dashboard Page
 
-Builds the driver dashboard using the canonical shared
-Driver Dashboard Service.
+Builds the driver dashboard using canonical shared
+Driver Dashboard and Driver Registration services.
 
 The page only prepares display data. Business information
-comes from the shared platform service.
+comes from shared HABESHAGO platform services.
 """
 
 from app.mini_app.config.settings import (
@@ -18,6 +18,10 @@ from app.mini_app.pages.app_shell import (
 
 from app.services.driver_dashboard_service import (
     get_driver_dashboard as get_shared_driver_dashboard,
+)
+
+from app.services.driver_registration_service import (
+    get_driver_registration_status,
 )
 
 
@@ -55,10 +59,17 @@ def get_driver_dashboard(
     driver_id = _get_development_driver_id()
 
     dashboard = None
+    registration_status = None
 
     if driver_id is not None:
         dashboard = get_shared_driver_dashboard(
             driver_id
+        )
+
+        registration_status = (
+            get_driver_registration_status(
+                driver_id
+            )
         )
 
     page["title"] = "Driver Dashboard"
@@ -69,6 +80,10 @@ def get_driver_dashboard(
     )
 
     page["driver_dashboard"] = dashboard
+
+    page["driver_registration"] = (
+        registration_status
+    )
 
     page["development_driver_id"] = driver_id
 

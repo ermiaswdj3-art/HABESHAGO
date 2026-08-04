@@ -87,8 +87,6 @@ def migrate_rides_table(
     Existing columns are never added twice.
     """
 
-    # Earlier HABESHAGO databases may not contain
-    # the general record-creation timestamp.
     add_column_if_missing(
         cursor,
         "rides",
@@ -96,7 +94,6 @@ def migrate_rides_table(
         "TIMESTAMP",
     )
 
-    # Full ride lifecycle timestamps.
     add_column_if_missing(
         cursor,
         "rides",
@@ -146,8 +143,6 @@ def migrate_rides_table(
         "TIMESTAMP",
     )
 
-    # For existing development rides, requested_at can safely
-    # inherit created_at when it is available.
     cursor.execute(
         """
         UPDATE rides
@@ -157,11 +152,6 @@ def migrate_rides_table(
         """
     )
 
-    # Existing completed development rides can inherit
-    # created_at as a temporary completed_at value.
-    #
-    # These historical test records will later be cleared
-    # during the planned Development Reset before Public Beta.
     cursor.execute(
         """
         UPDATE rides
@@ -173,6 +163,105 @@ def migrate_rides_table(
     )
 
 
+def migrate_drivers_table(
+    cursor,
+):
+    """
+    Safely upgrade the drivers table with the
+    HABESHAGO registration and verification contract.
+
+    Existing development drivers are preserved as
+    approved when the verification columns are first
+    introduced.
+
+    New registrations use pending verification defaults.
+    """
+
+    registration_status_added = (
+        add_column_if_missing(
+            cursor,
+            "drivers",
+            "registration_status",
+            "TEXT DEFAULT 'verification_pending'",
+        )
+    )
+
+    identity_status_added = (
+        add_column_if_missing(
+            cursor,
+            "drivers",
+            "identity_verification_status",
+            "TEXT DEFAULT 'pending'",
+        )
+    )
+
+    vehicle_status_added = (
+        add_column_if_missing(
+            cursor,
+            "drivers",
+            "vehicle_verification_status",
+            "TEXT DEFAULT 'pending'",
+        )
+    )
+
+    add_column_if_missing(
+        cursor,
+        "drivers",
+        "registration_submitted_at",
+        "TIMESTAMP",
+    )
+
+    add_column_if_missing(
+        cursor,
+        "drivers",
+        "verified_at",
+        "TIMESTAMP",
+    )
+
+    add_column_if_missing(
+        cursor,
+        "drivers",
+        "rejection_reason",
+        "TEXT",
+    )
+
+    # Preserve drivers created before Commit #73.
+    # These updates run only when the related status
+    # columns are introduced for the first time.
+
+    if registration_status_added:
+        cursor.execute(
+            """
+            UPDATE drivers
+            SET registration_status = 'approved',
+                registration_submitted_at = COALESCE(
+                    registration_submitted_at,
+                    created_at
+                ),
+                verified_at = COALESCE(
+                    verified_at,
+                    created_at
+                )
+            """
+        )
+
+    if identity_status_added:
+        cursor.execute(
+            """
+            UPDATE drivers
+            SET identity_verification_status = 'verified'
+            """
+        )
+
+    if vehicle_status_added:
+        cursor.execute(
+            """
+            UPDATE drivers
+            SET vehicle_verification_status = 'verified'
+            """
+        )
+
+
 def create_tables():
     """
     Create and safely upgrade all HABESHAGO database tables.
@@ -182,8 +271,6 @@ def create_tables():
     cursor = connection.cursor()
 
     try:
-        # Enable SQLite foreign-key enforcement
-        # for this connection.
         cursor.execute(
             "PRAGMA foreign_keys = ON"
         )
@@ -199,6 +286,7 @@ def create_tables():
                 telegram_id INTEGER UNIQUE NOT NULL,
                 full_name TEXT NOT NULL,
                 phone_number TEXT,
+
                 created_at TIMESTAMP
                     DEFAULT CURRENT_TIMESTAMP
             )
@@ -214,6 +302,7 @@ def create_tables():
             CREATE TABLE IF NOT EXISTS drivers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 telegram_id INTEGER UNIQUE NOT NULL,
+
                 full_name TEXT NOT NULL,
                 phone_number TEXT,
 
@@ -224,7 +313,20 @@ def create_tables():
 
                 rating REAL DEFAULT 5.0,
 
-                is_available INTEGER DEFAULT 1,
+                registration_status TEXT
+                    DEFAULT 'verification_pending',
+
+                identity_verification_status TEXT
+                    DEFAULT 'pending',
+
+                vehicle_verification_status TEXT
+                    DEFAULT 'pending',
+
+                registration_submitted_at TIMESTAMP,
+                verified_at TIMESTAMP,
+                rejection_reason TEXT,
+
+                is_available INTEGER DEFAULT 0,
                 is_online INTEGER DEFAULT 0,
 
                 latitude REAL NOT NULL,
@@ -234,6 +336,13 @@ def create_tables():
                     DEFAULT CURRENT_TIMESTAMP
             )
             """
+        )
+
+        # Safely upgrade databases created before
+        # the Driver Registration and Verification
+        # Platform was introduced.
+        migrate_drivers_table(
+            cursor
         )
 
         # ======================================
@@ -374,6 +483,30 @@ def create_tables():
             ON passenger_places (
                 passenger_id,
                 place_type
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_drivers_registration_status
+            ON drivers (
+                registration_status
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_drivers_dispatch_eligibility
+            ON drivers (
+                registration_status,
+                identity_verification_status,
+                vehicle_verification_status,
+                is_online,
+                is_available
             )
             """
         )

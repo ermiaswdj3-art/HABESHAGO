@@ -12,9 +12,12 @@ def register_driver(
     latitude,
     longitude,
 ):
-
     """
     Register a new driver.
+
+    Newly registered drivers are placed into the
+    verification workflow and cannot receive ride
+    requests until approved.
     """
 
     try:
@@ -32,9 +35,27 @@ def register_driver(
                 vehicle_color,
                 plate_number,
                 latitude,
-                longitude
+                longitude,
+
+                registration_status,
+                identity_verification_status,
+                vehicle_verification_status,
+                registration_submitted_at,
+
+                is_available,
+                is_online
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?,
+
+                'verification_pending',
+                'pending',
+                'pending',
+                CURRENT_TIMESTAMP,
+
+                0,
+                0
+            )
             """,
             (
                 telegram_id,
@@ -53,6 +74,9 @@ def register_driver(
         connection.close()
 
         print("✅ Driver registered successfully!")
+        print("Registration Status : verification_pending")
+        print("Identity Status     : pending")
+        print("Vehicle Status      : pending")
 
     except Exception as e:
         print("❌ DRIVER REGISTRATION ERROR:")
@@ -90,6 +114,48 @@ def get_driver_by_telegram_id(telegram_id):
     connection.close()
 
     return driver    
+
+def get_driver_registration_profile(
+    telegram_id,
+):
+    """
+    Return the persistent driver registration and
+    verification profile for one Telegram user.
+
+    This contract is used by shared HABESHAGO services
+    and future client interfaces.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            telegram_id,
+            full_name,
+            phone_number,
+            vehicle,
+            vehicle_year,
+            vehicle_color,
+            plate_number,
+            registration_status,
+            identity_verification_status,
+            vehicle_verification_status,
+            registration_submitted_at,
+            verified_at,
+            rejection_reason
+        FROM drivers
+        WHERE telegram_id = ?
+        """,
+        (telegram_id,),
+    )
+
+    registration = cursor.fetchone()
+
+    connection.close()
+
+    return registration
 
 def get_driver_dashboard_profile(
     telegram_id,
@@ -153,6 +219,9 @@ def get_available_drivers():
         FROM drivers
         WHERE is_available = 1
           AND is_online = 1
+          AND registration_status = 'approved'
+          AND identity_verification_status = 'verified'
+          AND vehicle_verification_status = 'verified'
         """
     )
 

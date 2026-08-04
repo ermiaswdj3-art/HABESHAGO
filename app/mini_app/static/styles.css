@@ -2754,3 +2754,94 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================
+   DRIVER REGISTRATION & VERIFICATION
+   Commit #73
+   ========================================== */
+
+.driver-verification-card {
+    padding: 20px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+}
+
+.driver-verification-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.driver-verification-approved {
+    color: var(--color-primary);
+    background: rgba(10, 143, 61, 0.12);
+}
+
+.driver-verification-verification_pending {
+    color: #9a6700;
+    background: rgba(255, 193, 7, 0.15);
+}
+
+.driver-verification-rejected,
+.driver-verification-suspended {
+    color: #b42318;
+    background: rgba(180, 35, 24, 0.12);
+}
+
+.driver-verification-grid {
+    display: grid;
+    grid-template-columns: repeat(
+        3,
+        minmax(0, 1fr)
+    );
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.driver-verification-grid article {
+    display: grid;
+    gap: 5px;
+    padding: 13px;
+    background: var(--color-background);
+    border-radius: 14px;
+}
+
+.driver-verification-grid span {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+
+.driver-verification-grid strong {
+    font-size: 15px;
+}
+
+.driver-verification-guidance {
+    display: grid;
+    gap: 8px;
+    margin-top: 18px;
+    padding: 14px;
+    background: var(--color-background);
+    border-radius: 14px;
+}
+
+.driver-verification-guidance p {
+    margin: 0;
+    color: var(--color-text-secondary);
+}
+
+.driver-rejection-reason {
+    color: #b42318 !important;
+    font-weight: 700;
+}
+
+@media (max-width: 640px) {
+    .driver-verification-grid {
+        grid-template-columns: 1fr;
+    }
+}

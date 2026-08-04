@@ -13,10 +13,6 @@ from app.database.passenger_places_repository import (
     save_recent_place,
 )
 
-from app.keyboards.availability import (
-    get_availability_keyboard,
-)
-
 from app.keyboards.confirmation import (
     get_confirmation_keyboard,
 )
@@ -144,10 +140,19 @@ async def receive_location(
         del driver_registration_state[user_id]
 
         await update.message.reply_text(
-            "🎉 Congratulations!\n\n"
-            "🚖 Your driver registration is complete!\n\n"
-            "Please choose your availability.",
-            reply_markup=get_availability_keyboard(),
+            "✅ Driver application submitted!\n\n"
+            "Your HABESHAGO driver profile has been saved "
+            "successfully.\n\n"
+            "📋 Registration Status\n"
+            "Verification Pending\n\n"
+            "🪪 Identity Verification\n"
+            "Pending\n\n"
+            "🚗 Vehicle Verification\n"
+            "Pending\n\n"
+            "You cannot receive ride requests until your "
+            "application has been reviewed and approved.\n\n"
+            "HABESHAGO will notify you when the verification "
+            "process is complete."
         )
 
         return
