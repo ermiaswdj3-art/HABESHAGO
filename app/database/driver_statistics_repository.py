@@ -26,6 +26,7 @@ def get_driver_statistics(driver_id):
         FROM rides
         WHERE driver_id = ?
           AND status = ?
+          AND settlement_status = 'settled'
         """,
         (
             driver_id,

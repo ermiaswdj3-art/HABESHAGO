@@ -33,6 +33,7 @@ def get_driver_financial_summary(driver_id):
         FROM rides
         WHERE driver_id = ?
           AND status = ?
+          AND settlement_status = 'settled'
         """,
         (
             driver_id,
@@ -84,6 +85,7 @@ def get_driver_today_summary(driver_id):
         FROM rides
         WHERE driver_id = ?
           AND status = ?
+          AND settlement_status = 'settled'
           AND DATE(created_at) = DATE('now', 'localtime')
         """,
         (
@@ -129,6 +131,7 @@ def get_driver_week_summary(driver_id):
         FROM rides
         WHERE driver_id = ?
           AND status = ?
+          AND settlement_status = 'settled'
           AND DATE(created_at) >= DATE(
               'now',
               'localtime',
@@ -178,6 +181,7 @@ def get_driver_month_summary(driver_id):
         FROM rides
         WHERE driver_id = ?
           AND status = ?
+          AND settlement_status = 'settled'
           AND STRFTIME(
               '%Y-%m',
               created_at

@@ -94,6 +94,33 @@ def migrate_rides_table(
         "TIMESTAMP",
     )
 
+    # ==========================================
+    # RIDE SETTLEMENT PLATFORM
+    # ==========================================
+
+    settlement_status_added = (
+        add_column_if_missing(
+            cursor,
+            "rides",
+            "settlement_status",
+            "TEXT DEFAULT 'not_settled'",
+        )
+    )
+
+    add_column_if_missing(
+        cursor,
+        "rides",
+        "settled_at",
+        "TIMESTAMP",
+    )
+
+    add_column_if_missing(
+        cursor,
+        "rides",
+        "settlement_reference",
+        "TEXT",
+    )
+
     add_column_if_missing(
         cursor,
         "rides",
@@ -161,6 +188,37 @@ def migrate_rides_table(
           AND status = 'TRIP_COMPLETED'
         """
     )
+
+    # Preserve historically completed rides as settled
+    # only when their stored financial arithmetic is
+    # already internally consistent.
+    #
+    # Legacy exceptions such as Ride #1 remain
+    # not_settled and are not silently rewritten.
+    if settlement_status_added:
+        cursor.execute(
+            """
+            UPDATE rides
+            SET
+                settlement_status = 'settled',
+                settled_at = COALESCE(
+                    completed_at,
+                    created_at
+                ),
+                settlement_reference = (
+                    'LEGACY-RIDE-' || id
+                )
+            WHERE status = 'TRIP_COMPLETED'
+              AND commission_amount > 0
+              AND ABS(
+                    driver_earnings
+                    - (
+                        fare
+                        - commission_amount
+                    )
+                  ) <= 0.01
+            """
+        )
 
 
 def migrate_drivers_table(
@@ -534,6 +592,13 @@ def create_tables():
                 commission_amount REAL DEFAULT 0,
                 driver_earnings REAL DEFAULT 0,
 
+                settlement_status TEXT
+                    DEFAULT 'not_settled',
+
+                settled_at TIMESTAMP,
+
+                settlement_reference TEXT,
+
                 status TEXT DEFAULT 'REQUESTED',
 
                 driver_rating INTEGER,
@@ -710,6 +775,39 @@ def create_tables():
             idx_vehicles_category
             ON vehicles (
                 category
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_rides_settlement_status
+            ON rides (
+                settlement_status
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_rides_settlement_reference
+            ON rides (
+                settlement_reference
+            )
+            WHERE settlement_reference IS NOT NULL
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_rides_driver_settlement
+            ON rides (
+                driver_id,
+                settlement_status,
+                settled_at
             )
             """
         )

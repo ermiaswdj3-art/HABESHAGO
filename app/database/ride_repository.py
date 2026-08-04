@@ -14,6 +14,10 @@ from app.database.database import (
     create_connection,
 )
 
+from app.services.ride_settlement_service import (
+    settle_completed_ride,
+)
+
 from app.services.earnings_service import (
     calculate_earnings,
 )
@@ -246,13 +250,14 @@ def mark_trip_started(ride_id):
 
 def mark_trip_completed(ride_id):
     """
-    Record that the trip completed.
+    Complete and financially settle one ride.
+
+    Settlement and lifecycle completion are persisted
+    atomically by the Ride Settlement Service.
     """
 
-    _update_status_and_timestamp(
-        ride_id,
-        TRIP_COMPLETED,
-        "completed_at",
+    return settle_completed_ride(
+        ride_id
     )
 
 
@@ -312,8 +317,9 @@ def update_ride_status(
     )
 
     if transition_function is not None:
-        transition_function(ride_id)
-        return
+        return transition_function(
+            ride_id
+        )
 
     connection = create_connection()
     cursor = connection.cursor()
@@ -336,13 +342,15 @@ def update_ride_status(
 
 def complete_ride(ride_id):
     """
-    Mark a ride as completed and record completed_at.
+    Complete and settle one ride.
 
-    This function is retained for compatibility
-    with the current completion handler.
+    This compatibility function returns the canonical
+    RideSettlement contract.
     """
 
-    mark_trip_completed(ride_id)
+    return mark_trip_completed(
+        ride_id
+    )
 
 
 def get_ride_status(ride_id):
