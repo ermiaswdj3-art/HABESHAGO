@@ -1,3 +1,10 @@
+"""
+HABESHAGO Telegram Driver Dashboard Handler
+
+Displays the database-backed driver workspace using the
+canonical Driver Dashboard Service contract.
+"""
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -52,16 +59,28 @@ async def show_driver_dashboard(
     )
 
     profile = dashboard["profile"]
+    vehicle = dashboard["vehicle"]
+    status = dashboard["status"]
+
     today = dashboard["today"]
     week = dashboard["week"]
     month = dashboard["month"]
     lifetime = dashboard["lifetime"]
     statistics = dashboard["statistics"]
 
+    status_icons = {
+        "offline": "🔴",
+        "available": "🟢",
+        "unavailable": "🟡",
+    }
+
+    status_icon = status_icons.get(
+        status["code"],
+        "⚪",
+    )
+
     availability_status = (
-        "🟢 Available"
-        if profile["is_available"]
-        else "🔴 Unavailable"
+        f"{status_icon} {status['label']}"
     )
 
     # ==========================================
@@ -132,10 +151,10 @@ async def show_driver_dashboard(
         f"👤 Name: {profile['full_name']}\n"
         f"📱 Phone: "
         f"{profile['phone_number'] or 'Not provided'}\n"
-        f"🚗 Vehicle: {profile['vehicle']}\n"
-        f"📅 Year: {profile['vehicle_year']}\n"
-        f"🎨 Color: {profile['vehicle_color']}\n"
-        f"🔢 Plate: {profile['plate_number']}\n"
+        f"🚗 Vehicle: {vehicle['name']}\n"
+        f"📅 Year: {vehicle['year']}\n"
+        f"🎨 Color: {vehicle['color']}\n"
+        f"🔢 Plate: {vehicle['plate_number']}\n"
         f"⭐ Rating: {profile['rating']:.2f}\n\n"
 
         "━━━━━━━━━━━━━━\n\n"

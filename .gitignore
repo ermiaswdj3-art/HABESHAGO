@@ -20,3 +20,5 @@ __pycache__/
 Thumbs.db
 # SQLite database
 habeshago.db
+
+HABESHAGO_MASTER_CONTEXT.md

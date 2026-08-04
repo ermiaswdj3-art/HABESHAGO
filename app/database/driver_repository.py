@@ -91,6 +91,45 @@ def get_driver_by_telegram_id(telegram_id):
 
     return driver    
 
+def get_driver_dashboard_profile(
+    telegram_id,
+):
+    """
+    Return the complete driver profile used by
+    shared dashboard clients.
+
+    This richer query preserves the existing
+    get_driver_by_telegram_id() contract.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            telegram_id,
+            full_name,
+            phone_number,
+            vehicle,
+            vehicle_year,
+            vehicle_color,
+            plate_number,
+            rating,
+            is_online,
+            is_available
+        FROM drivers
+        WHERE telegram_id = ?
+        """,
+        (telegram_id,),
+    )
+
+    driver = cursor.fetchone()
+
+    connection.close()
+
+    return driver
+
 def get_available_drivers():
     """
     Return all drivers that are online and available.

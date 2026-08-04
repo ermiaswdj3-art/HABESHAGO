@@ -1,12 +1,23 @@
+"""
+HABESHAGO Driver Dashboard Service
+
+Builds the canonical driver dashboard contract shared by
+the Telegram Bot, Telegram Mini App, and future clients.
+
+The service gathers driver information from repositories.
+Client pages and handlers should display this data rather
+than calculating business values themselves.
+"""
+
 from app.database.driver_repository import (
-    get_driver_by_telegram_id,
+    get_driver_dashboard_profile,
 )
 
 from app.database.driver_earnings_repository import (
     get_driver_financial_summary,
+    get_driver_month_summary,
     get_driver_today_summary,
     get_driver_week_summary,
-    get_driver_month_summary,
 )
 
 from app.database.driver_statistics_repository import (
@@ -14,16 +25,51 @@ from app.database.driver_statistics_repository import (
 )
 
 
-def get_driver_dashboard(driver_id):
+def _build_driver_status(
+    is_online: bool,
+    is_available: bool,
+) -> dict:
     """
-    Build the complete driver dashboard.
-
-    This service gathers information from
-    multiple repositories and returns one
-    dictionary for the Telegram handler.
+    Build the canonical dashboard status representation.
     """
 
-    driver = get_driver_by_telegram_id(
+    if not is_online:
+        return {
+            "code": "offline",
+            "label": "You are currently offline",
+            "action": "Go Online",
+            "is_online": False,
+            "is_available": False,
+        }
+
+    if is_available:
+        return {
+            "code": "available",
+            "label": "You are online and available",
+            "action": "Go Offline",
+            "is_online": True,
+            "is_available": True,
+        }
+
+    return {
+        "code": "unavailable",
+        "label": "You are online but unavailable",
+        "action": "Go Available",
+        "is_online": True,
+        "is_available": False,
+    }
+
+
+def get_driver_dashboard(
+    driver_id,
+):
+    """
+    Build the complete canonical driver dashboard.
+
+    This service is shared by every HABESHAGO client.
+    """
+
+    driver = get_driver_dashboard_profile(
         driver_id
     )
 
@@ -31,6 +77,7 @@ def get_driver_dashboard(driver_id):
         return None
 
     (
+        telegram_id,
         full_name,
         phone_number,
         vehicle,
@@ -38,20 +85,29 @@ def get_driver_dashboard(driver_id):
         vehicle_color,
         plate_number,
         rating,
+        is_online,
         is_available,
     ) = driver
 
-    dashboard = {
+    status = _build_driver_status(
+        is_online=bool(is_online),
+        is_available=bool(is_available),
+    )
+
+    return {
+        "driver_id": telegram_id,
         "profile": {
             "full_name": full_name,
             "phone_number": phone_number,
-            "vehicle": vehicle,
-            "vehicle_year": vehicle_year,
-            "vehicle_color": vehicle_color,
-            "plate_number": plate_number,
             "rating": float(rating or 0),
-            "is_available": bool(is_available),
         },
+        "vehicle": {
+            "name": vehicle,
+            "year": vehicle_year,
+            "color": vehicle_color,
+            "plate_number": plate_number,
+        },
+        "status": status,
         "today": get_driver_today_summary(
             driver_id
         ),
@@ -68,5 +124,3 @@ def get_driver_dashboard(driver_id):
             driver_id
         ),
     }
-
-    return dashboard

@@ -1,100 +1,252 @@
 {% extends "base.html" %}
 
 {% block title %}
-Driver Dashboard
+Driver Dashboard &#8226; HABESHAGO
 {% endblock %}
 
 {% block content %}
 
-<section class="dashboard-welcome card">
+<section class="driver-dashboard-page">
 
-    <p class="eyebrow">
-        Driver Dashboard
-    </p>
+    {% if page.driver_dashboard %}
 
-    <h2>
-        {{ page.layout.content.welcome.title }}
-    </h2>
+        {% set dashboard = page.driver_dashboard %}
+        {% set profile = dashboard.profile %}
+        {% set vehicle = dashboard.vehicle %}
+        {% set status = dashboard.status %}
+        {% set today = dashboard.today %}
 
-    <p>
-        {{ page.layout.content.welcome.subtitle }}
-    </p>
+        <header class="driver-dashboard-header">
 
-</section>
-
-
-<section class="dashboard-section">
-
-    <div class="section-heading">
-
-        <div>
-
-            <p class="eyebrow">
-                Driver Status
+            <p class="trip-planner-eyebrow">
+                Driver Operations
             </p>
 
-            <h3>
-                {{ page.layout.content.availability.label }}
-            </h3>
+            <h1>
+                Welcome back,
+                {{ profile.full_name }}
+            </h1>
 
-        </div>
-
-    </div>
-
-    <button class="primary-button">
-
-        {{ page.layout.content.availability.action }}
-
-    </button>
-
-</section>
-
-
-<section class="dashboard-section">
-
-    <div class="section-heading">
-
-        <div>
-
-            <p class="eyebrow">
-                Today's Summary
+            <p class="driver-dashboard-subtitle">
+                {{ page.subtitle }}
             </p>
 
-            <h3>
-                Performance
-            </h3>
+        </header>
 
-        </div>
+        <section class="driver-status-card">
 
-    </div>
+            <div class="driver-status-heading">
 
-    <div class="dashboard-service-grid">
+                <div>
+                    <span class="driver-dashboard-label">
+                        Current status
+                    </span>
 
-        <article class="dashboard-service-card">
+                    <h2>
+                        {{ status.label }}
+                    </h2>
+                </div>
 
-            <h4>Trips</h4>
+                <span
+                    class="
+                        driver-status-badge
+                        driver-status-{{ status.code }}
+                    "
+                >
+                    {{ status.code
+                        | replace("_", " ")
+                        | title }}
+                </span>
 
-            <p>{{ page.layout.content.summary.today_trips }}</p>
+            </div>
 
-        </article>
+            <div class="driver-status-details">
 
-        <article class="dashboard-service-card">
+                <span>
+                    Online:
+                    <strong>
+                        {{ "Yes" if status.is_online else "No" }}
+                    </strong>
+                </span>
 
-            <h4>Earnings</h4>
+                <span>
+                    Available:
+                    <strong>
+                        {{ "Yes" if status.is_available else "No" }}
+                    </strong>
+                </span>
 
-            <p>{{ page.layout.content.summary.today_earnings }}</p>
+            </div>
 
-        </article>
+            <button
+                type="button"
+                class="primary-button"
+                disabled
+            >
+                {{ status.action }}
+            </button>
 
-        <article class="dashboard-service-card">
+            <p class="driver-dashboard-note">
+                Driver status controls will become active
+                in Commit #76.
+            </p>
 
-            <h4>Rating</h4>
+        </section>
 
-            <p>{{ page.layout.content.summary.rating }}</p>
+        <section class="driver-summary-section">
 
-        </article>
+            <div class="section-heading">
 
-    </div>
+                <div>
+                    <p class="trip-planner-eyebrow">
+                        Today
+                    </p>
+
+                    <h2>Driver Summary</h2>
+                </div>
+
+            </div>
+
+            <div class="driver-summary-grid">
+
+                <article class="driver-summary-card">
+                    <span>Trips</span>
+
+                    <strong>
+                        {{ today.completed_rides }}
+                    </strong>
+                </article>
+
+                <article class="driver-summary-card">
+                    <span>Earnings</span>
+
+                    <strong>
+                        {{ "%.2f"|format(
+                            today.net_earnings
+                        ) }}
+                        ETB
+                    </strong>
+                </article>
+
+                <article class="driver-summary-card">
+                    <span>Rating</span>
+
+                    <strong>
+                        {{ "%.2f"|format(
+                            profile.rating
+                        ) }}
+                        &#9733;
+                    </strong>
+                </article>
+
+            </div>
+
+        </section>
+
+        <section class="driver-profile-card">
+
+            <div class="driver-profile-heading">
+
+                <div class="driver-profile-avatar">
+                    {{ profile.full_name[0] }}
+                </div>
+
+                <div>
+                    <span class="driver-dashboard-label">
+                        Driver profile
+                    </span>
+
+                    <h2>{{ profile.full_name }}</h2>
+
+                    <p>
+                        {{ profile.phone_number
+                            or "Phone not provided" }}
+                    </p>
+                </div>
+
+            </div>
+
+            <dl class="driver-profile-details">
+
+                <div>
+                    <dt>Vehicle</dt>
+                    <dd>{{ vehicle.name }}</dd>
+                </div>
+
+                <div>
+                    <dt>Category</dt>
+                    <dd>Standard</dd>
+                </div>
+
+                <div>
+                    <dt>Year</dt>
+                    <dd>{{ vehicle.year }}</dd>
+                </div>
+
+                <div>
+                    <dt>Color</dt>
+                    <dd>{{ vehicle.color }}</dd>
+                </div>
+
+                <div>
+                    <dt>Plate number</dt>
+                    <dd>{{ vehicle.plate_number }}</dd>
+                </div>
+
+            </dl>
+
+        </section>
+
+        <section class="driver-actions-section">
+
+            <div class="section-heading">
+
+                <div>
+                    <p class="trip-planner-eyebrow">
+                        Driver workspace
+                    </p>
+
+                    <h2>Quick Actions</h2>
+                </div>
+
+            </div>
+
+            <div class="driver-action-grid">
+
+                <button type="button" disabled>
+                    &#128203; Trip History
+                </button>
+
+                <button type="button" disabled>
+                    &#128176; Earnings
+                </button>
+
+                <button type="button" disabled>
+                    &#128100; Profile
+                </button>
+
+                <button type="button" disabled>
+                    &#9881; Settings
+                </button>
+
+            </div>
+
+        </section>
+
+    {% else %}
+
+        <section class="driver-dashboard-empty">
+
+            <h1>Driver Dashboard Unavailable</h1>
+
+            <p>
+                No configured HABESHAGO driver profile
+                could be loaded.
+            </p>
+
+        </section>
+
+    {% endif %}
 
 </section>
 
