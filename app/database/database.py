@@ -262,6 +262,120 @@ def migrate_drivers_table(
         )
 
 
+def migrate_existing_driver_vehicles(
+    cursor,
+):
+    """
+    Create canonical vehicle records for drivers that
+    existed before the Vehicle Platform was introduced.
+
+    Existing driver vehicle columns remain available for
+    backward compatibility during the migration period.
+    """
+
+    cursor.execute(
+        """
+        SELECT
+            telegram_id,
+            vehicle,
+            vehicle_year,
+            vehicle_color,
+            plate_number,
+            vehicle_verification_status,
+            created_at
+        FROM drivers
+        """
+    )
+
+    driver_records = cursor.fetchall()
+
+    for driver_record in driver_records:
+        (
+            driver_id,
+            vehicle_name,
+            vehicle_year,
+            vehicle_color,
+            plate_number,
+            verification_status,
+            created_at,
+        ) = driver_record
+
+        clean_vehicle_name = str(
+            vehicle_name or ""
+        ).strip()
+
+        vehicle_parts = clean_vehicle_name.split(
+            maxsplit=1
+        )
+
+        if len(vehicle_parts) == 2:
+            brand = vehicle_parts[0]
+            model = vehicle_parts[1]
+        elif len(vehicle_parts) == 1:
+            brand = vehicle_parts[0]
+            model = "Unknown"
+        else:
+            brand = "Unknown"
+            model = "Unknown"
+
+        clean_verification_status = (
+            verification_status
+            if verification_status
+            in {
+                "pending",
+                "verified",
+                "rejected",
+                "suspended",
+            }
+            else "pending"
+        )
+
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO vehicles (
+                driver_id,
+                vehicle_type,
+                brand,
+                model,
+                manufacturing_year,
+                color,
+                plate_number,
+                category,
+                verification_status,
+                is_active,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                ?,
+                'legacy',
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                'standard',
+                ?,
+                1,
+                COALESCE(
+                    ?,
+                    CURRENT_TIMESTAMP
+                ),
+                CURRENT_TIMESTAMP
+            )
+            """,
+            (
+                driver_id,
+                brand,
+                model,
+                vehicle_year,
+                vehicle_color,
+                plate_number,
+                clean_verification_status,
+                created_at,
+            ),
+        )
+
 def create_tables():
     """
     Create and safely upgrade all HABESHAGO database tables.
@@ -346,9 +460,57 @@ def create_tables():
         )
 
         # ======================================
-        # RIDES TABLE
+        # VEHICLES TABLE
         # ======================================
 
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS vehicles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                driver_id INTEGER NOT NULL,
+
+                vehicle_type TEXT NOT NULL,
+                brand TEXT NOT NULL,
+                model TEXT NOT NULL,
+
+                manufacturing_year INTEGER NOT NULL,
+                color TEXT NOT NULL,
+
+                plate_type TEXT,
+                plate_region TEXT,
+                plate_number TEXT UNIQUE NOT NULL,
+
+                category TEXT NOT NULL
+                    DEFAULT 'standard',
+
+                verification_status TEXT NOT NULL
+                    DEFAULT 'pending',
+
+                is_active INTEGER NOT NULL
+                    DEFAULT 1,
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP,
+
+                updated_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP,
+
+                FOREIGN KEY (driver_id)
+                    REFERENCES drivers (telegram_id)
+            )
+            """
+        )
+
+        # Safely migrate vehicle information from
+        # driver records created before Commit #74.
+        migrate_existing_driver_vehicles(
+            cursor
+        )
+
+        # ======================================
+        # RIDES TABLE
+        # ======================================
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS rides (
@@ -507,6 +669,47 @@ def create_tables():
                 vehicle_verification_status,
                 is_online,
                 is_available
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_vehicles_driver_id
+            ON vehicles (
+                driver_id
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_vehicles_active
+            ON vehicles (
+                driver_id,
+                is_active
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_vehicles_verification
+            ON vehicles (
+                verification_status
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_vehicles_category
+            ON vehicles (
+                category
             )
             """
         )

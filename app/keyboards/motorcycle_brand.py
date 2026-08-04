@@ -1,39 +1,47 @@
+"""
+HABESHAGO Motorcycle Brand Keyboard
+
+Builds the available motorcycle brands directly from the
+canonical Vehicle Catalog.
+"""
+
 from telegram import (
     KeyboardButton,
     ReplyKeyboardMarkup,
 )
 
+from app.data.vehicle_catalog import (
+    VEHICLE_CATALOG,
+)
+
 
 def get_motorcycle_brand_keyboard():
-    keyboard = [
-        [
-            KeyboardButton("🏍 Bajaj"),
-            KeyboardButton("🏍 TVS"),
-        ],
-        [
-            KeyboardButton("🏍 Yamaha"),
-            KeyboardButton("🏍 Honda"),
-        ],
-        [
-            KeyboardButton("🏍 Suzuki"),
-            KeyboardButton("🏍 Hero"),
-        ],
-        [
-            KeyboardButton("🏍 KTM"),
-            KeyboardButton("🏍 Royal Enfield"),
-        ],
-        [
-            KeyboardButton("🏍 BMW"),
-            KeyboardButton("🏍 Ducati"),
-        ],
-        [
-            KeyboardButton("🏍 Kawasaki"),
-            KeyboardButton("🏍 Harley-Davidson"),
-        ],
-        [
-            KeyboardButton("🏍 Other"),
-        ],
-    ]
+    """
+    Return every supported motorcycle brand.
+    """
+
+    brands = list(
+        VEHICLE_CATALOG[
+            "Motorcycle"
+        ].keys()
+    )
+
+    keyboard = []
+    row = []
+
+    for brand in brands:
+        row.append(
+            KeyboardButton(
+                f"🏍 {brand}"
+            )
+        )
+
+        if len(row) == 2:
+            keyboard.append(row)
+            row = []
+
+    if row:
+        keyboard.append(row)
 
     return ReplyKeyboardMarkup(
         keyboard,

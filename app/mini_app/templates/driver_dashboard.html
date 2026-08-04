@@ -266,33 +266,144 @@ Driver Dashboard &#8226; HABESHAGO
         <dl class="driver-profile-details">
 
             <div>
-                <dt>Vehicle</dt>
-                <dd>{{ vehicle.name }}</dd>
+                <dt>Phone</dt>
+                <dd>
+                    {{ profile.phone_number
+                    or "Not provided" }}
+                </dd>
             </div>
 
             <div>
-                <dt>Category</dt>
-                <dd>Standard</dd>
-            </div>
-
-            <div>
-                <dt>Year</dt>
-                <dd>{{ vehicle.year }}</dd>
-            </div>
-
-            <div>
-                <dt>Color</dt>
-                <dd>{{ vehicle.color }}</dd>
-            </div>
-
-            <div>
-                <dt>Plate number</dt>
-                <dd>{{ vehicle.plate_number }}</dd>
+                <dt>Rating</dt>
+                <dd>
+                    {{ "%.2f"|format(
+                    profile.rating
+                    ) }}
+                    &#9733;
+                </dd>
             </div>
 
         </dl>
 
     </section>
+
+    {% if page.vehicle_management %}
+
+    {% set vehicle_management =
+    page.vehicle_management %}
+
+    {% set active_vehicle =
+    vehicle_management.active_vehicle %}
+
+    <section class="driver-vehicle-card">
+
+        <div class="driver-status-heading">
+
+            <div>
+                <span class="driver-dashboard-label">
+                    Vehicle management
+                </span>
+
+                <h2>
+                    {% if active_vehicle %}
+                    {{ active_vehicle.display_name }}
+                    {% else %}
+                    No Active Vehicle
+                    {% endif %}
+                </h2>
+            </div>
+
+            {% if active_vehicle %}
+
+            <span class="
+                    driver-vehicle-status
+                    driver-vehicle-{{ active_vehicle.verification_status }}
+                ">
+                {{ active_vehicle.status_label }}
+            </span>
+
+            {% endif %}
+
+        </div>
+
+        {% if active_vehicle %}
+
+        <div class="driver-vehicle-grid">
+
+            <article>
+                <span>Vehicle type</span>
+                <strong>
+                    {{ active_vehicle.vehicle_type
+                    | replace("_", " ")
+                    | title }}
+                </strong>
+            </article>
+
+            <article>
+                <span>Category</span>
+                <strong>
+                    {{ active_vehicle.category
+                    | title }}
+                </strong>
+            </article>
+
+            <article>
+                <span>Manufacturing year</span>
+                <strong>
+                    {{ active_vehicle.manufacturing_year }}
+                </strong>
+            </article>
+
+            <article>
+                <span>Color</span>
+                <strong>
+                    {{ active_vehicle.color }}
+                </strong>
+            </article>
+
+            <article>
+                <span>Plate number</span>
+                <strong>
+                    {{ active_vehicle.plate.number }}
+                </strong>
+            </article>
+
+            <article>
+                <span>Can operate</span>
+                <strong>
+                    {{ "Yes"
+                    if active_vehicle.can_operate
+                    else "No" }}
+                </strong>
+            </article>
+
+        </div>
+
+        <div class="driver-vehicle-guidance">
+
+            <p>
+                {{ active_vehicle.status_message }}
+            </p>
+
+            <strong>
+                Registered vehicles:
+                {{ vehicle_management.vehicle_count }}
+            </strong>
+
+        </div>
+
+        {% else %}
+
+        <p class="driver-dashboard-note">
+            No vehicle is currently available for
+            HABESHAGO operations.
+        </p>
+
+        {% endif %}
+
+    </section>
+
+    {% endif %}
 
     <section class="driver-actions-section">
 

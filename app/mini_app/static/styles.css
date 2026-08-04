@@ -2845,3 +2845,91 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================
+   VEHICLE MANAGEMENT PLATFORM
+   Commit #74
+   ========================================== */
+
+.driver-vehicle-card {
+    padding: 20px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+}
+
+.driver-vehicle-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.driver-vehicle-verified {
+    color: var(--color-primary);
+    background: rgba(10, 143, 61, 0.12);
+}
+
+.driver-vehicle-pending {
+    color: #9a6700;
+    background: rgba(255, 193, 7, 0.15);
+}
+
+.driver-vehicle-rejected,
+.driver-vehicle-suspended {
+    color: #b42318;
+    background: rgba(180, 35, 24, 0.12);
+}
+
+.driver-vehicle-grid {
+    display: grid;
+    grid-template-columns: repeat(
+        3,
+        minmax(0, 1fr)
+    );
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.driver-vehicle-grid article {
+    display: grid;
+    gap: 5px;
+    padding: 13px;
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+}
+
+.driver-vehicle-grid span {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+
+.driver-vehicle-grid strong {
+    font-size: 15px;
+    overflow-wrap: anywhere;
+}
+
+.driver-vehicle-guidance {
+    display: grid;
+    gap: 8px;
+    margin-top: 18px;
+    padding: 14px;
+    background: var(--color-background);
+    border-radius: 14px;
+}
+
+.driver-vehicle-guidance p {
+    margin: 0;
+    color: var(--color-text-secondary);
+}
+
+@media (max-width: 640px) {
+    .driver-vehicle-grid {
+        grid-template-columns: 1fr;
+    }
+}

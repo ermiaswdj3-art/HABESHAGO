@@ -1,28 +1,112 @@
 from app.database.database import create_connection
 
+from app.models import Vehicle
 
 def register_driver(
     telegram_id,
     full_name,
     phone_number,
-    vehicle,
+    vehicle_type,
+    vehicle_brand,
+    vehicle_model,
     vehicle_year,
     vehicle_color,
+    plate_type,
+    plate_region,
     plate_number,
     latitude,
     longitude,
 ):
     """
-    Register a new driver.
+    Register a driver application and its first vehicle
+    in one atomic database transaction.
 
-    Newly registered drivers are placed into the
-    verification workflow and cannot receive ride
-    requests until approved.
+    Newly submitted drivers and vehicles remain pending
+    verification and cannot enter dispatch until approved.
     """
 
+    clean_vehicle_type = str(
+        vehicle_type or ""
+    ).strip()
+
+    vehicle_type_map = {
+        "⛽ Fuel Car": "fuel_car",
+        "Fuel Car": "fuel_car",
+        "⚡ Electric Car": "electric_car",
+        "Electric Car": "electric_car",
+        "🏍 Motorcycle": "motorcycle",
+        "Motorcycle": "motorcycle",
+    }
+
+    canonical_vehicle_type = (
+        vehicle_type_map.get(
+            clean_vehicle_type,
+            "legacy",
+        )
+    )
+
+    clean_plate_type = str(
+        plate_type or ""
+    ).strip()
+
+    plate_type_map = {
+        "🟦 Regional Plate": "regional",
+        "Regional Plate": "regional",
+        "🟩 National ETH Plate": "national_eth",
+        "National ETH Plate": "national_eth",
+    }
+
+    canonical_plate_type = (
+        plate_type_map.get(
+            clean_plate_type
+        )
+    )
+
+    canonical_plate_region = (
+        str(plate_region).strip()
+        if plate_region
+        else None
+    )
+
+    vehicle_category = (
+        "motorcycle"
+        if canonical_vehicle_type == "motorcycle"
+        else "standard"
+    )
+
+    vehicle_record = Vehicle(
+        vehicle_id=None,
+        driver_id=int(telegram_id),
+        vehicle_type=canonical_vehicle_type,
+        brand=str(vehicle_brand).strip(),
+        model=str(vehicle_model).strip(),
+        manufacturing_year=int(
+            vehicle_year
+        ),
+        color=str(vehicle_color).strip(),
+        plate_type=canonical_plate_type,
+        plate_region=canonical_plate_region,
+        plate_number=str(
+            plate_number
+        ).strip(),
+        category=vehicle_category,
+        verification_status="pending",
+        is_active=True,
+    )
+
+    vehicle_record.validate()
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
     try:
-        connection = create_connection()
-        cursor = connection.cursor()
+        cursor.execute(
+            "PRAGMA foreign_keys = ON"
+        )
+
+        # ======================================
+        # DRIVER APPLICATION
+        # ======================================
 
         cursor.execute(
             """
@@ -30,10 +114,12 @@ def register_driver(
                 telegram_id,
                 full_name,
                 phone_number,
+
                 vehicle,
                 vehicle_year,
                 vehicle_color,
                 plate_number,
+
                 latitude,
                 longitude,
 
@@ -46,7 +132,11 @@ def register_driver(
                 is_online
             )
             VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?,
+
+                ?, ?, ?, ?,
+
+                ?, ?,
 
                 'verification_pending',
                 'pending',
@@ -61,27 +151,97 @@ def register_driver(
                 telegram_id,
                 full_name,
                 phone_number,
-                vehicle,
-                vehicle_year,
-                vehicle_color,
-                plate_number,
+
+                vehicle_record.display_name,
+                vehicle_record.manufacturing_year,
+                vehicle_record.color,
+                vehicle_record.plate_number,
+
                 latitude,
                 longitude,
             ),
         )
 
+        # ======================================
+        # CANONICAL VEHICLE RECORD
+        # ======================================
+
+        cursor.execute(
+            """
+            INSERT INTO vehicles (
+                driver_id,
+                vehicle_type,
+                brand,
+                model,
+                manufacturing_year,
+                color,
+                plate_type,
+                plate_region,
+                plate_number,
+                category,
+                verification_status,
+                is_active,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                'pending',
+                1,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+            )
+            """,
+            (
+                vehicle_record.driver_id,
+                vehicle_record.vehicle_type,
+                vehicle_record.brand,
+                vehicle_record.model,
+                vehicle_record.manufacturing_year,
+                vehicle_record.color,
+                vehicle_record.plate_type,
+                vehicle_record.plate_region,
+                vehicle_record.plate_number,
+                vehicle_record.category,
+            ),
+        )
+
+        vehicle_record.vehicle_id = (
+            cursor.lastrowid
+        )
+
         connection.commit()
-        connection.close()
 
-        print("✅ Driver registered successfully!")
-        print("Registration Status : verification_pending")
-        print("Identity Status     : pending")
-        print("Vehicle Status      : pending")
+        print(
+            "✅ Driver application submitted successfully!"
+        )
+        print(
+            "Registration Status : verification_pending"
+        )
+        print(
+            "Identity Status     : pending"
+        )
+        print(
+            "Vehicle Status      : pending"
+        )
+        print(
+            "Vehicle ID          :",
+            vehicle_record.vehicle_id,
+        )
 
-    except Exception as e:
-        print("❌ DRIVER REGISTRATION ERROR:")
-        print(e)
+        return vehicle_record
+
+    except Exception:
+        connection.rollback()
+
+        print(
+            "❌ DRIVER AND VEHICLE REGISTRATION ERROR"
+        )
+
         raise
+
+    finally:
+        connection.close()
 
 
 def get_driver_by_telegram_id(telegram_id):

@@ -1,25 +1,47 @@
+"""
+HABESHAGO Vehicle Model Keyboard
+
+Builds vehicle-model options from the canonical
+Vehicle Catalog.
+"""
+
 from telegram import (
     KeyboardButton,
     ReplyKeyboardMarkup,
 )
 
-from app.data.vehicle_catalog import VEHICLE_CATALOG
+from app.data.vehicle_catalog import (
+    VEHICLE_CATALOG,
+)
 
 
-def get_vehicle_model_keyboard(vehicle_type, brand):
+def get_vehicle_model_keyboard(
+    vehicle_type: str,
+    brand: str,
+):
     """
-    Creates a keyboard containing every model
-    for the selected vehicle brand.
+    Return supported models for one vehicle type and brand.
+
+    Unknown combinations safely fall back to "Other"
+    instead of raising a KeyError.
     """
 
-    models = VEHICLE_CATALOG[vehicle_type][brand]
+    vehicle_catalog = (
+        VEHICLE_CATALOG.get(
+            vehicle_type,
+            {},
+        )
+    )
+
+    models = vehicle_catalog.get(
+        brand,
+        ["Other"],
+    )
 
     keyboard = []
-
     row = []
 
     for model in models:
-
         row.append(
             KeyboardButton(model)
         )
