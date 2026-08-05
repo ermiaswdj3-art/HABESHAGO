@@ -1,82 +1,64 @@
 """
-HABESHAGO Dispatch Service
+HABESHAGO Mini App Dispatch Adapter
 
-Finds, ranks, and selects eligible drivers for an active trip.
+Adapts the Mini App Trip contract to the canonical shared
+HABESHAGO Intelligent Dispatch Platform.
 
-This first version uses controlled in-memory drivers.
-Future versions will use live GPS, traffic, driver state,
-vehicle compatibility, offer timeouts, and reassignment.
+The Mini App does not own driver-ranking business logic.
 """
 
-from math import asin, cos, radians, sin, sqrt
+from app.mini_app.models import (
+    Driver,
+    Trip,
+)
 
-from app.mini_app.models import Driver, Trip
-from app.mini_app.repositories import get_available_drivers
+from app.services.dispatch_service import (
+    find_ranked_drivers as find_shared_ranked_drivers,
+)
+
+from app.services.eta_service import (
+    calculate_eta,
+)
 
 
-def calculate_distance_km(
-    latitude_1: float,
-    longitude_1: float,
-    latitude_2: float,
-    longitude_2: float,
-) -> float:
+def _build_mini_app_driver(
+    ranked_driver: dict,
+) -> Driver:
     """
-    Calculate approximate geographic distance using
-    the Haversine formula.
-    """
-
-    earth_radius_km = 6371.0
-
-    latitude_difference = radians(
-        latitude_2 - latitude_1
-    )
-
-    longitude_difference = radians(
-        longitude_2 - longitude_1
-    )
-
-    latitude_1_radians = radians(latitude_1)
-    latitude_2_radians = radians(latitude_2)
-
-    haversine_value = (
-        sin(latitude_difference / 2) ** 2
-        + cos(latitude_1_radians)
-        * cos(latitude_2_radians)
-        * sin(longitude_difference / 2) ** 2
-    )
-
-    angular_distance = 2 * asin(
-        sqrt(haversine_value)
-    )
-
-    return earth_radius_km * angular_distance
-
-
-def estimate_driver_eta_minutes(
-    distance_km: float,
-) -> int:
-    """
-    Estimate driver arrival time from distance.
-
-    Uses a controlled average city speed for the
-    Dispatch Engine foundation.
+    Convert one canonical dispatch result into the
+    Mini App's existing Driver presentation model.
     """
 
-    average_speed_kmh = 24.0
+    driver = Driver(
+        driver_id=str(
+            ranked_driver["telegram_id"]
+        ),
+        name=ranked_driver["name"],
+        rating=float(
+            ranked_driver["rating"]
+        ),
+        vehicle=ranked_driver["vehicle"],
+        plate_number=ranked_driver["plate"],
+        vehicle_color=ranked_driver["color"],
+        latitude=0.0,
+        longitude=0.0,
+        is_online=True,
+        is_available=True,
+    )
 
-    travel_minutes = (
-        distance_km / average_speed_kmh
-    ) * 60
+    driver.eta_minutes = calculate_eta(
+        ranked_driver["distance"]
+    )
 
-    return max(1, round(travel_minutes))
+    return driver
 
 
 def rank_available_drivers(
     trip: Trip,
 ) -> list[Driver]:
     """
-    Rank eligible drivers by pickup distance first,
-    then by driver rating.
+    Return Mini App Driver models in canonical shared
+    dispatch-ranking order.
     """
 
     if (
@@ -85,42 +67,22 @@ def rank_available_drivers(
     ):
         return []
 
-    drivers = get_available_drivers()
-
-    ranked_drivers = []
-
-    for driver in drivers:
-        distance_km = calculate_distance_km(
-            trip.pickup_latitude,
-            trip.pickup_longitude,
-            driver.latitude,
-            driver.longitude,
-        )
-
-        driver.eta_minutes = (
-            estimate_driver_eta_minutes(
-                distance_km
-            )
-        )
-
-        ranked_drivers.append(
-            (
-                distance_km,
-                -driver.rating,
-                driver,
-            )
-        )
-
-    ranked_drivers.sort(
-        key=lambda item: (
-            item[0],
-            item[1],
+    ranked_drivers = (
+        find_shared_ranked_drivers(
+            passenger_latitude=(
+                trip.pickup_latitude
+            ),
+            passenger_longitude=(
+                trip.pickup_longitude
+            ),
         )
     )
 
     return [
-        item[2]
-        for item in ranked_drivers
+        _build_mini_app_driver(
+            ranked_driver
+        )
+        for ranked_driver in ranked_drivers
     ]
 
 
@@ -128,10 +90,13 @@ def find_best_driver(
     trip: Trip,
 ) -> Driver | None:
     """
-    Return the highest-ranked eligible driver.
+    Return the Mini App representation of the strongest
+    canonical platform driver match.
     """
 
-    ranked_drivers = rank_available_drivers(trip)
+    ranked_drivers = rank_available_drivers(
+        trip
+    )
 
     if not ranked_drivers:
         return None

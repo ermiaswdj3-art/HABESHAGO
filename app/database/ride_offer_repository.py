@@ -525,6 +525,40 @@ def _transition_pending_offer(
     return offer
 
 
+def get_pending_offer_driver_ids() -> set[int]:
+    """
+    Return the IDs of drivers who currently hold
+    non-expired pending ride offers.
+
+    Overdue offers are excluded from this result.
+    The Ride Offer Service or recovery process remains
+    responsible for changing their status to EXPIRED.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT DISTINCT
+            driver_id
+        FROM ride_offers
+        WHERE status = ?
+          AND DATETIME(expires_at) >
+              DATETIME('now')
+        """,
+        (PENDING,),
+    )
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    return {
+        int(row[0])
+        for row in rows
+    }
+
 def get_all_pending_ride_offers() -> list[RideOffer]:
     """
     Return every currently pending ride offer.

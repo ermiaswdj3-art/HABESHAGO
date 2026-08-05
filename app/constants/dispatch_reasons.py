@@ -22,6 +22,18 @@ class DispatchReason:
 
     AVAILABLE_DRIVER = "AVAILABLE_DRIVER"
 
+    DRIVER_OFFLINE = "DRIVER_OFFLINE"
+
+    DRIVER_UNAVAILABLE = "DRIVER_UNAVAILABLE"
+
+    DRIVER_HAS_ACTIVE_RIDE = (
+        "DRIVER_HAS_ACTIVE_RIDE"
+    )
+
+    DRIVER_HAS_PENDING_OFFER = (
+        "DRIVER_HAS_PENDING_OFFER"
+    )
+
     # ==========================================
     # DRIVER QUALITY
     # ==========================================

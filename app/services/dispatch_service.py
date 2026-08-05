@@ -11,14 +11,19 @@ Responsibilities:
 - Build dispatch candidates
 - Apply pickup-radius rules
 - Apply an optional development-driver filter
+- Exclude drivers with pending ride offers
 - Rank candidates
-- Return the strongest driver match
+- Return canonical dispatch results
 """
 
 import os
 
 from app.database.driver_repository import (
     get_available_drivers,
+)
+
+from app.database.ride_offer_repository import (
+    get_pending_offer_driver_ids,
 )
 
 from app.models.dispatch_candidate import (
@@ -40,6 +45,7 @@ from app.services.live_location_service import (
 from app.state.active_ride_state import (
     active_rides,
 )
+
 
 MAX_PICKUP_DISTANCE_KM = 10.0
 
@@ -70,7 +76,9 @@ def _get_test_driver_ids() -> set[int]:
             continue
 
         try:
-            test_driver_ids.add(int(cleaned_value))
+            test_driver_ids.add(
+                int(cleaned_value)
+            )
 
         except ValueError:
             continue
@@ -78,32 +86,77 @@ def _get_test_driver_ids() -> set[int]:
     return test_driver_ids
 
 
-def find_best_driver(
+def _serialize_ranked_candidate(
+    candidate: DispatchCandidate,
+    driver_record: tuple,
+    live_location,
+) -> dict:
+    """
+    Convert one ranked dispatch candidate into the
+    canonical shared dispatch-result contract.
+    """
+
+    return {
+        "telegram_id": driver_record[0],
+        "name": driver_record[1],
+        "phone": driver_record[2],
+        "vehicle": driver_record[3],
+        "color": driver_record[4],
+        "plate": driver_record[5],
+        "rating": float(
+            driver_record[6] or 0
+        ),
+        "distance": round(
+            candidate.distance_km,
+            2,
+        ),
+        "dispatch_score": round(
+            candidate.score,
+            2,
+        ),
+        "dispatch_reasons": list(
+            candidate.reasons
+        ),
+        "disqualification_reason": (
+            candidate.disqualification_reason
+        ),
+        "location_status": (
+            live_location.status
+        ),
+        "location_recorded_at": (
+            live_location.recorded_at
+        ),
+    }
+
+
+def find_ranked_drivers(
     passenger_latitude: float,
     passenger_longitude: float,
-) -> dict | None:
+) -> list[dict]:
     """
-    Find the strongest eligible driver match
-    using fresh live-location data.
+    Return every eligible driver ranked from strongest
+    to weakest dispatch match.
 
-    Drivers without a fresh usable location
-    are excluded from dispatch.
-
-    Return None when no suitable driver exists.
+    This is the canonical shared ranking contract used by
+    Telegram, the Mini App, future native apps, and Admin.
     """
-
-    # ==========================================
-    # LOAD ELIGIBLE DRIVERS
-    # ==========================================
 
     drivers = get_available_drivers()
 
     if not drivers:
-        return None
+        return []
 
-    test_driver_ids = _get_test_driver_ids()
+    test_driver_ids = (
+        _get_test_driver_ids()
+    )
 
-    candidates: list[DispatchCandidate] = []
+    pending_offer_driver_ids = (
+        get_pending_offer_driver_ids()
+    )
+
+    candidates: list[
+        DispatchCandidate
+    ] = []
 
     driver_records: dict[
         int,
@@ -112,38 +165,23 @@ def find_best_driver(
 
     driver_locations = {}
 
-    # ==========================================
-    # BUILD DISPATCH CANDIDATES
-    # ==========================================
-
     for driver in drivers:
         driver_id = driver[0]
 
-        print(
-            "\nChecking dispatch candidate:",
-            driver_id,
-            driver[1],
-        )
-
-        # During controlled local testing, only
-        # explicitly approved driver accounts are
-        # considered. When no test IDs are set,
-        # every eligible driver is considered.
-        if test_driver_ids and driver_id not in test_driver_ids:
-            print("Rejected: not included in " "HABESHAGO_TEST_DRIVER_IDS.")
+        if (
+            test_driver_ids
+            and driver_id
+            not in test_driver_ids
+        ):
             continue
 
-        # The database coordinates are no longer
-        # trusted for live dispatch decisions.
-        live_location = get_usable_live_location(driver_id)
-
-        print(
-            "Usable live location:",
-            live_location,
+        live_location = (
+            get_usable_live_location(
+                driver_id
+            )
         )
 
         if live_location is None:
-            print("Rejected: no fresh usable " "live location.")
             continue
 
         distance = calculate_distance(
@@ -153,116 +191,87 @@ def find_best_driver(
             live_location.longitude,
         )
 
-        print(
-            "Calculated pickup distance:",
-            f"{distance:.2f} km",
-        )
-
         if distance > MAX_PICKUP_DISTANCE_KM:
-            print("Rejected: outside maximum " "pickup distance.")
             continue
 
         candidate = DispatchCandidate(
             driver_id=driver_id,
             distance_km=distance,
-            rating=float(driver[6]),
+            rating=float(
+                driver[6] or 0
+            ),
             is_online=True,
             is_available=True,
-            has_active_ride=(driver_id in active_rides),
+            has_active_ride=(
+                driver_id in active_rides
+            ),
+            has_pending_offer=(
+                driver_id
+                in pending_offer_driver_ids
+            ),
         )
 
-        candidates.append(candidate)
+        candidates.append(
+            candidate
+        )
 
-        driver_records[driver_id] = driver
+        driver_records[
+            driver_id
+        ] = driver
 
-        driver_locations[driver_id] = live_location
+        driver_locations[
+            driver_id
+        ] = live_location
 
-    if not candidates:
+    ranked_candidates = rank_candidates(
+        candidates
+    )
+
+    ranked_results = []
+
+    for candidate in ranked_candidates:
+        if not candidate.is_eligible():
+            continue
+
+        if candidate.score <= 0:
+            continue
+
+        driver_record = driver_records[
+            candidate.driver_id
+        ]
+
+        live_location = driver_locations[
+            candidate.driver_id
+        ]
+
+        ranked_results.append(
+            _serialize_ranked_candidate(
+                candidate,
+                driver_record,
+                live_location,
+            )
+        )
+
+    return ranked_results
+
+
+def find_best_driver(
+    passenger_latitude: float,
+    passenger_longitude: float,
+) -> dict | None:
+    """
+    Return the strongest eligible driver match.
+
+    This compatibility function delegates to the
+    canonical ranked-driver contract.
+    """
+
+    ranked_drivers = find_ranked_drivers(
+        passenger_latitude,
+        passenger_longitude,
+    )
+
+    if not ranked_drivers:
         return None
 
-    # ==========================================
-    # RANK CANDIDATES
-    # ==========================================
-
-    ranked_candidates = rank_candidates(candidates)
-
-    eligible_candidates = [
-        candidate for candidate in ranked_candidates if candidate.score > 0
-    ]
-
-    if not eligible_candidates:
-        return None
-
-    best_candidate = eligible_candidates[0]
-
-    selected_driver = driver_records[best_candidate.driver_id]
-
-    selected_location = driver_locations[best_candidate.driver_id]
-
-    # ==========================================
-    # DISPATCH DECISION LOG
-    # ==========================================
-
-    print("\n========== HABESHAGO DISPATCH ==========")
-
-    print(
-        "Driver ID:",
-        selected_driver[0],
-    )
-
-    print(
-        "Driver Name:",
-        selected_driver[1],
-    )
-
-    print(
-        "Pickup Distance:",
-        f"{best_candidate.distance_km:.2f} km",
-    )
-
-    print(
-        "Dispatch Score:",
-        f"{best_candidate.score:.2f}",
-    )
-
-    print(
-        "Dispatch Reasons:",
-        best_candidate.reasons,
-    )
-
-    print(
-        "Location Status:",
-        selected_location.status,
-    )
-
-    print(
-        "Location Recorded At:",
-        selected_location.recorded_at,
-    )
-
-    print("========================================\n")
-
-    # ==========================================
-    # RETURN COMPATIBLE DRIVER RESULT
-    # ==========================================
-
-    return {
-        "telegram_id": selected_driver[0],
-        "name": selected_driver[1],
-        "phone": selected_driver[2],
-        "vehicle": selected_driver[3],
-        "color": selected_driver[4],
-        "plate": selected_driver[5],
-        "rating": selected_driver[6],
-        "distance": round(
-            best_candidate.distance_km,
-            2,
-        ),
-        "dispatch_score": round(
-            best_candidate.score,
-            2,
-        ),
-        "dispatch_reasons": list(best_candidate.reasons),
-        "location_status": (selected_location.status),
-        "location_recorded_at": (selected_location.recorded_at),
-    }
+    return ranked_drivers[0]

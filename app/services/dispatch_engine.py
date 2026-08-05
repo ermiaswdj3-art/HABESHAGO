@@ -48,16 +48,35 @@ def calculate_candidate_score(
     # ELIGIBILITY RULES
     # ==========================================
 
+    candidate.disqualification_reason = None
+
     if not candidate.is_online:
+        candidate.disqualification_reason = (
+            DispatchReason.DRIVER_OFFLINE
+        )
         return candidate
 
     if not candidate.is_available:
+        candidate.disqualification_reason = (
+            DispatchReason.DRIVER_UNAVAILABLE
+        )
         return candidate
 
     if candidate.has_active_ride:
+        candidate.disqualification_reason = (
+            DispatchReason.DRIVER_HAS_ACTIVE_RIDE
+        )
         return candidate
 
-    candidate.reasons.append(DispatchReason.AVAILABLE_DRIVER)
+    if candidate.has_pending_offer:
+        candidate.disqualification_reason = (
+            DispatchReason.DRIVER_HAS_PENDING_OFFER
+        )
+        return candidate
+
+    candidate.reasons.append(
+        DispatchReason.AVAILABLE_DRIVER
+    )
 
     # ==========================================
     # DISTANCE SCORE
