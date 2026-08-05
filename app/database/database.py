@@ -686,6 +686,67 @@ def create_tables():
             cursor
         )
 
+                # ======================================
+        # RIDE OFFERS TABLE
+        # ======================================
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ride_offers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                offer_reference TEXT UNIQUE NOT NULL,
+
+                passenger_id INTEGER NOT NULL,
+                driver_id INTEGER NOT NULL,
+
+                pickup_latitude REAL NOT NULL,
+                pickup_longitude REAL NOT NULL,
+
+                destination_latitude REAL NOT NULL,
+                destination_longitude REAL NOT NULL,
+
+                distance REAL NOT NULL,
+                pickup_distance REAL NOT NULL,
+
+                pickup_eta INTEGER NOT NULL,
+                trip_eta INTEGER NOT NULL,
+
+                fare REAL NOT NULL,
+
+                payment_method TEXT NOT NULL
+                    DEFAULT 'Cash',
+
+                service_type TEXT NOT NULL
+                    DEFAULT 'fuel',
+
+                status TEXT NOT NULL
+                    DEFAULT 'PENDING',
+
+                accepted_ride_id INTEGER,
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP,
+
+                expires_at TIMESTAMP NOT NULL,
+
+                accepted_at TIMESTAMP,
+                rejected_at TIMESTAMP,
+                expired_at TIMESTAMP,
+                cancelled_at TIMESTAMP,
+
+                FOREIGN KEY (passenger_id)
+                    REFERENCES passengers (telegram_id),
+
+                FOREIGN KEY (driver_id)
+                    REFERENCES drivers (telegram_id),
+
+                FOREIGN KEY (accepted_ride_id)
+                    REFERENCES rides (id)
+            )
+            """
+        )
+
         # ======================================
         # PASSENGER PLACES TABLE
         # ======================================
@@ -888,6 +949,61 @@ def create_tables():
                 is_online,
                 is_available
             )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_ride_offers_driver_status
+            ON ride_offers (
+                driver_id,
+                status
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_ride_offers_passenger_status
+            ON ride_offers (
+                passenger_id,
+                status
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_ride_offers_expiration
+            ON ride_offers (
+                status,
+                expires_at
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_ride_offers_pending_driver
+            ON ride_offers (
+                driver_id
+            )
+            WHERE status = 'PENDING'
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_ride_offers_pending_passenger
+            ON ride_offers (
+                passenger_id
+            )
+            WHERE status = 'PENDING'
             """
         )
 

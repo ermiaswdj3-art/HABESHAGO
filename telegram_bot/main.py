@@ -15,6 +15,10 @@ from app.services.recovery_service import (
     recover_active_rides,
 )
 
+from app.services.ride_offer_recovery_service import (
+    recover_pending_ride_offers,
+)
+
 from app.handlers.availability import (
     go_offline,
     go_online,
@@ -144,6 +148,10 @@ def main():
     register_event_listeners()
 
     recovered_ride_count = recover_active_rides()
+
+    ride_offer_recovery = (
+        recover_pending_ride_offers()
+    )
 
     app = Application.builder().token(BOT_TOKEN).build()
 

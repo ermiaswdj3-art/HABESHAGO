@@ -5,3 +5,5 @@ from .vehicle import Vehicle
 from .driver_operational_state import (
     DriverOperationalState,
 )
+
+from .ride_offer import RideOffer

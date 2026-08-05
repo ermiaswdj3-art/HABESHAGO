@@ -1,3 +1,10 @@
+"""
+HABESHAGO Driver Ride Response Handlers
+
+Processes driver acceptance and rejection through the
+canonical persistent Ride Offer Platform.
+"""
+
 import asyncio
 
 from telegram import Update
@@ -9,18 +16,6 @@ from app.constants.ride_status import (
 
 from app.database.driver_repository import (
     get_driver_by_id,
-)
-
-from app.database.ride_repository import (
-    save_ride,
-)
-
-from app.services.idempotency_service import (
-    is_duplicate_action,
-)
-
-from app.services.driver_availability_service import (
-    make_driver_unavailable,
 )
 
 from app.keyboards.driver_menu import (
@@ -39,16 +34,33 @@ from app.keyboards.trip_status import (
     get_trip_status_keyboard,
 )
 
+from app.services.driver_availability_service import (
+    make_driver_unavailable,
+)
+
 from app.services.eta_service import (
     calculate_eta,
+)
+
+from app.services.idempotency_service import (
+    is_duplicate_action,
 )
 
 from app.services.progress_service import (
     send_driver_progress,
 )
 
+from app.services.ride_offer_service import (
+    get_driver_pending_offer,
+    reject_driver_ride_offer,
+)
+
 from app.state.active_ride_state import (
     active_rides,
+)
+
+from app.services.ride_offer_acceptance_service import (
+    accept_offer_and_create_ride,
 )
 
 from app.state.driver_state import (
@@ -65,11 +77,10 @@ async def accept_ride(
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """
-    Driver accepts a passenger's ride request.
+    Accept one canonical pending ride offer.
 
-    The accepted ride is saved to the database,
-    accepted_at is recorded automatically, and
-    the ride becomes active for the driver.
+    The persistent Ride Offer is authoritative.
+    Temporary dictionaries remain compatibility caches.
     """
 
     if update.message is None:
@@ -77,12 +88,17 @@ async def accept_ride(
 
     driver_id = update.effective_user.id
 
+    # ==========================================
+    # DUPLICATE-ACTION PROTECTION
+    # ==========================================
+
     if is_duplicate_action(
         driver_id,
         "accept_ride",
     ):
         await update.message.reply_text(
-            "⏳ Your ride acceptance is already being processed."
+            "⏳ Your ride acceptance is already "
+            "being processed."
         )
         return
 
@@ -94,57 +110,100 @@ async def accept_ride(
         await update.message.reply_text(
             "❌ You already have an active ride.\n\n"
             "Please complete your current ride "
-            "before accepting another."
+            "before accepting another.",
+            reply_markup=get_driver_menu(),
         )
         return
 
     # ==========================================
-    # VERIFY PENDING REQUEST
+    # LOAD CANONICAL PENDING OFFER
     # ==========================================
 
-    request = pending_driver_requests.get(
+    offer = get_driver_pending_offer(
         driver_id
     )
 
-    if request is None:
+    if offer is None:
+        pending_driver_requests.pop(
+            driver_id,
+            None,
+        )
+
         await update.message.reply_text(
-            "❌ No pending ride request."
+            "❌ No active ride offer is available.\n\n"
+            "The offer may have expired, been cancelled, "
+            "or already been resolved.",
+            reply_markup=get_driver_menu(),
         )
         return
 
+    request = {
+        "offer_id": offer["offer_id"],
+        "offer_reference": (
+            offer["offer_reference"]
+        ),
+        "passenger_id": offer["passenger_id"],
+        "pickup": (
+            offer["pickup"]["latitude"],
+            offer["pickup"]["longitude"],
+        ),
+        "destination": (
+            offer["destination"]["latitude"],
+            offer["destination"]["longitude"],
+        ),
+        "distance": offer["distance"],
+        "pickup_distance": (
+            offer["pickup_distance"]
+        ),
+        "pickup_eta": offer["pickup_eta"],
+        "trip_eta": offer["trip_eta"],
+        "fare": offer["fare"],
+        "payment_method": (
+            offer["payment_method"]
+        ),
+        "service_type": offer["service_type"],
+    }
+
     passenger_id = request["passenger_id"]
 
-    # ==========================================
-    # SAVE ACCEPTED RIDE
+        # ==========================================
+    # ATOMIC OFFER ACCEPTANCE
     # ==========================================
 
-    ride_id = save_ride(
-        passenger_id=passenger_id,
-        driver_id=driver_id,
-        pickup_latitude=request["pickup"][0],
-        pickup_longitude=request["pickup"][1],
-        destination_latitude=request[
-            "destination"
-        ][0],
-        destination_longitude=request[
-            "destination"
-        ][1],
-        distance=request["distance"],
-        fare=request["fare"],
-        status=ACCEPTED,
-        service_type=request.get(
-            "service_type",
-            "fuel",
+    try:
+        acceptance = (
+            accept_offer_and_create_ride(
+                offer_id=request["offer_id"],
+                driver_id=driver_id,
+            )
+        )
+
+    except ValueError as error:
+        pending_driver_requests.pop(
+            driver_id,
+            None,
+        )
+
+        await update.message.reply_text(
+            "❌ This ride offer can no longer "
+            "be accepted.\n\n"
+            f"{error}",
+            reply_markup=get_driver_menu(),
+        )
+        return
+
+    # ==========================================
+    # LOAD ATOMIC ACCEPTANCE RESULT
+    # ==========================================
+
+    ride_id = acceptance["ride_id"]
+
+    accepted_offer = {
+        "offer_id": acceptance["offer_id"],
+        "offer_reference": (
+            acceptance["offer_reference"]
         ),
-    )
-
-    # save_ride() records:
-    #
-    # created_at
-    # requested_at
-    # accepted_at
-    #
-    # because this ride is saved with ACCEPTED.
+    }
 
     # ==========================================
     # CREATE CANONICAL ACTIVE ASSIGNMENT
@@ -152,11 +211,29 @@ async def accept_ride(
 
     active_rides[driver_id] = {
         "ride_id": ride_id,
+        "offer_id": (
+            accepted_offer["offer_id"]
+        ),
+        "offer_reference": (
+            accepted_offer["offer_reference"]
+        ),
         "passenger_id": passenger_id,
         "pickup": request["pickup"],
         "destination": request["destination"],
         "distance": request["distance"],
+        "pickup_distance": request[
+            "pickup_distance"
+        ],
+        "pickup_eta": request[
+            "pickup_eta"
+        ],
+        "trip_eta": request[
+            "trip_eta"
+        ],
         "fare": request["fare"],
+        "payment_method": request[
+            "payment_method"
+        ],
         "service_type": request.get(
             "service_type",
             "fuel",
@@ -187,13 +264,18 @@ async def accept_ride(
         )
         return
 
+    # ==========================================
+    # LOAD DRIVER PROFILE
+    # ==========================================
+
     driver = get_driver_by_id(
         driver_id
     )
 
     if driver is None:
         await update.message.reply_text(
-            "❌ Driver profile could not be found."
+            "❌ Driver profile could not be found.",
+            reply_markup=get_driver_menu(),
         )
         return
 
@@ -209,6 +291,8 @@ async def accept_ride(
         chat_id=passenger_id,
         text=(
             "🎉 Your ride has been accepted!\n\n"
+            f"🆔 Offer Reference: "
+            f"{accepted_offer['offer_reference']}\n\n"
             f"👤 Driver: {driver[1]}\n"
             f"⭐ Rating: {driver[6]}\n"
             f"🚗 Vehicle: {driver[3]}\n"
@@ -220,8 +304,7 @@ async def accept_ride(
         reply_markup=get_ride_status_keyboard(),
     )
 
-    # Start the temporary passenger progress
-    # notification task.
+    # Start the temporary passenger progress task.
     asyncio.create_task(
         send_driver_progress(
             context,
@@ -235,6 +318,8 @@ async def accept_ride(
 
     await update.message.reply_text(
         "✅ Ride accepted successfully!\n\n"
+        f"🆔 Offer Reference: "
+        f"{accepted_offer['offer_reference']}\n\n"
         "Drive safely to the passenger's "
         "pickup location.\n\n"
         "When you arrive, tap 📍 Arrived.",
@@ -242,7 +327,7 @@ async def accept_ride(
     )
 
     # ==========================================
-    # CLEAN UP PENDING MEMORY
+    # CLEAN UP TEMPORARY MEMORY
     # ==========================================
 
     ride_requests.pop(
@@ -261,8 +346,7 @@ async def decline_ride(
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """
-    Driver declines a passenger's pending
-    ride request.
+    Reject one canonical pending ride offer.
     """
 
     if update.message is None:
@@ -270,18 +354,49 @@ async def decline_ride(
 
     driver_id = update.effective_user.id
 
-    request = pending_driver_requests.get(
+    # ==========================================
+    # LOAD CANONICAL PENDING OFFER
+    # ==========================================
+
+    offer = get_driver_pending_offer(
         driver_id
     )
 
-    if request is None:
+    if offer is None:
+        pending_driver_requests.pop(
+            driver_id,
+            None,
+        )
+
         await update.message.reply_text(
-            "❌ No pending ride request.",
+            "❌ No active ride offer is available.\n\n"
+            "The offer may have expired, been cancelled, "
+            "or already been resolved.",
             reply_markup=get_driver_menu(),
         )
         return
 
-    passenger_id = request["passenger_id"]
+    passenger_id = offer["passenger_id"]
+
+    # ==========================================
+    # REJECT CANONICAL OFFER
+    # ==========================================
+
+    try:
+        rejected_offer = (
+            reject_driver_ride_offer(
+                offer["offer_id"]
+            )
+        )
+
+    except ValueError as error:
+        await update.message.reply_text(
+            "❌ This ride offer can no longer "
+            "be rejected.\n\n"
+            f"{error}",
+            reply_markup=get_driver_menu(),
+        )
+        return
 
     # ==========================================
     # NOTIFY PASSENGER
@@ -291,13 +406,15 @@ async def decline_ride(
         chat_id=passenger_id,
         text=(
             "😔 The driver declined your ride.\n\n"
+            f"🆔 Offer Reference: "
+            f"{rejected_offer['offer_reference']}\n\n"
             "Please request another ride."
         ),
         reply_markup=get_main_menu(),
     )
 
     # ==========================================
-    # CLEAN UP PENDING REQUEST
+    # CLEAN UP TEMPORARY MEMORY
     # ==========================================
 
     pending_driver_requests.pop(
@@ -316,6 +433,8 @@ async def decline_ride(
 
     await update.message.reply_text(
         "❌ Ride declined.\n\n"
+        f"🆔 Offer Reference: "
+        f"{rejected_offer['offer_reference']}\n\n"
         "You are ready to receive another "
         "ride request.",
         reply_markup=get_driver_menu(),

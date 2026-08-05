@@ -24,6 +24,12 @@ from app.database.ride_repository import (
     update_ride_status,
 )
 
+from app.services.ride_offer_service import (
+    cancel_driver_ride_offer,
+    create_driver_ride_offer,
+    get_passenger_pending_offer,
+)
+
 from app.keyboards.driver_menu import (
     get_driver_menu,
 )
@@ -212,10 +218,40 @@ async def confirm_ride(
         location_updated_text = "Unknown"
 
     # ==========================================
-    # SAVE PENDING DRIVER REQUEST
+    # CREATE CANONICAL RIDE OFFER
     # ==========================================
 
+    try:
+        offer = create_driver_ride_offer(
+            passenger_id=user_id,
+            driver_id=driver_id,
+            pickup=pickup,
+            destination=destination,
+            distance=distance,
+            pickup_distance=driver["distance"],
+            pickup_eta=pickup_eta,
+            trip_eta=trip_eta,
+            fare=fare,
+            payment_method="Cash",
+            service_type="fuel",
+        )
+
+    except ValueError as error:
+        await update.message.reply_text(
+            "❌ A ride offer could not be created.\n\n"
+            f"{error}\n\n"
+            "Please try requesting the ride again.",
+            reply_markup=get_main_menu(),
+        )
+        return
+
+    # Temporary in-memory compatibility cache.
+    # The persistent Ride Offer record is authoritative.
     pending_driver_requests[driver_id] = {
+        "offer_id": offer["offer_id"],
+        "offer_reference": (
+            offer["offer_reference"]
+        ),
         "passenger_id": user_id,
         "pickup": pickup,
         "destination": destination,
@@ -226,6 +262,7 @@ async def confirm_ride(
         "fare": fare,
         "payment_method": "Cash",
         "service_type": "fuel",
+        "expires_at": offer["expires_at"],
     }
 
     # ==========================================
@@ -236,7 +273,7 @@ async def confirm_ride(
         chat_id=driver_id,
         text=(
             "🚖 NEW RIDE REQUEST\n\n"
-            "🆔 Ride Reference: Pending\n\n"
+            f"🆔 Offer Reference: {offer['offer_reference']}\n\n"
             "📍 Pickup\n"
             f"{pickup_name}\n\n"
             "🏁 Destination\n"
@@ -426,6 +463,22 @@ async def cancel_ride(
         for driver_id, request in pending_driver_requests.items()
         if request.get("passenger_id") == user_id
     ]
+
+    pending_offer = (
+        get_passenger_pending_offer(
+            user_id
+        )
+    )
+
+    if pending_offer is not None:
+        try:
+            cancel_driver_ride_offer(
+                pending_offer["offer_id"]
+            )
+        except ValueError:
+            # Another terminal action may already
+            # have resolved the offer.
+            pass
 
     for driver_id in pending_driver_ids:
         del pending_driver_requests[driver_id]
