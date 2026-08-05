@@ -12,8 +12,8 @@ from app.constants.ride_status import (
     TRIP_STARTED,
 )
 
-from app.database.driver_repository import (
-    set_driver_available,
+from app.services.driver_availability_service import (
+    make_driver_available,
 )
 
 from app.database.ride_repository import (
@@ -328,12 +328,28 @@ async def complete_ride_handler(
     # Retrieve the stored financial breakdown.
     earnings = get_ride_earnings(ride_id)
 
-    # Driver becomes available again.
-    set_driver_available(driver_id)
+        # Remove the completed active assignment first.
+    active_rides.pop(
+        driver_id,
+        None,
+    )
 
-    # Remove active ride from memory.
-    if driver_id in active_rides:
-        del active_rides[driver_id]
+    # The driver may now receive new ride offers.
+    try:
+        make_driver_available(
+            driver_id
+        )
+
+    except ValueError as error:
+        await update.message.reply_text(
+            "⚠️ The ride was completed, but your driver "
+            "availability could not be restored.\n\n"
+            f"{error}\n\n"
+            "Please open Driver Availability and try "
+            "going online again.",
+            reply_markup=get_driver_menu(),
+        )
+        return
 
     # Ask passenger to rate the driver.
     await context.bot.send_message(

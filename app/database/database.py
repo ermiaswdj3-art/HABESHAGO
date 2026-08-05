@@ -283,6 +283,55 @@ def migrate_drivers_table(
         "TEXT",
     )
 
+    # ==========================================
+    # DRIVER AVAILABILITY & LIFECYCLE PLATFORM
+    # ==========================================
+
+    operational_status_added = (
+        add_column_if_missing(
+            cursor,
+            "drivers",
+            "operational_status",
+            "TEXT DEFAULT 'offline'",
+        )
+    )
+
+    add_column_if_missing(
+        cursor,
+        "drivers",
+        "operational_status_updated_at",
+        "TIMESTAMP",
+    )
+
+        # Preserve the existing operational meaning of
+    # drivers created before Commit #76.
+    #
+    # This runs only when operational_status is first
+    # introduced, so later platform transitions are
+    # never overwritten during application startup.
+    if operational_status_added:
+        cursor.execute(
+            """
+            UPDATE drivers
+            SET
+                operational_status = CASE
+                    WHEN is_online = 0
+                        THEN 'offline'
+
+                    WHEN is_online = 1
+                         AND is_available = 1
+                        THEN 'available'
+
+                    ELSE 'unavailable'
+                END,
+
+                operational_status_updated_at = COALESCE(
+                    operational_status_updated_at,
+                    CURRENT_TIMESTAMP
+                )
+            """
+        )
+
     # Preserve drivers created before Commit #73.
     # These updates run only when the related status
     # columns are introduced for the first time.
@@ -500,6 +549,11 @@ def create_tables():
 
                 is_available INTEGER DEFAULT 0,
                 is_online INTEGER DEFAULT 0,
+
+                operational_status TEXT
+                    DEFAULT 'offline',
+
+                operational_status_updated_at TIMESTAMP,
 
                 latitude REAL NOT NULL,
                 longitude REAL NOT NULL,
@@ -808,6 +862,31 @@ def create_tables():
                 driver_id,
                 settlement_status,
                 settled_at
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_drivers_operational_status
+            ON drivers (
+                operational_status
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_drivers_operational_eligibility
+            ON drivers (
+                registration_status,
+                identity_verification_status,
+                vehicle_verification_status,
+                operational_status,
+                is_online,
+                is_available
             )
             """
         )

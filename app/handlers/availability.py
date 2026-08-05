@@ -1,16 +1,12 @@
+"""
+HABESHAGO Driver Availability Handlers
+
+Telegram handlers for the canonical Driver Availability
+and Lifecycle Platform.
+"""
+
 from telegram import Update
 from telegram.ext import ContextTypes
-
-from app.database.driver_repository import (
-    set_driver_available,
-    set_driver_unavailable,
-    set_driver_online,
-    set_driver_offline,
-)
-
-from app.keyboards.availability import (
-    get_availability_keyboard,
-)
 
 from app.keyboards.availability import (
     get_availability_keyboard,
@@ -20,50 +16,93 @@ from app.keyboards.driver_menu import (
     get_driver_menu,
 )
 
+from app.services.driver_availability_service import (
+    make_driver_available,
+    make_driver_offline,
+)
+
+
 async def go_online(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """
-    Set the driver as available.
+    Put an eligible driver online and available.
     """
 
-    user_id = update.effective_user.id
+    if update.message is None:
+        return
 
-    set_driver_online(user_id)
-    set_driver_available(user_id)
+    driver_id = update.effective_user.id
+
+    try:
+        state = make_driver_available(
+            driver_id
+        )
+
+    except ValueError as error:
+        await update.message.reply_text(
+            "❌ Unable to go online.\n\n"
+            f"{error}",
+            reply_markup=get_driver_menu(),
+        )
+        return
 
     await update.message.reply_text(
-        "🟢 You are now ONLINE.\n\n"
-        "Passengers can now request rides from you.",
+        "🟢 You are now ONLINE and AVAILABLE.\n\n"
+        "You can receive new HABESHAGO ride offers.",
         reply_markup=get_driver_menu(),
     )
+
 
 async def go_offline(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """
-    Set the driver as unavailable.
+    Put a driver fully offline.
+
+    Drivers with active rides cannot go offline.
     """
 
-    user_id = update.effective_user.id
+    if update.message is None:
+        return
 
-    set_driver_offline(user_id)
-    set_driver_unavailable(user_id)
+    driver_id = update.effective_user.id
+
+    try:
+        state = make_driver_offline(
+            driver_id
+        )
+
+    except ValueError as error:
+        await update.message.reply_text(
+            "❌ Unable to go offline.\n\n"
+            f"{error}",
+            reply_markup=get_driver_menu(),
+        )
+        return
 
     await update.message.reply_text(
         "🔴 You are now OFFLINE.\n\n"
-        "You will no longer receive new ride requests.",
+        "You will not receive new HABESHAGO ride offers.",
         reply_markup=get_driver_menu(),
     )
+
 
 async def show_availability_menu(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
+    """
+    Display the driver availability controls.
+    """
+
+    if update.message is None:
+        return
+
     await update.message.reply_text(
         "🚖 Driver Availability\n\n"
-        "Choose your current status.",
+        "Choose your current operational status.",
         reply_markup=get_availability_keyboard(),
     )

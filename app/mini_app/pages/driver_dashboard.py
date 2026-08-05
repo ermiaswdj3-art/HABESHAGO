@@ -24,6 +24,10 @@ from app.services.vehicle_management_service import (
     get_driver_vehicle_management,
 )
 
+from app.services.driver_availability_service import (
+    get_driver_availability,
+)
+
 from app.services.driver_registration_service import (
     get_driver_registration_status,
 )
@@ -65,6 +69,7 @@ def get_driver_dashboard(
     dashboard = None
     registration_status = None
     vehicle_management = None
+    driver_availability = None
     if driver_id is not None:
         dashboard = get_shared_driver_dashboard(
             driver_id
@@ -78,6 +83,12 @@ def get_driver_dashboard(
 
         vehicle_management = (
             get_driver_vehicle_management(
+                driver_id
+            )
+        )
+
+        driver_availability = (
+            get_driver_availability(
                 driver_id
             )
         )
@@ -97,6 +108,10 @@ def get_driver_dashboard(
 
     page["vehicle_management"] = (
         vehicle_management
+    )
+
+    page["driver_availability"] = (
+        driver_availability
     )
 
     page["development_driver_id"] = driver_id

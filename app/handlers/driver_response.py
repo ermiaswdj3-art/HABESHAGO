@@ -9,7 +9,6 @@ from app.constants.ride_status import (
 
 from app.database.driver_repository import (
     get_driver_by_id,
-    set_driver_unavailable,
 )
 
 from app.database.ride_repository import (
@@ -18,6 +17,10 @@ from app.database.ride_repository import (
 
 from app.services.idempotency_service import (
     is_duplicate_action,
+)
+
+from app.services.driver_availability_service import (
+    make_driver_unavailable,
 )
 
 from app.keyboards.driver_menu import (
@@ -144,12 +147,8 @@ async def accept_ride(
     # because this ride is saved with ACCEPTED.
 
     # ==========================================
-    # DRIVER IS NOW BUSY
+    # CREATE CANONICAL ACTIVE ASSIGNMENT
     # ==========================================
-
-    set_driver_unavailable(
-        driver_id
-    )
 
     active_rides[driver_id] = {
         "ride_id": ride_id,
@@ -162,7 +161,31 @@ async def accept_ride(
             "service_type",
             "fuel",
         ),
+        "status": ACCEPTED,
+        "recovered": False,
     }
+
+    # ==========================================
+    # DRIVER IS NOW BUSY
+    # ==========================================
+
+    try:
+        make_driver_unavailable(
+            driver_id
+        )
+
+    except ValueError as error:
+        active_rides.pop(
+            driver_id,
+            None,
+        )
+
+        await update.message.reply_text(
+            "❌ The ride could not be activated.\n\n"
+            f"{error}",
+            reply_markup=get_driver_menu(),
+        )
+        return
 
     driver = get_driver_by_id(
         driver_id

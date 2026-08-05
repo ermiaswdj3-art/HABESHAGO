@@ -26,37 +26,50 @@ from app.database.driver_statistics_repository import (
 
 
 def _build_driver_status(
+    operational_status: str,
     is_online: bool,
     is_available: bool,
+    status_updated_at,
 ) -> dict:
     """
     Build the canonical dashboard status representation.
+
+    operational_status is authoritative.
+    The boolean flags remain compatibility information.
     """
 
-    if not is_online:
-        return {
+    status_contracts = {
+        "offline": {
             "code": "offline",
             "label": "You are currently offline",
             "action": "Go Online",
-            "is_online": False,
-            "is_available": False,
-        }
-
-    if is_available:
-        return {
+        },
+        "available": {
             "code": "available",
             "label": "You are online and available",
             "action": "Go Offline",
-            "is_online": True,
-            "is_available": True,
-        }
+        },
+        "unavailable": {
+            "code": "unavailable",
+            "label": "You are online but unavailable",
+            "action": "Go Available",
+        },
+    }
+
+    status = status_contracts.get(
+        operational_status,
+        status_contracts["offline"],
+    )
 
     return {
-        "code": "unavailable",
-        "label": "You are online but unavailable",
-        "action": "Go Available",
-        "is_online": True,
-        "is_available": False,
+        **status,
+        "operational_status": operational_status,
+        "is_online": bool(is_online),
+        "is_available": bool(is_available),
+        "can_receive_ride_offers": (
+            operational_status == "available"
+        ),
+        "status_updated_at": status_updated_at,
     }
 
 
@@ -85,13 +98,21 @@ def get_driver_dashboard(
         vehicle_color,
         plate_number,
         rating,
+        operational_status,
         is_online,
         is_available,
+        operational_status_updated_at,
     ) = driver
 
     status = _build_driver_status(
+        operational_status=str(
+            operational_status or "offline"
+        ),
         is_online=bool(is_online),
         is_available=bool(is_available),
+        status_updated_at=(
+            operational_status_updated_at
+        ),
     )
 
     return {

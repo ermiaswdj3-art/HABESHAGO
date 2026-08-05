@@ -2,6 +2,10 @@ from app.database.database import create_connection
 
 from app.models import Vehicle
 
+from app.models import (
+    DriverOperationalState,
+)
+
 def register_driver(
     telegram_id,
     full_name,
@@ -342,8 +346,10 @@ def get_driver_dashboard_profile(
             vehicle_color,
             plate_number,
             rating,
+            operational_status,
             is_online,
-            is_available
+            is_available,
+            operational_status_updated_at
         FROM drivers
         WHERE telegram_id = ?
         """,
@@ -395,31 +401,11 @@ def get_available_drivers():
 
     return drivers
 
-
-def set_driver_unavailable(telegram_id):
+def get_driver_operational_state(
+    driver_id: int,
+) -> DriverOperationalState | None:
     """
-    Mark a driver as unavailable.
-    """
-
-    connection = create_connection()
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        UPDATE drivers
-        SET is_available = 0
-        WHERE telegram_id = ?
-        """,
-        (telegram_id,),
-    )
-
-    connection.commit()
-    connection.close()
-
-
-def set_driver_available(telegram_id):
-    """
-    Mark a driver as available.
+    Return one driver's canonical operational state.
     """
 
     connection = create_connection()
@@ -427,56 +413,204 @@ def set_driver_available(telegram_id):
 
     cursor.execute(
         """
-        UPDATE drivers
-        SET is_available = 1
-        WHERE telegram_id = ?
-        """,
-        (telegram_id,),
-    )
-
-    connection.commit()
-    connection.close()
-
-def set_driver_online(driver_id):
-    """
-    Mark driver as online.
-    """
-
-    connection = create_connection()
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        UPDATE drivers
-        SET is_online = 1
+        SELECT
+            telegram_id,
+            operational_status,
+            is_online,
+            is_available,
+            operational_status_updated_at
+        FROM drivers
         WHERE telegram_id = ?
         """,
         (driver_id,),
     )
 
-    connection.commit()
+    row = cursor.fetchone()
+
     connection.close()
 
+    if row is None:
+        return None
 
-def set_driver_offline(driver_id):
+    state = DriverOperationalState(
+        driver_id=row[0],
+        operational_status=str(
+            row[1] or "offline"
+        ),
+        is_online=bool(row[2]),
+        is_available=bool(row[3]),
+        status_updated_at=row[4],
+    )
+
+    state.validate()
+
+    return state
+
+
+def set_driver_operational_status(
+    driver_id: int,
+    operational_status: str,
+) -> DriverOperationalState:
     """
-    Mark driver as offline.
+    Atomically update the canonical driver status and
+    its compatibility flags in one transaction.
     """
+
+    status_flags = {
+        "offline": (
+            0,
+            0,
+        ),
+        "available": (
+            1,
+            1,
+        ),
+        "unavailable": (
+            1,
+            0,
+        ),
+    }
+
+    if operational_status not in status_flags:
+        raise ValueError(
+            "Invalid driver operational status: "
+            f"{operational_status}"
+        )
+
+    is_online, is_available = status_flags[
+        operational_status
+    ]
 
     connection = create_connection()
     cursor = connection.cursor()
 
-    cursor.execute(
-        """
-        UPDATE drivers
-        SET is_online = 0
-        WHERE telegram_id = ?
-        """,
-        (driver_id,),
+    try:
+        cursor.execute(
+            """
+            UPDATE drivers
+            SET
+                operational_status = ?,
+                is_online = ?,
+                is_available = ?,
+                operational_status_updated_at =
+                    CURRENT_TIMESTAMP
+            WHERE telegram_id = ?
+            """,
+            (
+                operational_status,
+                is_online,
+                is_available,
+                driver_id,
+            ),
+        )
+
+        if cursor.rowcount != 1:
+            raise ValueError(
+                "Driver profile not found."
+            )
+
+        cursor.execute(
+            """
+            SELECT
+                telegram_id,
+                operational_status,
+                is_online,
+                is_available,
+                operational_status_updated_at
+            FROM drivers
+            WHERE telegram_id = ?
+            """,
+            (driver_id,),
+        )
+
+        row = cursor.fetchone()
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+    if row is None:
+        raise RuntimeError(
+            "Driver operational state could not "
+            "be loaded after update."
+        )
+
+    state = DriverOperationalState(
+        driver_id=row[0],
+        operational_status=str(row[1]),
+        is_online=bool(row[2]),
+        is_available=bool(row[3]),
+        status_updated_at=row[4],
     )
 
-    connection.commit()
-    connection.close()
+    state.validate()
+
+    return state
+
+def set_driver_unavailable(
+    telegram_id,
+):
+    """
+    Compatibility wrapper.
+
+    Keep the driver online but unavailable for
+    new ride offers.
+    """
+
+    return set_driver_operational_status(
+        driver_id=telegram_id,
+        operational_status="unavailable",
+    )
+
+
+def set_driver_available(
+    telegram_id,
+):
+    """
+    Compatibility wrapper.
+
+    Put the driver online and available.
+    """
+
+    return set_driver_operational_status(
+        driver_id=telegram_id,
+        operational_status="available",
+    )
+
+
+def set_driver_online(
+    driver_id,
+):
+    """
+    Compatibility wrapper.
+
+    Historically, "online" meant online and available.
+    """
+
+    return set_driver_operational_status(
+        driver_id=driver_id,
+        operational_status="available",
+    )
+
+
+def set_driver_offline(
+    driver_id,
+):
+    """
+    Compatibility wrapper.
+
+    Put the driver fully offline.
+    """
+
+    return set_driver_operational_status(
+        driver_id=driver_id,
+        operational_status="offline",
+    )
 
 
 def update_driver_rating(driver_id):
