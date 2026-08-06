@@ -37,6 +37,7 @@ from app.handlers.admin_dashboard import (
 )
 
 from app.handlers.admin_driver_management import (
+    handle_admin_driver_action_reason,
     show_admin_driver_management,
 )
 
@@ -483,6 +484,19 @@ def main():
     # ==========================================
     # GENERAL TEXT ROUTING
     # ==========================================
+
+    # ==========================================
+    # ADMIN DRIVER ACTION REASON
+    # ==========================================
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT
+            & ~filters.COMMAND,
+            handle_admin_driver_action_reason,
+        ),
+        group=-1,
+    )
 
     app.add_handler(
         MessageHandler(
