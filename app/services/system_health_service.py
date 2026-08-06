@@ -5,7 +5,9 @@ from app.database.database import (
     create_connection,
 )
 
-
+from app.services.admin_operations_service import (
+    get_admin_operations_snapshot,
+)
 
 HABESHAGO_VERSION = "v0.50"
 
@@ -38,92 +40,50 @@ def check_database_health():
 
 def get_system_metrics():
     """
-    Return basic operational metrics used by
-    the administrator health dashboard.
+    Return compatibility metrics derived from the
+    canonical Admin Operations Platform.
+
+    This function remains available for existing
+    system-health handlers, but it no longer owns
+    separate business-count SQL.
     """
 
-    connection = create_connection()
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        SELECT COUNT(*)
-        FROM passengers
-        """
+    snapshot = (
+        get_admin_operations_snapshot()
     )
-    total_passengers = cursor.fetchone()[0]
 
-    cursor.execute(
-        """
-        SELECT COUNT(*)
-        FROM drivers
-        """
-    )
-    total_drivers = cursor.fetchone()[0]
+    passengers = snapshot["passengers"]
 
-    cursor.execute(
-        """
-        SELECT COUNT(*)
-        FROM drivers
-        WHERE is_online = 1
-        """
-    )
-    online_drivers = cursor.fetchone()[0]
+    registration = snapshot[
+        "drivers"
+    ]["registration"]
 
-    cursor.execute(
-        """
-        SELECT COUNT(*)
-        FROM drivers
-        WHERE is_available = 1
-        """
-    )
-    available_drivers = cursor.fetchone()[0]
+    operations = snapshot[
+        "drivers"
+    ]["operations"]
 
-    cursor.execute(
-        """
-        SELECT COUNT(*)
-        FROM rides
-        WHERE status IN (
-            'ACCEPTED',
-            'DRIVER_ARRIVING',
-            'DRIVER_ARRIVED',
-            'TRIP_STARTED'
-        )
-        """
-    )
-    active_rides = cursor.fetchone()[0]
+    rides = snapshot["rides"]
 
-    cursor.execute(
-        """
-        SELECT COUNT(*)
-        FROM rides
-        WHERE status = 'TRIP_COMPLETED'
-          AND DATE(completed_at)
-              = DATE('now', 'localtime')
-        """
-    )
-    completed_rides_today = cursor.fetchone()[0]
+    offers = snapshot["ride_offers"]
 
-    connection.close()
+    settlements = snapshot["settlements"]
 
     return {
-        "total_passengers": int(
-            total_passengers or 0
+        "total_passengers": passengers["total"],
+        "total_drivers": registration["total"],
+        "online_drivers": operations["online"],
+        "available_drivers": (
+            operations["available"]
         ),
-        "total_drivers": int(
-            total_drivers or 0
+        "active_rides": rides["active"],
+        "completed_rides_today": (
+            rides["completed_today"]
         ),
-        "online_drivers": int(
-            online_drivers or 0
+        "pending_ride_offers": (
+            offers["pending"]
         ),
-        "available_drivers": int(
-            available_drivers or 0
-        ),
-        "active_rides": int(
-            active_rides or 0
-        ),
-        "completed_rides_today": int(
-            completed_rides_today or 0
+        "unsettled_completed_rides": (
+            settlements["not_settled"]
         ),
     }
 
@@ -199,6 +159,8 @@ def get_system_health():
             "available_drivers": 0,
             "active_rides": 0,
             "completed_rides_today": 0,
+            "pending_ride_offers": 0,
+            "unsettled_completed_rides": 0,
         }
         metrics_available = False
 
