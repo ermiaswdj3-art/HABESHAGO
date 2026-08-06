@@ -748,6 +748,47 @@ def create_tables():
         )
 
         # ======================================
+        # DRIVER ADMINISTRATION ACTIONS TABLE
+        # ======================================
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS
+            driver_admin_actions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                action_reference TEXT
+                    UNIQUE NOT NULL,
+
+                driver_id INTEGER NOT NULL,
+                actor_id INTEGER NOT NULL,
+
+                action_type TEXT NOT NULL,
+
+                previous_registration_status TEXT,
+                new_registration_status TEXT,
+
+                previous_identity_status TEXT,
+                new_identity_status TEXT,
+
+                previous_vehicle_status TEXT,
+                new_vehicle_status TEXT,
+
+                previous_operational_status TEXT,
+                new_operational_status TEXT,
+
+                reason TEXT,
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP,
+
+                FOREIGN KEY (driver_id)
+                    REFERENCES drivers (telegram_id)
+            )
+            """
+        )
+
+        # ======================================
         # PASSENGER PLACES TABLE
         # ======================================
 
@@ -959,6 +1000,39 @@ def create_tables():
             ON ride_offers (
                 driver_id,
                 status
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_driver_admin_actions_driver
+            ON driver_admin_actions (
+                driver_id,
+                created_at
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_driver_admin_actions_actor
+            ON driver_admin_actions (
+                actor_id,
+                created_at
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_driver_admin_actions_type
+            ON driver_admin_actions (
+                action_type,
+                created_at
             )
             """
         )

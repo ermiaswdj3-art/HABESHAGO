@@ -5,6 +5,10 @@ from app.handlers.destination_search import (
     select_destination,
 )
 
+from app.handlers.admin_driver_management import (
+    route_admin_driver_callback,
+)
+
 from app.handlers.recent_place_selection import (
     select_recent_place,
 )
@@ -44,6 +48,19 @@ async def route_callback(
         "recent_place:"
     ):
         await select_recent_place(
+            update,
+            context,
+        )
+        return
+
+    # ==========================================
+    # DRIVER MANAGEMENT
+    # ==========================================
+
+    if callback_data.startswith(
+        "admin_driver:"
+    ):
+        await route_admin_driver_callback(
             update,
             context,
         )

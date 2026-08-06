@@ -36,6 +36,10 @@ from app.handlers.admin_dashboard import (
     show_admin_dashboard,
 )
 
+from app.handlers.admin_driver_management import (
+    show_admin_driver_management,
+)
+
 from app.listeners.register_listeners import (
     register_event_listeners,
 )
@@ -229,6 +233,16 @@ def main():
         CommandHandler(
             "admin",
             show_admin_dashboard,
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT
+            & filters.Regex(
+                "^👥 Manage Drivers$"
+            ),
+            show_admin_driver_management,
         )
     )
 

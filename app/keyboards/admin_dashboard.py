@@ -37,12 +37,17 @@ def get_admin_dashboard_keyboard(
     primary = [
         [
             KeyboardButton(
-                "🔄 Recover Active Rides"
+                "👥 Manage Drivers"
             ),
             KeyboardButton(
                 "📋 Active Ride Queue"
             ),
-        ]
+        ],
+        [
+            KeyboardButton(
+                "🔄 Recover Active Rides"
+            ),
+        ],
     ]
 
     secondary = []
