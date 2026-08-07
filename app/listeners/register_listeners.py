@@ -68,10 +68,17 @@ def register_event_listeners() -> None:
         EventType.DRIVER_RESUBMITTED,
     )
 
-    for event_type in driver_administration_event_types:
+    for event_type in (
+        driver_administration_event_types
+    ):
         subscribe(
             event_type,
             driver_administration_observability_listener,
+        )
+
+        subscribe(
+            event_type,
+            synchronization_listener,
         )
 
     # ==========================================

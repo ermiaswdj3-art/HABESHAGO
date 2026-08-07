@@ -27,32 +27,79 @@ from app.models.synchronization_update import (
 )
 
 
-def build_synchronization_update(
+DRIVER_ADMINISTRATION_EVENT_TYPES = {
+    EventType.DRIVER_APPROVED,
+    EventType.DRIVER_REJECTED,
+    EventType.DRIVER_SUSPENDED,
+    EventType.DRIVER_RESTORED,
+    EventType.DRIVER_RESUBMITTED,
+}
+
+
+def _get_synchronization_targets(
     event: Event,
-) -> SynchronizationUpdate:
+) -> tuple[str, ...]:
     """
-    Convert a platform event into a
-    synchronization update.
+    Return the canonical synchronization targets for one
+    platform event.
     """
 
-    targets: tuple[str, ...]
+    # ==========================================
+    # RIDE STATE EVENTS
+    # ==========================================
 
     if event.event_type == EventType.STATE_CHANGED:
-        targets = (
+        return (
             SynchronizationTarget.PASSENGER,
             SynchronizationTarget.DRIVER,
             SynchronizationTarget.OPERATIONS,
         )
 
-    else:
-        targets = ()
+    # ==========================================
+    # DRIVER ADMINISTRATION EVENTS
+    # ==========================================
+
+    if (
+        event.event_type
+        in DRIVER_ADMINISTRATION_EVENT_TYPES
+    ):
+        return (
+            SynchronizationTarget.DRIVER,
+            SynchronizationTarget.ADMIN,
+            SynchronizationTarget.OPERATIONS,
+        )
+
+    # ==========================================
+    # UNMAPPED EVENTS
+    # ==========================================
+
+    return ()
+
+
+def build_synchronization_update(
+    event: Event,
+) -> SynchronizationUpdate:
+    """
+    Convert a platform event into a canonical
+    synchronization update.
+    """
+
+    targets = (
+        _get_synchronization_targets(
+            event
+        )
+    )
 
     return SynchronizationUpdate(
         event_id=event.event_id,
         event_type=event.event_type,
         entity=event.entity,
-        entity_id=event.payload.get("entity_id"),
+        entity_id=event.payload.get(
+            "entity_id"
+        ),
         targets=targets,
-        payload=event.payload,
+        payload=dict(
+            event.payload
+        ),
         source="SynchronizationEngine",
     )
