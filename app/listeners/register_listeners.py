@@ -17,6 +17,10 @@ from app.listeners.passenger_notification_listener import (
     passenger_notification_listener,
 )
 
+from app.listeners.driver_administration_notification_listener import (
+    driver_administration_notification_listener,
+)
+
 from app.listeners.synchronization_listener import (
     synchronization_listener,
 )
@@ -79,6 +83,11 @@ def register_event_listeners() -> None:
         subscribe(
             event_type,
             synchronization_listener,
+        )
+
+        subscribe(
+            event_type,
+            driver_administration_notification_listener,
         )
 
     # ==========================================

@@ -7,3 +7,7 @@ from .driver_operational_state import (
 )
 
 from .ride_offer import RideOffer
+
+from .notification import (
+    Notification,
+)
