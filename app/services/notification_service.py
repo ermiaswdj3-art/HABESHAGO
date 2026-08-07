@@ -82,6 +82,79 @@ def get_pending_notifications(
         )
     )
 
+def get_pending_notification_by_action_reference(
+    *,
+    recipient_type: str,
+    recipient_id: int | str,
+    action_reference: str,
+) -> Notification | None:
+    """
+    Return one pending notification matching a specific
+    recipient and Driver Administration action reference.
+
+    The notification remains queued.
+    """
+
+    notifications = _PENDING_NOTIFICATIONS.get(
+        recipient_type,
+        deque(),
+    )
+
+    for notification in notifications:
+        if (
+            notification.recipient_id
+            == recipient_id
+            and notification.metadata.get(
+                "action_reference"
+            )
+            == action_reference
+        ):
+            return notification
+
+    return None
+
+
+def remove_pending_notification(
+    notification_id: str,
+) -> bool:
+    """
+    Remove one notification from its queue by ID.
+
+    Return True when the notification was found and
+    removed.
+    """
+
+    for recipient_type in list(
+        _PENDING_NOTIFICATIONS.keys()
+    ):
+        notifications = (
+            _PENDING_NOTIFICATIONS[
+                recipient_type
+            ]
+        )
+
+        for notification in list(
+            notifications
+        ):
+            if (
+                notification.notification_id
+                != notification_id
+            ):
+                continue
+
+            notifications.remove(
+                notification
+            )
+
+            if not notifications:
+                _PENDING_NOTIFICATIONS.pop(
+                    recipient_type,
+                    None,
+                )
+
+            return True
+
+    return False
 
 def pop_pending_notifications(
     recipient_type: str,

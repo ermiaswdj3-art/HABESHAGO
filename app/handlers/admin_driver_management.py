@@ -12,13 +12,6 @@ remain owned by the shared Driver Administration Service.
 import logging
 
 from telegram import Update
-from telegram.error import (
-    BadRequest,
-    Forbidden,
-    NetworkError,
-    RetryAfter,
-    TimedOut,
-)
 from telegram.ext import ContextTypes
 
 from app.config.settings import (
@@ -43,6 +36,19 @@ from app.services.driver_administration_service import (
 from app.services.driver_management_service import (
     get_driver_management_dashboard,
     list_driver_management_dashboard,
+)
+
+from app.constants.notification import (
+    NotificationRecipient,
+)
+
+from app.services.notification_service import (
+    get_pending_notification_by_action_reference,
+    remove_pending_notification,
+)
+
+from app.services.telegram_notification_delivery_service import (
+    deliver_telegram_notification,
 )
 
 from app.state.admin_driver_action_state import (
@@ -236,126 +242,82 @@ def _execute_driver_admin_action(
         "Unsupported driver administration action."
     )
 
-
-def _build_driver_notification_text(
-    *,
-    action: str,
-    result: dict,
-) -> str:
-    """
-    Build the driver-facing notification for a completed
-    administrative action.
-    """
-
-    driver = result["driver"]
-
-    registration_status = driver[
-        "registration_status"
-    ]
-
-    reason = result["action"].get(
-        "reason"
-    )
-
-    reason_text = (
-        f"\n\nReason:\n{reason}"
-        if reason
-        else ""
-    )
-
-    action_messages = {
-        "APPROVE": (
-            "✅ Your HABESHAGO driver registration "
-            "has been approved.\n\n"
-            "You may now open your Driver Dashboard "
-            "and choose when to go online."
-        ),
-        "REJECT": (
-            "❌ Your HABESHAGO driver application "
-            "has been rejected."
-        ),
-        "SUSPEND": (
-            "⛔ Your HABESHAGO driver account "
-            "has been suspended.\n\n"
-            "You have been placed offline and cannot "
-            "receive new ride offers."
-        ),
-        "RESTORE": (
-            "♻️ Your HABESHAGO driver account "
-            "has been restored.\n\n"
-            "Your account remains offline until you "
-            "voluntarily go online."
-        ),
-        "RESUBMIT": (
-            "🔄 Your HABESHAGO driver application "
-            "has been returned to verification.\n\n"
-            "Your identity and vehicle records are "
-            "waiting for a new review."
-        ),
-    }
-
-    message = action_messages.get(
-        action,
-        "Your HABESHAGO driver registration "
-        "status has been updated.",
-    )
-
-    return (
-        f"{message}\n\n"
-        "Current Registration Status: "
-        f"{registration_status}"
-        f"{reason_text}"
-    )
-
-
-async def _notify_driver_of_admin_action(
+async def _deliver_driver_admin_notification(
     *,
     context: ContextTypes.DEFAULT_TYPE,
     driver_id: int,
-    action: str,
     result: dict,
 ) -> bool:
     """
-    Notify the affected driver after a successful database
-    transition.
+    Deliver the canonical queued Driver Administration
+    notification through Telegram.
 
-    Notification failure never rolls back or invalidates
-    the completed administrative action.
+    Notification meaning is owned by the shared
+    Notification Platform.
+
+    This handler only coordinates Telegram delivery.
     """
 
-    try:
-        await context.bot.send_message(
-            chat_id=driver_id,
-            text=(
-                _build_driver_notification_text(
-                    action=action,
-                    result=result,
-                )
-            ),
-        )
+    action = result.get(
+        "action",
+        {}
+    )
 
-        return True
+    action_reference = action.get(
+        "action_reference"
+    )
 
-    except (
-        BadRequest,
-        Forbidden,
-        NetworkError,
-        RetryAfter,
-        TimedOut,
-    ) as error:
+    if not action_reference:
         logger.warning(
             (
-                "Driver administration action %s "
-                "succeeded, but notification to "
-                "driver %s failed: %s"
+                "Driver Administration action completed "
+                "without an action reference. "
+                "driver_id=%s"
             ),
-            action,
             driver_id,
-            error,
         )
 
         return False
 
+    notification = (
+        get_pending_notification_by_action_reference(
+            recipient_type=(
+                NotificationRecipient.DRIVER
+            ),
+            recipient_id=driver_id,
+            action_reference=(
+                action_reference
+            ),
+        )
+    )
+
+    if notification is None:
+        logger.warning(
+            (
+                "Driver Administration notification "
+                "was not found in the shared queue. "
+                "driver_id=%s "
+                "action_reference=%s"
+            ),
+            driver_id,
+            action_reference,
+        )
+
+        return False
+
+    delivered = (
+        await deliver_telegram_notification(
+            bot=context.bot,
+            notification=notification,
+        )
+    )
+
+    if delivered:
+        remove_pending_notification(
+            notification.notification_id
+        )
+
+    return delivered
 
 def _build_admin_action_success_text(
     *,
@@ -1165,14 +1127,12 @@ async def route_admin_driver_callback(
         )
 
         notification_sent = (
-            await _notify_driver_of_admin_action(
+            await _deliver_driver_admin_notification(
                 context=context,
                 driver_id=callback_driver_id,
-                action=callback_action,
                 result=result,
             )
         )
-
         updated_dashboard = (
             get_driver_management_dashboard(
                 callback_driver_id
