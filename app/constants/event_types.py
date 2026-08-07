@@ -44,6 +44,20 @@ class EventType:
     DRIVER_OFFLINE = "DRIVER_OFFLINE"
 
     # ==========================================
+    # DRIVER ADMINISTRATION EVENTS
+    # ==========================================
+
+    DRIVER_APPROVED = "DRIVER_APPROVED"
+
+    DRIVER_REJECTED = "DRIVER_REJECTED"
+
+    DRIVER_SUSPENDED = "DRIVER_SUSPENDED"
+
+    DRIVER_RESTORED = "DRIVER_RESTORED"
+
+    DRIVER_RESUBMITTED = "DRIVER_RESUBMITTED"
+
+    # ==========================================
     # PASSENGER EVENTS
     # ==========================================
 

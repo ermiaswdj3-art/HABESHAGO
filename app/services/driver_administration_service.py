@@ -1,3 +1,5 @@
+import logging
+
 """
 HABESHAGO Driver Administration Service
 
@@ -13,6 +15,10 @@ from app.constants.driver_admin_actions import (
     DriverAdminAction,
 )
 
+from app.services.driver_administration_event_service import (
+    publish_driver_admin_event,
+)
+
 from app.database.driver_administration_repository import (
     apply_driver_admin_transition,
     get_driver_admin_actions,
@@ -20,6 +26,7 @@ from app.database.driver_administration_repository import (
     list_driver_management_records,
 )
 
+logger = logging.getLogger(__name__)
 
 REGISTRATION_VERIFICATION_PENDING = (
     "verification_pending"
@@ -177,6 +184,50 @@ def _build_transition_result(
         "driver": updated_driver,
     }
 
+def _finalize_driver_admin_transition(
+    *,
+    audit_action: dict,
+) -> dict:
+    """
+    Build the canonical Driver Administration result and
+    publish its corresponding platform event.
+
+    The atomic database transition and durable audit record
+    have already completed successfully before this helper
+    is called.
+
+    Event publication is therefore best-effort
+    observability. An event failure must never make a
+    committed administration transition appear to have
+    failed.
+    """
+
+    result = _build_transition_result(
+        audit_action=audit_action
+    )
+
+    try:
+        publish_driver_admin_event(
+            result
+        )
+
+    except Exception:
+        logger.exception(
+            (
+                "Driver Administration transition "
+                "completed successfully, but its "
+                "platform event could not be published. "
+                "action_reference=%s driver_id=%s"
+            ),
+            audit_action.get(
+                "action_reference"
+            ),
+            audit_action.get(
+                "driver_id"
+            ),
+        )
+
+    return result
 
 def get_managed_driver(
     driver_id: int,
@@ -314,7 +365,7 @@ def approve_driver(
         )
     )
 
-    return _build_transition_result(
+    return _finalize_driver_admin_transition(
         audit_action=audit_action
     )
 
@@ -382,7 +433,7 @@ def reject_driver(
         )
     )
 
-    return _build_transition_result(
+    return _finalize_driver_admin_transition(
         audit_action=audit_action
     )
 
@@ -460,7 +511,7 @@ def suspend_driver(
         )
     )
 
-    return _build_transition_result(
+    return _finalize_driver_admin_transition(
         audit_action=audit_action
     )
 
@@ -549,7 +600,7 @@ def restore_driver(
         )
     )
 
-    return _build_transition_result(
+    return _finalize_driver_admin_transition(
         audit_action=audit_action
     )
 
@@ -617,6 +668,6 @@ def resubmit_driver(
         )
     )
 
-    return _build_transition_result(
+    return _finalize_driver_admin_transition(
         audit_action=audit_action
     )
