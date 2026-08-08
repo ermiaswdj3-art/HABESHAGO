@@ -1,12 +1,18 @@
 """
 HABESHAGO Pricing Platform Contracts
 
-Defines interfaces expected from later Pricing Platform
+Defines interfaces expected from Pricing Platform
 components.
 
-Commit #86 establishes contracts only.
-Implementations arrive in later pricing commits.
+These contracts preserve clear boundaries between:
+- configuration resolution
+- deterministic pricing calculation
+- quote persistence
 """
+
+from datetime import (
+    datetime,
+)
 
 from typing import (
     Protocol,
@@ -16,11 +22,8 @@ from app.pricing.configuration import (
     PricingConfiguration,
 )
 
-from datetime import (
-    datetime,
-)
-
 from app.pricing.models import (
+    FareBreakdown,
     PricingQuote,
     PricingRequest,
 )
@@ -69,14 +72,30 @@ class PricingEngineContract(
     Protocol
 ):
     """
-    Contract that the future authoritative Pricing Engine
-    must satisfy.
+    Contract for the authoritative Core Decimal Pricing
+    Engine.
 
-    Commit #86 intentionally provides no implementation.
+    Configuration resolution occurs outside the engine.
+
+    Implementations calculate only from the supplied
+    PricingRequest and PricingConfiguration.
     """
 
-    def create_quote(
+    def calculate_fare_breakdown(
         self,
+        *,
         request: PricingRequest,
+        configuration: PricingConfiguration,
+    ) -> FareBreakdown:
+        ...
+
+    def create_pricing_quote(
+        self,
+        *,
+        request: PricingRequest,
+        configuration: PricingConfiguration,
+        quote_id: str,
+        calculated_at: datetime,
+        valid_until: datetime | None = None,
     ) -> PricingQuote:
         ...

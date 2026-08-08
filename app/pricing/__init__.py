@@ -43,6 +43,11 @@ from app.pricing.models import (
     PricingRequest,
 )
 
+from app.pricing.engine import (
+    calculate_fare_breakdown,
+    create_pricing_quote,
+)
+
 from app.pricing.configuration import (
     PricingConfiguration,
 )
@@ -76,5 +81,7 @@ __all__ = [
     "PRICING_PLATFORM_VERSION",
     "PricingRoundingPolicy",
     "PricingConfiguration",
+    "calculate_fare_breakdown",
+    "create_pricing_quote",
     "SurgePolicy",
 ]
