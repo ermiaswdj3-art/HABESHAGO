@@ -686,7 +686,42 @@ def create_tables():
             cursor
         )
 
-                # ======================================
+        # ======================================
+        # RIDE FINANCIAL ALLOCATIONS TABLE
+        # ======================================
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS
+            ride_financial_allocations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                ride_id INTEGER UNIQUE NOT NULL,
+
+                passenger_fare TEXT NOT NULL,
+
+                commission_rate TEXT NOT NULL,
+
+                commission_amount TEXT NOT NULL,
+
+                driver_earnings TEXT NOT NULL,
+
+                currency TEXT NOT NULL,
+
+                commission_policy_version TEXT NOT NULL,
+
+                commission_policy_reference TEXT NOT NULL,
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP,
+
+                FOREIGN KEY (ride_id)
+                    REFERENCES rides (id)
+            )
+            """
+        )
+
+        # ======================================
         # RIDE OFFERS TABLE
         # ======================================
 
@@ -1180,6 +1215,17 @@ def create_tables():
             WHERE status = 'PENDING'
             """
         )
+
+        cursor.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_ride_financial_allocations_ride
+            ON ride_financial_allocations (
+                ride_id
+            )
+            """
+        )
+
 
         connection.commit()
 

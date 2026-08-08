@@ -36,6 +36,15 @@ from app.pricing.constants import (
     SurgePolicy,
 )
 
+from app.pricing.financial import (
+    CommissionPolicy,
+    FinancialAllocation,
+)
+
+from app.pricing.financial_engine import (
+    allocate_financials,
+)
+
 from app.pricing.models import (
     FareBreakdown,
     PricingComponent,
@@ -101,5 +110,8 @@ __all__ = [
     "PricingAdjustmentType",
     "apply_pricing_adjustments",
     "create_adjusted_pricing_result",
+    "CommissionPolicy",
+    "FinancialAllocation",
+    "allocate_financials",
     "SurgePolicy",
 ]
