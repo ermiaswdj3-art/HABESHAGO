@@ -64,6 +64,23 @@ class EventType:
     PASSENGER_REGISTERED = "PASSENGER_REGISTERED"
 
     DRIVER_REGISTERED = "DRIVER_REGISTERED"
+
+    # ==========================================
+    # PRICING EVENTS
+    # ==========================================
+
+    PRICING_QUOTE_ISSUED = (
+        "PRICING_QUOTE_ISSUED"
+    )
+
+    PRICING_ADJUSTED = (
+        "PRICING_ADJUSTED"
+    )
+
+    FINANCIAL_ALLOCATION_CREATED = (
+        "FINANCIAL_ALLOCATION_CREATED"
+    )
+
     # ==========================================
     # PLATFORM EVENTS
     # ==========================================

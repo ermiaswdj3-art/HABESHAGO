@@ -36,6 +36,17 @@ DRIVER_ADMINISTRATION_EVENT_TYPES = {
 }
 
 
+PRICING_QUOTE_EVENT_TYPES = {
+    EventType.PRICING_QUOTE_ISSUED,
+    EventType.PRICING_ADJUSTED,
+}
+
+
+PRICING_FINANCIAL_EVENT_TYPES = {
+    EventType.FINANCIAL_ALLOCATION_CREATED,
+}
+
+
 def _get_synchronization_targets(
     event: Event,
 ) -> tuple[str, ...]:
@@ -53,6 +64,35 @@ def _get_synchronization_targets(
             SynchronizationTarget.PASSENGER,
             SynchronizationTarget.DRIVER,
             SynchronizationTarget.OPERATIONS,
+        )
+
+    # ==========================================
+    # PRICING QUOTE / ADJUSTMENT EVENTS
+    # ==========================================
+
+    if (
+        event.event_type
+        in PRICING_QUOTE_EVENT_TYPES
+    ):
+        return (
+            SynchronizationTarget.PASSENGER,
+            SynchronizationTarget.OPERATIONS,
+            SynchronizationTarget.ANALYTICS,
+        )
+
+    # ==========================================
+    # PRICING FINANCIAL EVENTS
+    # ==========================================
+
+    if (
+        event.event_type
+        in PRICING_FINANCIAL_EVENT_TYPES
+    ):
+        return (
+            SynchronizationTarget.DRIVER,
+            SynchronizationTarget.ADMIN,
+            SynchronizationTarget.OPERATIONS,
+            SynchronizationTarget.ANALYTICS,
         )
 
     # ==========================================
