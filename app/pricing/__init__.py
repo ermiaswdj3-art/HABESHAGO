@@ -48,6 +48,18 @@ from app.pricing.engine import (
     create_pricing_quote,
 )
 
+from app.pricing.adjustments import (
+    AdjustedPricingResult,
+    PricingAdjustment,
+    PricingAdjustmentSource,
+    PricingAdjustmentType,
+)
+
+from app.pricing.adjustment_engine import (
+    apply_pricing_adjustments,
+    create_adjusted_pricing_result,
+)
+
 from app.pricing.configuration import (
     PricingConfiguration,
 )
@@ -83,5 +95,11 @@ __all__ = [
     "PricingConfiguration",
     "calculate_fare_breakdown",
     "create_pricing_quote",
+    "AdjustedPricingResult",
+    "PricingAdjustment",
+    "PricingAdjustmentSource",
+    "PricingAdjustmentType",
+    "apply_pricing_adjustments",
+    "create_adjusted_pricing_result",
     "SurgePolicy",
 ]
