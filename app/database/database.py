@@ -789,6 +789,59 @@ def create_tables():
         )
 
         # ======================================
+        # PRICING CONFIGURATIONS TABLE
+        # ======================================
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS
+            pricing_configurations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                configuration_version TEXT
+                    UNIQUE NOT NULL,
+
+                city TEXT NOT NULL,
+
+                service_type TEXT NOT NULL,
+                ride_category TEXT NOT NULL,
+
+                currency TEXT NOT NULL,
+
+                base_fare TEXT NOT NULL,
+                price_per_km TEXT NOT NULL,
+                price_per_minute TEXT NOT NULL,
+
+                waiting_price_per_minute TEXT
+                    NOT NULL,
+
+                minimum_fare TEXT NOT NULL,
+
+                rounding_policy TEXT NOT NULL,
+                rounding_multiple TEXT NOT NULL,
+
+                pricing_policy TEXT NOT NULL,
+                surge_policy TEXT NOT NULL,
+
+                effective_from TEXT NOT NULL,
+                effective_until TEXT,
+
+                is_active INTEGER NOT NULL
+                    DEFAULT 1
+                    CHECK (
+                        is_active IN (0, 1)
+                    ),
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP,
+
+                updated_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        # ======================================
         # PASSENGER PLACES TABLE
         # ======================================
 
@@ -1033,6 +1086,53 @@ def create_tables():
             ON driver_admin_actions (
                 action_type,
                 created_at
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_pricing_config_scope
+            ON pricing_configurations (
+                city,
+                service_type,
+                ride_category
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_pricing_config_active_scope
+            ON pricing_configurations (
+                city,
+                service_type,
+                ride_category,
+                is_active
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_pricing_config_effective_window
+            ON pricing_configurations (
+                effective_from,
+                effective_until
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_pricing_config_policy
+            ON pricing_configurations (
+                pricing_policy,
+                surge_policy
             )
             """
         )

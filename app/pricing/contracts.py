@@ -12,6 +12,14 @@ from typing import (
     Protocol,
 )
 
+from app.pricing.configuration import (
+    PricingConfiguration,
+)
+
+from datetime import (
+    datetime,
+)
+
 from app.pricing.models import (
     PricingQuote,
     PricingRequest,
@@ -32,7 +40,8 @@ class PricingConfigurationProvider(
         city: str,
         service_type: str,
         ride_category: str,
-    ):
+        at_time: datetime | None = None,
+    ) -> PricingConfiguration:
         ...
 
 

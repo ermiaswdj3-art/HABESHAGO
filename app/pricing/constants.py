@@ -111,6 +111,21 @@ class PricingPolicy:
         STANDARD,
     }
 
+class PricingRoundingPolicy:
+    NEAREST = "nearest"
+
+    UP = "up"
+
+    DOWN = "down"
+
+    NONE = "none"
+
+    ALL = {
+        NEAREST,
+        UP,
+        DOWN,
+        NONE,
+    }
 
 class SurgePolicy:
     NONE = "none"
