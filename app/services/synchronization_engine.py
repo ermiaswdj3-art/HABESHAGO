@@ -46,6 +46,17 @@ PRICING_FINANCIAL_EVENT_TYPES = {
     EventType.FINANCIAL_ALLOCATION_CREATED,
 }
 
+PAYMENT_PASSENGER_EVENT_TYPES = {
+    EventType.PAYMENT_TRANSACTION_CREATED,
+    EventType.PAYMENT_EXECUTION_RECORDED,
+    EventType.PAYMENT_VERIFIED,
+}
+
+
+PAYMENT_FINANCIAL_EVENT_TYPES = {
+    EventType.PAYMENT_RECONCILED,
+    EventType.PAYMENT_FAILED,
+}
 
 def _get_synchronization_targets(
     event: Event,
@@ -89,6 +100,36 @@ def _get_synchronization_targets(
         in PRICING_FINANCIAL_EVENT_TYPES
     ):
         return (
+            SynchronizationTarget.DRIVER,
+            SynchronizationTarget.ADMIN,
+            SynchronizationTarget.OPERATIONS,
+            SynchronizationTarget.ANALYTICS,
+        )
+
+    # ==========================================
+    # PAYMENT PASSENGER EVENTS
+    # ==========================================
+
+    if (
+        event.event_type
+        in PAYMENT_PASSENGER_EVENT_TYPES
+    ):
+        return (
+            SynchronizationTarget.PASSENGER,
+            SynchronizationTarget.OPERATIONS,
+            SynchronizationTarget.ANALYTICS,
+        )
+
+    # ==========================================
+    # PAYMENT FINANCIAL EVENTS
+    # ==========================================
+
+    if (
+        event.event_type
+        in PAYMENT_FINANCIAL_EVENT_TYPES
+    ):
+        return (
+            SynchronizationTarget.PASSENGER,
             SynchronizationTarget.DRIVER,
             SynchronizationTarget.ADMIN,
             SynchronizationTarget.OPERATIONS,

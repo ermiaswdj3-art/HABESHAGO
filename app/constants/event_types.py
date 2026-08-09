@@ -82,6 +82,30 @@ class EventType:
     )
 
     # ==========================================
+    # PAYMENT EVENTS
+    # ==========================================
+
+    PAYMENT_TRANSACTION_CREATED = (
+        "PAYMENT_TRANSACTION_CREATED"
+    )
+
+    PAYMENT_EXECUTION_RECORDED = (
+        "PAYMENT_EXECUTION_RECORDED"
+    )
+
+    PAYMENT_VERIFIED = (
+        "PAYMENT_VERIFIED"
+    )
+
+    PAYMENT_RECONCILED = (
+        "PAYMENT_RECONCILED"
+    )
+
+    PAYMENT_FAILED = (
+        "PAYMENT_FAILED"
+    )
+
+    # ==========================================
     # PLATFORM EVENTS
     # ==========================================
 

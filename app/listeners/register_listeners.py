@@ -29,6 +29,10 @@ from app.listeners.synchronization_listener import (
     synchronization_listener,
 )
 
+from app.listeners.payment_observability_listener import (
+    payment_observability_listener,
+)
+
 from app.services.event_bus import (
     subscribe,
 )
@@ -108,6 +112,29 @@ def register_event_listeners() -> None:
         subscribe(
             event_type,
             pricing_observability_listener,
+        )
+
+        subscribe(
+            event_type,
+            synchronization_listener,
+        )
+
+    # ==========================================
+    # PAYMENT PLATFORM LISTENERS
+    # ==========================================
+
+    payment_event_types = (
+        EventType.PAYMENT_TRANSACTION_CREATED,
+        EventType.PAYMENT_EXECUTION_RECORDED,
+        EventType.PAYMENT_VERIFIED,
+        EventType.PAYMENT_RECONCILED,
+        EventType.PAYMENT_FAILED,
+    )
+
+    for event_type in payment_event_types:
+        subscribe(
+            event_type,
+            payment_observability_listener,
         )
 
         subscribe(
