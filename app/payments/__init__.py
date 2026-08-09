@@ -86,6 +86,17 @@ from app.payments.provider_adapters import (
     UnavailablePaymentAdapter,
 )
 
+from app.payments.orchestration import (
+    PaymentOrchestrationResult,
+    PaymentWorkflowStatus,
+)
+
+from app.payments.orchestrator import (
+    execute_prepared_payment,
+    prepare_payment,
+    verify_and_reconcile_payment,
+)
+
 from app.payments.provider_registry import (
     get_payment_provider_adapter,
     list_registered_payment_providers,
@@ -143,5 +154,10 @@ __all__ = [
     "ProviderVerificationEvidence",
     "reconcile_payment",
     "verify_payment_evidence",
+    "PaymentOrchestrationResult",
+    "PaymentWorkflowStatus",
+    "execute_prepared_payment",
+    "prepare_payment",
+    "verify_and_reconcile_payment",
     "resolve_payment_provider",
 ]

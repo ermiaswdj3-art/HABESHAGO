@@ -10,6 +10,7 @@ Responsibilities:
 - Build Payment Verification events
 - Build Payment Reconciliation events
 - Publish through the shared Event Engine
+- Preserve deterministic logical event identity
 
 This service observes authoritative Payment Platform
 results.
@@ -22,6 +23,8 @@ It does not:
 - mutate payment state
 - persist payment records
 """
+
+import uuid
 
 from app.constants.event_types import (
     EventType,
@@ -50,6 +53,69 @@ from app.payments.verification import (
 from app.services.event_engine import (
     publish_event,
 )
+
+
+def _build_payment_event_id(
+    *,
+    event_type: str,
+    source: str,
+    transaction_reference: str,
+) -> str:
+    """
+    Build a deterministic identity for one logical Payment
+    Platform event.
+
+    Retrying publication of the same authoritative payment
+    fact therefore produces the same event_id.
+
+    Including source prevents distinct payment stages that
+    share an event type such as PAYMENT_FAILED from
+    colliding.
+    """
+
+    normalized_event_type = str(
+        event_type or ""
+    ).strip()
+
+    normalized_source = str(
+        source or ""
+    ).strip()
+
+    normalized_transaction_reference = str(
+        transaction_reference or ""
+    ).strip()
+
+    if not normalized_event_type:
+        raise ValueError(
+            "event_type cannot be empty."
+        )
+
+    if not normalized_source:
+        raise ValueError(
+            "source cannot be empty."
+        )
+
+    if not normalized_transaction_reference:
+        raise ValueError(
+            (
+                "transaction_reference cannot "
+                "be empty."
+            )
+        )
+
+    logical_identity = (
+        "habeshago:payment:"
+        f"{normalized_source}:"
+        f"{normalized_event_type}:"
+        f"{normalized_transaction_reference}"
+    )
+
+    return str(
+        uuid.uuid5(
+            uuid.NAMESPACE_URL,
+            logical_identity,
+        )
+    )
 
 
 def _require_text(
@@ -98,12 +164,23 @@ def build_payment_transaction_created_event(
             )
         )
 
+    event_type = (
+        EventType.PAYMENT_TRANSACTION_CREATED
+    )
+
+    source = "PaymentPlatform"
+
     return Event(
-        event_type=(
-            EventType.PAYMENT_TRANSACTION_CREATED
+        event_id=_build_payment_event_id(
+            event_type=event_type,
+            source=source,
+            transaction_reference=(
+                transaction.transaction_reference
+            ),
         ),
+        event_type=event_type,
         entity="payment_transaction",
-        source="PaymentPlatform",
+        source=source,
         payload={
             "entity_id": (
                 transaction.transaction_reference
@@ -195,10 +272,19 @@ def build_payment_execution_recorded_event(
         else EventType.PAYMENT_EXECUTION_RECORDED
     )
 
+    source = "PaymentExecutionPlatform"
+
     return Event(
+        event_id=_build_payment_event_id(
+            event_type=event_type,
+            source=source,
+            transaction_reference=(
+                transaction.transaction_reference
+            ),
+        ),
         event_type=event_type,
         entity="payment_transaction",
-        source="PaymentExecutionPlatform",
+        source=source,
         payload={
             "entity_id": (
                 transaction.transaction_reference
@@ -263,10 +349,19 @@ def build_payment_verified_event(
         else EventType.PAYMENT_VERIFIED
     )
 
+    source = "PaymentVerificationPlatform"
+
     return Event(
+        event_id=_build_payment_event_id(
+            event_type=event_type,
+            source=source,
+            transaction_reference=(
+                verification.transaction_reference
+            ),
+        ),
         event_type=event_type,
         entity="payment_verification",
-        source="PaymentVerificationPlatform",
+        source=source,
         payload={
             "entity_id": (
                 verification.transaction_reference
@@ -322,10 +417,19 @@ def build_payment_reconciled_event(
         else EventType.PAYMENT_FAILED
     )
 
+    source = "PaymentReconciliationPlatform"
+
     return Event(
+        event_id=_build_payment_event_id(
+            event_type=event_type,
+            source=source,
+            transaction_reference=(
+                reconciliation.transaction_reference
+            ),
+        ),
         event_type=event_type,
         entity="payment_reconciliation",
-        source="PaymentReconciliationPlatform",
+        source=source,
         payload={
             "entity_id": (
                 reconciliation.transaction_reference
@@ -354,7 +458,7 @@ def publish_payment_transaction_created_event(
     transaction: PaymentTransaction,
 ) -> Event:
     """
-    Build and publish a Payment Transaction event.
+    Build and publish one Payment Transaction event.
     """
 
     event = (
@@ -376,7 +480,7 @@ def publish_payment_execution_recorded_event(
     execution_result: PaymentExecutionResult,
 ) -> Event:
     """
-    Build and publish a Payment Execution event.
+    Build and publish one Payment Execution event.
     """
 
     event = (
@@ -397,7 +501,7 @@ def publish_payment_verified_event(
     verification: PaymentVerificationResult,
 ) -> Event:
     """
-    Build and publish a Payment Verification event.
+    Build and publish one Payment Verification event.
     """
 
     event = build_payment_verified_event(
@@ -415,7 +519,7 @@ def publish_payment_reconciled_event(
     reconciliation: PaymentReconciliationResult,
 ) -> Event:
     """
-    Build and publish a Payment Reconciliation event.
+    Build and publish one Payment Reconciliation event.
     """
 
     event = build_payment_reconciled_event(
