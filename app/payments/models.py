@@ -390,3 +390,273 @@ class PaymentRequest:
             self.contract_version,
             field_name="contract_version",
         )
+
+@dataclass(
+    frozen=True,
+    slots=True,
+)
+class PaymentIntent:
+    """
+    Immutable controlled instruction to attempt fulfillment
+    of one PaymentRequest.
+
+    A PaymentIntent does not mean money has moved.
+
+    It records that HABESHAGO has created one governed
+    payment-processing attempt.
+    """
+
+    payment_request: PaymentRequest
+
+    provider: str
+
+    intent_reference: str = field(
+        default_factory=lambda: (
+            f"PAYINT-{uuid4()}"
+        )
+    )
+
+    status: str = "created"
+
+    created_at: datetime = field(
+        default_factory=lambda: (
+            datetime.now(
+                timezone.utc
+            )
+        )
+    )
+
+    expires_at: datetime | None = None
+
+    contract_version: str = (
+        PAYMENT_CONTRACT_VERSION
+    )
+
+    def __post_init__(
+        self,
+    ) -> None:
+        from app.payments.constants import (
+            PaymentIntentStatus,
+            PaymentProvider,
+        )
+
+        if not isinstance(
+            self.payment_request,
+            PaymentRequest,
+        ):
+            raise PaymentValidationError(
+                (
+                    "payment_request must be a "
+                    "PaymentRequest."
+                )
+            )
+
+        _require_choice(
+            self.provider,
+            field_name="provider",
+            allowed_values=(
+                PaymentProvider.ALL
+            ),
+        )
+
+        _require_text(
+            self.intent_reference,
+            field_name="intent_reference",
+        )
+
+        _require_choice(
+            self.status,
+            field_name="status",
+            allowed_values=(
+                PaymentIntentStatus.ALL
+            ),
+        )
+
+        if (
+            self.status
+            != PaymentIntentStatus.CREATED
+        ):
+            raise PaymentValidationError(
+                (
+                    "A new PaymentIntent must start "
+                    "with status created."
+                )
+            )
+
+        _require_aware_datetime(
+            self.created_at,
+            field_name="created_at",
+        )
+
+        if self.expires_at is not None:
+            _require_aware_datetime(
+                self.expires_at,
+                field_name="expires_at",
+            )
+
+            if (
+                self.expires_at
+                <= self.created_at
+            ):
+                raise PaymentValidationError(
+                    (
+                        "expires_at must be later "
+                        "than created_at."
+                    )
+                )
+
+        _require_text(
+            self.contract_version,
+            field_name="contract_version",
+        )
+
+
+@dataclass(
+    frozen=True,
+    slots=True,
+)
+class PaymentTransaction:
+    """
+    Immutable canonical record describing one payment
+    processing attempt.
+
+    Commit #94 defines transaction state only.
+
+    Provider execution, persistence and reconciliation
+    arrive in later commits.
+    """
+
+    intent_reference: str
+
+    transaction_reference: str
+
+    provider: str
+
+    payment_method: str
+
+    amount: Decimal
+
+    currency: str
+
+    status: str
+
+    payer_id: int
+
+    obligation_reference: str
+
+    created_at: datetime
+
+    provider_reference: str | None = None
+
+    failure_reason: str | None = None
+
+    contract_version: str = (
+        PAYMENT_CONTRACT_VERSION
+    )
+
+    def __post_init__(
+        self,
+    ) -> None:
+        from app.payments.constants import (
+            PaymentProvider,
+            PaymentTransactionStatus,
+        )
+
+        _require_text(
+            self.intent_reference,
+            field_name="intent_reference",
+        )
+
+        _require_text(
+            self.transaction_reference,
+            field_name=(
+                "transaction_reference"
+            ),
+        )
+
+        _require_choice(
+            self.provider,
+            field_name="provider",
+            allowed_values=(
+                PaymentProvider.ALL
+            ),
+        )
+
+        _require_choice(
+            self.payment_method,
+            field_name="payment_method",
+            allowed_values=(
+                PaymentMethod.ALL
+            ),
+        )
+
+        _require_decimal(
+            self.amount,
+            field_name="amount",
+            allow_zero=False,
+        )
+
+        _require_choice(
+            self.currency,
+            field_name="currency",
+            allowed_values=(
+                PaymentCurrency.ALL
+            ),
+        )
+
+        _require_choice(
+            self.status,
+            field_name="status",
+            allowed_values=(
+                PaymentTransactionStatus.ALL
+            ),
+        )
+
+        if (
+            not isinstance(
+                self.payer_id,
+                int,
+            )
+            or isinstance(
+                self.payer_id,
+                bool,
+            )
+            or self.payer_id <= 0
+        ):
+            raise PaymentValidationError(
+                (
+                    "payer_id must be a positive "
+                    "integer."
+                )
+            )
+
+        _require_text(
+            self.obligation_reference,
+            field_name=(
+                "obligation_reference"
+            ),
+        )
+
+        _require_aware_datetime(
+            self.created_at,
+            field_name="created_at",
+        )
+
+        if self.provider_reference is not None:
+            _require_text(
+                self.provider_reference,
+                field_name=(
+                    "provider_reference"
+                ),
+            )
+
+        if self.failure_reason is not None:
+            _require_text(
+                self.failure_reason,
+                field_name="failure_reason",
+            )
+
+        _require_text(
+            self.contract_version,
+            field_name="contract_version",
+        )

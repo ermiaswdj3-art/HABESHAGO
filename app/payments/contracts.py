@@ -4,18 +4,28 @@ HABESHAGO Payment Platform Contracts
 Defines interfaces expected from later Payment Platform
 components.
 
-Commit #93 establishes contracts only.
+Commit #93 established the foundational payment contracts.
 
-Implementations arrive in later payment commits.
+Commit #94 extends those contracts with canonical
+PaymentIntent and PaymentTransaction lifecycle objects.
+
+Provider execution and persistence implementations arrive
+in later payment commits.
 """
+
+from datetime import (
+    datetime,
+)
 
 from typing import (
     Protocol,
 )
 
 from app.payments.models import (
+    PaymentIntent,
     PaymentObligation,
     PaymentRequest,
+    PaymentTransaction,
 )
 
 
@@ -59,6 +69,46 @@ class PaymentRequestRepository(
         ...
 
 
+class PaymentIntentRepository(
+    Protocol
+):
+    """
+    Contract for durable PaymentIntent persistence.
+    """
+
+    def save_intent(
+        self,
+        intent: PaymentIntent,
+    ) -> PaymentIntent:
+        ...
+
+    def get_intent(
+        self,
+        intent_reference: str,
+    ) -> PaymentIntent | None:
+        ...
+
+
+class PaymentTransactionRepository(
+    Protocol
+):
+    """
+    Contract for durable PaymentTransaction persistence.
+    """
+
+    def save_transaction(
+        self,
+        transaction: PaymentTransaction,
+    ) -> PaymentTransaction:
+        ...
+
+    def get_transaction(
+        self,
+        transaction_reference: str,
+    ) -> PaymentTransaction | None:
+        ...
+
+
 class PaymentProviderGateway(
     Protocol
 ):
@@ -73,7 +123,7 @@ class PaymentProviderGateway(
     - ArifPay
     - controlled cash verification
 
-    Commit #93 deliberately defines no provider-specific
+    Commit #94 deliberately defines no provider-specific
     request or response implementation.
     """
 
@@ -93,11 +143,12 @@ class PaymentPlatformContract(
     Protocol
 ):
     """
-    High-level contract for the future shared HABESHAGO
-    Payment Platform.
+    High-level contract for the shared HABESHAGO Payment
+    Platform.
 
-    The concrete lifecycle implementation is intentionally
-    deferred to later commits.
+    Commit #94 defines lifecycle creation only.
+
+    Provider execution remains a later responsibility.
     """
 
     def create_payment_request(
@@ -107,4 +158,23 @@ class PaymentPlatformContract(
         payer_id: int,
         payment_method: str,
     ) -> PaymentRequest:
+        ...
+
+    def create_payment_intent(
+        self,
+        *,
+        payment_request: PaymentRequest,
+        intent_reference: str,
+        created_at: datetime,
+        expires_at: datetime | None = None,
+    ) -> PaymentIntent:
+        ...
+
+    def create_payment_transaction(
+        self,
+        *,
+        intent: PaymentIntent,
+        transaction_reference: str,
+        created_at: datetime,
+    ) -> PaymentTransaction:
         ...

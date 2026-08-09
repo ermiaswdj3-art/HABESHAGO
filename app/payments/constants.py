@@ -139,3 +139,66 @@ class PaymentSource:
         DELIVERY,
         OTHER,
     }
+
+
+class PaymentIntentStatus:
+    """
+    Canonical lifecycle for one Payment Intent.
+    """
+
+    CREATED = "created"
+
+    READY = "ready"
+
+    SUBMITTED = "submitted"
+
+    CANCELLED = "cancelled"
+
+    EXPIRED = "expired"
+
+    COMPLETED = "completed"
+
+    ALL = {
+        CREATED,
+        READY,
+        SUBMITTED,
+        CANCELLED,
+        EXPIRED,
+        COMPLETED,
+    }
+
+
+class PaymentTransactionStatus:
+    """
+    Canonical lifecycle for one payment transaction.
+    """
+
+    CREATED = "created"
+
+    PENDING = "pending"
+
+    PROCESSING = "processing"
+
+    AUTHORIZED = "authorized"
+
+    COMPLETED = "completed"
+
+    FAILED = "failed"
+
+    CANCELLED = "cancelled"
+
+    EXPIRED = "expired"
+
+    REFUNDED = "refunded"
+
+    ALL = {
+        CREATED,
+        PENDING,
+        PROCESSING,
+        AUTHORIZED,
+        COMPLETED,
+        FAILED,
+        CANCELLED,
+        EXPIRED,
+        REFUNDED,
+    }

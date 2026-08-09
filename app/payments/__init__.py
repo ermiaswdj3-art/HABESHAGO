@@ -4,25 +4,33 @@ HABESHAGO Payment Platform
 Canonical domain contracts for authoritative,
 versioned and auditable payment processing.
 
-Commit #93 establishes Payment Platform language and
-contracts only.
+Commit #93 established Payment Platform language and
+contracts.
 
-No real payment processing occurs in this package yet.
+Commit #94 adds canonical PaymentIntent and
+PaymentTransaction lifecycle creation.
+
+No real payment-provider execution occurs in this package
+yet.
 """
 
 from app.payments.constants import (
     PaymentCurrency,
+    PaymentIntentStatus,
     PaymentMethod,
     PaymentProvider,
     PaymentSource,
     PaymentStatus,
+    PaymentTransactionStatus,
 )
 
 from app.payments.contracts import (
+    PaymentIntentRepository,
     PaymentObligationRepository,
     PaymentPlatformContract,
     PaymentProviderGateway,
     PaymentRequestRepository,
+    PaymentTransactionRepository,
 )
 
 from app.payments.exceptions import (
@@ -35,9 +43,17 @@ from app.payments.exceptions import (
     PaymentValidationError,
 )
 
+from app.payments.intent_service import (
+    create_payment_intent,
+    create_payment_transaction,
+    resolve_payment_provider,
+)
+
 from app.payments.models import (
+    PaymentIntent,
     PaymentObligation,
     PaymentRequest,
+    PaymentTransaction,
 )
 
 from app.payments.versions import (
@@ -51,6 +67,9 @@ __all__ = [
     "PAYMENT_PLATFORM_VERSION",
     "PaymentCurrency",
     "PaymentError",
+    "PaymentIntent",
+    "PaymentIntentRepository",
+    "PaymentIntentStatus",
     "PaymentMethod",
     "PaymentMethodError",
     "PaymentObligation",
@@ -66,5 +85,11 @@ __all__ = [
     "PaymentSource",
     "PaymentStateError",
     "PaymentStatus",
+    "PaymentTransaction",
+    "PaymentTransactionRepository",
+    "PaymentTransactionStatus",
     "PaymentValidationError",
+    "create_payment_intent",
+    "create_payment_transaction",
+    "resolve_payment_provider",
 ]
