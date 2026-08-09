@@ -877,6 +877,153 @@ def create_tables():
         )
 
         # ======================================
+        # PAYMENT OBLIGATIONS TABLE
+        # ======================================
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS
+            payment_obligations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                obligation_reference TEXT
+                    UNIQUE NOT NULL,
+
+                source_type TEXT NOT NULL,
+                source_reference TEXT NOT NULL,
+
+                amount TEXT NOT NULL,
+                currency TEXT NOT NULL,
+
+                pricing_quote_id TEXT,
+                pricing_request_id TEXT,
+
+                created_at TEXT NOT NULL,
+
+                contract_version TEXT NOT NULL
+            )
+            """
+        )
+
+        # ======================================
+        # PAYMENT REQUESTS TABLE
+        # ======================================
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS
+            payment_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                request_reference TEXT
+                    UNIQUE NOT NULL,
+
+                obligation_reference TEXT NOT NULL,
+
+                payer_id INTEGER NOT NULL,
+
+                payment_method TEXT NOT NULL,
+                status TEXT NOT NULL,
+
+                requested_at TEXT NOT NULL,
+
+                contract_version TEXT NOT NULL,
+
+                FOREIGN KEY (
+                    obligation_reference
+                )
+                    REFERENCES payment_obligations (
+                        obligation_reference
+                    )
+            )
+            """
+        )
+
+        # ======================================
+        # PAYMENT INTENTS TABLE
+        # ======================================
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS
+            payment_intents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                intent_reference TEXT
+                    UNIQUE NOT NULL,
+
+                request_reference TEXT NOT NULL,
+
+                provider TEXT NOT NULL,
+                status TEXT NOT NULL,
+
+                created_at TEXT NOT NULL,
+                expires_at TEXT,
+
+                contract_version TEXT NOT NULL,
+
+                FOREIGN KEY (
+                    request_reference
+                )
+                    REFERENCES payment_requests (
+                        request_reference
+                    )
+            )
+            """
+        )
+
+        # ======================================
+        # PAYMENT TRANSACTIONS TABLE
+        # ======================================
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS
+            payment_transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                transaction_reference TEXT
+                    UNIQUE NOT NULL,
+
+                intent_reference TEXT NOT NULL,
+
+                provider TEXT NOT NULL,
+                payment_method TEXT NOT NULL,
+
+                amount TEXT NOT NULL,
+                currency TEXT NOT NULL,
+
+                status TEXT NOT NULL,
+
+                payer_id INTEGER NOT NULL,
+
+                obligation_reference TEXT NOT NULL,
+
+                created_at TEXT NOT NULL,
+
+                provider_reference TEXT,
+                failure_reason TEXT,
+
+                contract_version TEXT NOT NULL,
+
+                FOREIGN KEY (
+                    intent_reference
+                )
+                    REFERENCES payment_intents (
+                        intent_reference
+                    ),
+
+                FOREIGN KEY (
+                    obligation_reference
+                )
+                    REFERENCES payment_obligations (
+                        obligation_reference
+                    )
+            )
+            """
+        )
+
+        # ======================================
         # PASSENGER PLACES TABLE
         # ======================================
 
@@ -1223,6 +1370,102 @@ def create_tables():
             ON ride_financial_allocations (
                 ride_id
             )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_payment_obligations_source
+            ON payment_obligations (
+                source_type,
+                source_reference
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_payment_requests_obligation
+            ON payment_requests (
+                obligation_reference
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_payment_requests_payer
+            ON payment_requests (
+                payer_id,
+                status
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_payment_intents_request
+            ON payment_intents (
+                request_reference
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_payment_intents_status
+            ON payment_intents (
+                status,
+                expires_at
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_payment_transactions_intent
+            ON payment_transactions (
+                intent_reference
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_payment_transactions_obligation
+            ON payment_transactions (
+                obligation_reference
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_payment_transactions_status
+            ON payment_transactions (
+                status,
+                created_at
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_payment_provider_reference
+            ON payment_transactions (
+                provider,
+                provider_reference
+            )
+            WHERE provider_reference IS NOT NULL
             """
         )
 
