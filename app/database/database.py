@@ -1024,6 +1024,76 @@ def create_tables():
         )
 
         # ======================================
+        # PAYMENT VERIFICATIONS TABLE
+        # ======================================
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS
+            payment_verifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                transaction_reference TEXT
+                    UNIQUE NOT NULL,
+
+                provider TEXT NOT NULL,
+
+                provider_reference TEXT NOT NULL,
+
+                status TEXT NOT NULL,
+
+                verified_at TEXT NOT NULL,
+
+                matched_fields TEXT NOT NULL,
+
+                mismatched_fields TEXT NOT NULL,
+
+                reason TEXT,
+
+                FOREIGN KEY (
+                    transaction_reference
+                )
+                    REFERENCES payment_transactions (
+                        transaction_reference
+                    )
+            )
+            """
+        )
+
+        # ======================================
+        # PAYMENT RECONCILIATIONS TABLE
+        # ======================================
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS
+            payment_reconciliations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                transaction_reference TEXT
+                    UNIQUE NOT NULL,
+
+                provider TEXT NOT NULL,
+
+                provider_reference TEXT NOT NULL,
+
+                status TEXT NOT NULL,
+
+                reconciled_at TEXT NOT NULL,
+
+                reason TEXT,
+
+                FOREIGN KEY (
+                    transaction_reference
+                )
+                    REFERENCES payment_transactions (
+                        transaction_reference
+                    )
+            )
+            """
+        )
+
+        # ======================================
         # PASSENGER PLACES TABLE
         # ======================================
 
@@ -1469,6 +1539,49 @@ def create_tables():
             """
         )
 
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_payment_verifications_status
+            ON payment_verifications (
+                status,
+                verified_at
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_payment_verifications_provider
+            ON payment_verifications (
+                provider,
+                provider_reference
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_payment_reconciliations_status
+            ON payment_reconciliations (
+                status,
+                reconciled_at
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_payment_reconciliations_provider
+            ON payment_reconciliations (
+                provider,
+                provider_reference
+            )
+            """
+        )
 
         connection.commit()
 

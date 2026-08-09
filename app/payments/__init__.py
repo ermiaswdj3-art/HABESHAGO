@@ -67,6 +67,20 @@ from app.payments.provider import (
     PaymentExecutionStatus,
 )
 
+from app.payments.reconciliation import (
+    PaymentReconciliationResult,
+    PaymentReconciliationStatus,
+    reconcile_payment,
+)
+
+from app.payments.verification import (
+    PaymentVerificationResult,
+    PaymentVerificationStatus,
+    ProviderPaymentStatus,
+    ProviderVerificationEvidence,
+    verify_payment_evidence,
+)
+
 from app.payments.provider_adapters import (
     CashPaymentAdapter,
     UnavailablePaymentAdapter,
@@ -121,5 +135,13 @@ __all__ = [
     "execute_payment_transaction",
     "get_payment_provider_adapter",
     "list_registered_payment_providers",
+    "PaymentReconciliationResult",
+    "PaymentReconciliationStatus",
+    "PaymentVerificationResult",
+    "PaymentVerificationStatus",
+    "ProviderPaymentStatus",
+    "ProviderVerificationEvidence",
+    "reconcile_payment",
+    "verify_payment_evidence",
     "resolve_payment_provider",
 ]
