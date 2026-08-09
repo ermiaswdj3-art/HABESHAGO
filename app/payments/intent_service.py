@@ -58,6 +58,18 @@ PAYMENT_METHOD_PROVIDER_MAP = {
     PaymentMethod.ARIFPAY: (
         PaymentProvider.ARIFPAY
     ),
+    PaymentMethod.AWASH_BANK: (
+        PaymentProvider.AWASH_BANK
+    ),
+    PaymentMethod.AMHARA_BANK: (
+        PaymentProvider.AMHARA_BANK
+    ),
+    PaymentMethod.BANK_OF_ABYSSINIA: (
+        PaymentProvider.BANK_OF_ABYSSINIA
+    ),
+    PaymentMethod.DASHEN_BANK: (
+        PaymentProvider.DASHEN_BANK
+    ),
 }
 
 

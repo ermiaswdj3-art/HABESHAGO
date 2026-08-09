@@ -21,6 +21,11 @@ from typing import (
     Protocol,
 )
 
+from app.payments.provider import (
+    PaymentExecutionRequest,
+    PaymentExecutionResult,
+)
+
 from app.payments.models import (
     PaymentIntent,
     PaymentObligation,
@@ -113,18 +118,13 @@ class PaymentProviderGateway(
     Protocol
 ):
     """
-    Contract implemented by future payment-provider
-    adapters.
+    Contract implemented by payment-provider adapters.
 
-    Examples may eventually include:
-    - Telebirr
-    - CBE Birr
-    - Chapa
-    - ArifPay
-    - controlled cash verification
-
-    Commit #94 deliberately defines no provider-specific
-    request or response implementation.
+    A provider adapter must:
+    - identify itself canonically;
+    - declare supported payment methods;
+    - execute one provider-independent request;
+    - return one canonical execution result.
     """
 
     def provider_name(
@@ -136,6 +136,14 @@ class PaymentProviderGateway(
         self,
         payment_method: str,
     ) -> bool:
+        ...
+
+    def execute(
+        self,
+        request: PaymentExecutionRequest,
+        *,
+        processed_at: datetime,
+    ) -> PaymentExecutionResult:
         ...
 
 

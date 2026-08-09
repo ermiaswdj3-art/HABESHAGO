@@ -30,6 +30,12 @@ class PaymentCurrency:
 class PaymentMethod:
     """
     Canonical passenger payment methods.
+
+    A payment method describes how the payer chooses to
+    fulfill a payment obligation.
+
+    Provider execution is handled separately by the
+    Payment Provider Gateway.
     """
 
     CASH = "cash"
@@ -42,22 +48,36 @@ class PaymentMethod:
 
     ARIFPAY = "arifpay"
 
+    AWASH_BANK = "awash_bank"
+
+    AMHARA_BANK = "amhara_bank"
+
+    BANK_OF_ABYSSINIA = (
+        "bank_of_abyssinia"
+    )
+
+    DASHEN_BANK = "dashen_bank"
+
     ALL = {
         CASH,
         TELEBIRR,
         CBE_BIRR,
         CHAPA,
         ARIFPAY,
+        AWASH_BANK,
+        AMHARA_BANK,
+        BANK_OF_ABYSSINIA,
+        DASHEN_BANK,
     }
 
 
 class PaymentProvider:
     """
-    Canonical payment-processing authority.
+    Canonical payment-processing authorities.
 
-    Cash is represented explicitly because it has a
-    different verification lifecycle from digital
-    providers.
+    Provider identity is intentionally separate from
+    PaymentMethod so future payment rails can evolve
+    without changing the payment-domain contract.
     """
 
     CASH = "cash"
@@ -70,12 +90,26 @@ class PaymentProvider:
 
     ARIFPAY = "arifpay"
 
+    AWASH_BANK = "awash_bank"
+
+    AMHARA_BANK = "amhara_bank"
+
+    BANK_OF_ABYSSINIA = (
+        "bank_of_abyssinia"
+    )
+
+    DASHEN_BANK = "dashen_bank"
+
     ALL = {
         CASH,
         TELEBIRR,
         CBE_BIRR,
         CHAPA,
         ARIFPAY,
+        AWASH_BANK,
+        AMHARA_BANK,
+        BANK_OF_ABYSSINIA,
+        DASHEN_BANK,
     }
 
 

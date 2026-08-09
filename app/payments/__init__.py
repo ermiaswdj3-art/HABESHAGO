@@ -56,6 +56,27 @@ from app.payments.models import (
     PaymentTransaction,
 )
 
+from app.payments.execution_engine import (
+    build_payment_execution_request,
+    execute_payment_transaction,
+)
+
+from app.payments.provider import (
+    PaymentExecutionRequest,
+    PaymentExecutionResult,
+    PaymentExecutionStatus,
+)
+
+from app.payments.provider_adapters import (
+    CashPaymentAdapter,
+    UnavailablePaymentAdapter,
+)
+
+from app.payments.provider_registry import (
+    get_payment_provider_adapter,
+    list_registered_payment_providers,
+)
+
 from app.payments.versions import (
     PAYMENT_CONTRACT_VERSION,
     PAYMENT_PLATFORM_VERSION,
@@ -91,5 +112,14 @@ __all__ = [
     "PaymentValidationError",
     "create_payment_intent",
     "create_payment_transaction",
+    "CashPaymentAdapter",
+    "PaymentExecutionRequest",
+    "PaymentExecutionResult",
+    "PaymentExecutionStatus",
+    "UnavailablePaymentAdapter",
+    "build_payment_execution_request",
+    "execute_payment_transaction",
+    "get_payment_provider_adapter",
+    "list_registered_payment_providers",
     "resolve_payment_provider",
 ]
