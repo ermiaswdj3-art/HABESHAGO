@@ -2933,3 +2933,126 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================
+   DRIVER LIVE RIDE OFFER
+   ========================================== */
+
+.driver-ride-offer-section {
+    padding: 20px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+}
+
+.driver-ride-offer-status {
+    margin-top: 14px;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+}
+
+.driver-ride-offer-card {
+    display: grid;
+    gap: 16px;
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+}
+
+.driver-ride-offer-card[hidden] {
+    display: none;
+}
+
+.driver-ride-offer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.driver-ride-offer-header > div {
+    display: grid;
+    gap: 4px;
+}
+
+.driver-ride-offer-header span,
+.driver-ride-offer-grid span {
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}
+
+.driver-ride-offer-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.driver-ride-offer-grid > div {
+    display: grid;
+    gap: 4px;
+    padding: 12px;
+    background: var(--color-surface);
+    border-radius: 14px;
+}
+
+.driver-ride-offer-grid strong {
+    color: var(--color-text-primary);
+    font-size: 15px;
+}
+
+.driver-ride-offer-accept {
+    min-height: 50px;
+    padding: 12px 16px;
+    border: 0;
+    border-radius: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.driver-ride-offer-accept:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.driver-ride-offer-feedback {
+    min-height: 20px;
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}
+
+@media (max-width: 640px) {
+    .driver-ride-offer-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.driver-ride-offer-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.driver-ride-offer-reject {
+    min-height: 50px;
+    padding: 12px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.driver-ride-offer-reject:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+@media (max-width: 640px) {
+    .driver-ride-offer-actions {
+        grid-template-columns: 1fr;
+    }
+}

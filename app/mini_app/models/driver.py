@@ -46,6 +46,9 @@ class Driver:
     # Driver journey state
     driver_status: str = "available"
 
+    # Distance from driver to passenger pickup
+    pickup_distance_km: Optional[float] = None
+
     # Estimated arrival to passenger
     eta_minutes: Optional[int] = None
 

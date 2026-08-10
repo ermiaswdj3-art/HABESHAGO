@@ -1,128 +1,226 @@
 "use strict";
 
-document.addEventListener("DOMContentLoaded", function () {
-    console.log("HABESHAGO Booking Summary initialized.");
-
-    const confirmButton = document.querySelector(
-        "[data-confirm-booking]"
-    );
-
-    const feedback = document.querySelector(
-        "[data-booking-confirmation-feedback]"
-    );
-
-    if (!confirmButton) {
-        console.error(
-            "Confirm Booking button was not found."
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+        console.log(
+            "HABESHAGO Booking Summary initialized."
         );
-        return;
-    }
 
-    function setFeedback(message, isSuccess) {
-        if (!feedback) {
+        const confirmButton = document.querySelector(
+            "[data-confirm-booking]"
+        );
+
+        const feedback = document.querySelector(
+            "[data-booking-confirmation-feedback]"
+        );
+
+        if (!confirmButton) {
+            console.error(
+                "Confirm Booking button was not found."
+            );
             return;
         }
 
-        feedback.textContent = message;
-
-        feedback.classList.toggle(
-            "booking-confirmation-success",
-            Boolean(isSuccess)
-        );
-    }
-
-    async function sendPostRequest(url) {
-        const response = await fetch(
-            url,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({}),
+        function setFeedback(
+            message,
+            isSuccess
+        ) {
+            if (!feedback) {
+                return;
             }
-        );
 
-        const result = await response.json();
+            feedback.textContent = message;
 
-        if (!response.ok || !result.success) {
-            throw new Error(
-                result.message ||
-                "The request could not be completed."
+            feedback.classList.toggle(
+                "booking-confirmation-success",
+                Boolean(isSuccess)
             );
         }
 
-        return result;
-    }
+        function getTelegramInitData() {
+            const telegram = window.Telegram;
 
-    async function confirmAndDispatchBooking() {
-        confirmButton.disabled = true;
-        confirmButton.textContent =
-            "Confirming Booking...";
-
-        setFeedback("", false);
-
-        try {
-            const confirmationResult =
-                await sendPostRequest(
-                    "/api/trip/confirm"
+            if (
+                !telegram ||
+                !telegram.WebApp
+            ) {
+                throw new Error(
+                    "Telegram Mini App is unavailable. " +
+                    "Please open HABESHAGO from Telegram."
                 );
+            }
 
-            console.log(
-                "Booking confirmed:",
-                confirmationResult.trip
-            );
+            const initData =
+                telegram.WebApp.initData;
 
-            confirmButton.textContent =
-                "Searching for Driver...";
-
-            setFeedback(
-                "Booking confirmed. Searching for " +
-                "the best available driver...",
-                true
-            );
-
-            const dispatchResult =
-                await sendPostRequest(
-                    "/api/trip/dispatch"
+            if (
+                typeof initData !== "string" ||
+                !initData.trim()
+            ) {
+                throw new Error(
+                    "Telegram authentication data is " +
+                    "unavailable. Please reopen HABESHAGO " +
+                    "from Telegram."
                 );
+            }
 
-            console.log(
-                "Driver assigned:",
-                dispatchResult.trip
+            return initData;
+        }
+
+        async function sendPostRequest(
+            url,
+            options = {}
+        ) {
+            const headers = {
+                "Content-Type": "application/json",
+            };
+
+            if (options.telegramInitData) {
+                headers["X-Telegram-Init-Data"] =
+                    options.telegramInitData;
+            }
+
+            const response = await fetch(
+                url,
+                {
+                    method: "POST",
+                    headers: headers,
+                    body: JSON.stringify({}),
+                }
             );
 
+            let result;
+
+            try {
+                result = await response.json();
+            } catch (error) {
+                throw new Error(
+                    "The server returned an invalid response."
+                );
+            }
+
+            if (
+                !response.ok ||
+                !result.success
+            ) {
+                throw new Error(
+                    result.error ||
+                    result.message ||
+                    "The request could not be completed."
+                );
+            }
+
+            return result;
+        }
+
+        async function confirmAndDispatchBooking() {
+            confirmButton.disabled = true;
             confirmButton.textContent =
-                "Driver Found";
+                "Confirming Booking...";
 
             setFeedback(
-                "Driver assigned successfully. " +
-                "Opening driver details...",
-                true
-            );
-
-            window.location.href =
-                "/driver-assignment";
-        } catch (error) {
-            console.error(
-                "Booking or dispatch failed:",
-                error
-            );
-
-            setFeedback(
-                error.message ||
-                "We could not complete the booking.",
+                "",
                 false
             );
 
-            confirmButton.disabled = false;
-            confirmButton.textContent =
-                "Confirm Booking";
-        }
-    }
+            try {
+                /*
+                 * Authentication is required before
+                 * canonical dispatch.
+                 *
+                 * Reading Telegram initData here does
+                 * not establish passenger identity.
+                 * The HABESHAGO server validates the
+                 * signed credential.
+                 */
+                const telegramInitData =
+                    getTelegramInitData();
 
-    confirmButton.addEventListener(
-        "click",
-        confirmAndDispatchBooking
-    );
-});
+                const confirmationResult =
+                    await sendPostRequest(
+                        "/api/trip/confirm"
+                    );
+
+                console.log(
+                    "Booking confirmed:",
+                    confirmationResult.trip
+                );
+
+                confirmButton.textContent =
+                    "Preparing Ride Offer...";
+
+                setFeedback(
+                    "Booking confirmed. Preparing your " +
+                    "ride request...",
+                    true
+                );
+
+                const dispatchResult =
+                    await sendPostRequest(
+                        "/api/trip/dispatch",
+                        {
+                            telegramInitData:
+                                telegramInitData,
+                        }
+                    );
+
+                console.log(
+                    "Canonical Ride Offer created:",
+                    dispatchResult
+                );
+
+                if (
+                    dispatchResult.status !==
+                    "offer_pending"
+                ) {
+                    throw new Error(
+                        "The ride request entered an " +
+                        "unexpected lifecycle state."
+                    );
+                }
+
+                confirmButton.textContent =
+                    "Ride Offer Sent";
+
+                setFeedback(
+                    "Your ride offer has been sent to " +
+                    "the selected driver. Waiting for " +
+                    "driver acceptance...",
+                    true
+                );
+
+                /*
+                 * Do NOT redirect to driver assignment.
+                 *
+                 * A pending Ride Offer is not yet an
+                 * accepted canonical Ride.
+                 *
+                 * Driver assignment becomes valid only
+                 * after canonical offer acceptance and
+                 * Ride creation.
+                 */
+            } catch (error) {
+                console.error(
+                    "Booking or dispatch failed:",
+                    error
+                );
+
+                setFeedback(
+                    error.message ||
+                    "We could not complete the booking.",
+                    false
+                );
+
+                confirmButton.disabled = false;
+                confirmButton.textContent =
+                    "Confirm Booking";
+            }
+        }
+
+        confirmButton.addEventListener(
+            "click",
+            confirmAndDispatchBooking
+        );
+    }
+);

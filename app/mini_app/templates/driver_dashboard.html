@@ -405,6 +405,119 @@ Driver Dashboard &#8226; HABESHAGO
 
     {% endif %}
 
+    <section class="driver-ride-offer-section" data-driver-ride-offer-section>
+        <div class="section-heading">
+
+            <div>
+                <p class="trip-planner-eyebrow">
+                    Live dispatch
+                </p>
+
+                <h2>Ride Offer</h2>
+            </div>
+
+        </div>
+
+        <div class="driver-ride-offer-status" data-driver-offer-status>
+            Checking for a pending ride offer...
+        </div>
+
+        <article class="driver-ride-offer-card" data-driver-offer-card hidden>
+            <div class="driver-ride-offer-header">
+
+                <div>
+                    <span>Offer</span>
+
+                    <strong data-offer-reference>
+                        —
+                    </strong>
+                </div>
+
+                <span class="driver-status-badge
+                       driver-status-available">
+                    Pending
+                </span>
+
+            </div>
+
+            <div class="driver-ride-offer-grid">
+
+                <div>
+                    <span>Pickup</span>
+                    <strong data-offer-pickup>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Destination</span>
+                    <strong data-offer-destination>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Trip distance</span>
+                    <strong data-offer-distance>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Trip ETA</span>
+                    <strong data-offer-trip-eta>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Pickup ETA</span>
+                    <strong data-offer-pickup-eta>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Fare</span>
+                    <strong data-offer-fare>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Payment</span>
+                    <strong data-offer-payment>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Service</span>
+                    <strong data-offer-service>
+                        —
+                    </strong>
+                </div>
+
+            </div>
+
+            <div class="driver-ride-offer-actions">
+
+                <button type="button" class="driver-ride-offer-accept" data-accept-driver-offer>
+                    Accept Ride
+                </button>
+
+                <button type="button" class="driver-ride-offer-reject" data-reject-driver-offer>
+                    Reject Ride
+                </button>
+
+            </div>
+
+            <p class="driver-ride-offer-feedback" data-driver-offer-feedback></p>
+
+        </article>
+
+    </section>
+
     <section class="driver-actions-section">
 
         <div class="section-heading">
@@ -458,4 +571,8 @@ Driver Dashboard &#8226; HABESHAGO
 
 </section>
 
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='driver_dashboard.js') }}"></script>
 {% endblock %}

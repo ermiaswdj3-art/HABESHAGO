@@ -51,6 +51,30 @@ from app.mini_app.services.tracking_service import (
     move_driver_toward_pickup,
 )
 
+from datetime import (
+    datetime,
+    timezone,
+)
+
+from uuid import uuid4
+
+from app.config.settings import (
+    BOT_TOKEN,
+)
+
+from app.mini_app.auth import (
+    authenticate_mini_app_driver,
+    authenticate_mini_app_passenger,
+)
+
+from app.mini_app.ride_integration import (
+    MiniAppRideLifecycleBridgeError,
+    MiniAppRouteMeasurementAdapterError,
+    accept_offer_and_bind_trip,
+    measure_mini_app_route,
+    orchestrate_mini_app_ride_offer,
+)
+
 from app.mini_app.services.payment_service import (
     SUPPORTED_PAYMENT_METHODS,
     process_payment,
@@ -70,6 +94,11 @@ from app.mini_app.services.trip_lifecycle_service import (
 
 from app.mini_app.services.dispatch_service import (
     find_best_driver,
+)
+
+from app.services.ride_offer_service import (
+    get_driver_pending_offer,
+    reject_driver_ride_offer,
 )
 
 import json
@@ -304,42 +333,168 @@ def update_trip_destination():
     """
     Store the passenger's selected destination
     in the active Trip Context.
+
+    Destination coordinates are accepted when available.
+
+    They remain optional temporarily so the existing
+    demonstration destination flow continues to work
+    while HABESHAGO transitions to canonical location
+    context.
     """
 
     payload = request.get_json(silent=True) or {}
 
     destination = str(
-        payload.get("destination", "")
+        payload.get(
+            "destination",
+            "",
+        )
     ).strip()
 
     if not destination:
         return jsonify(
             {
                 "success": False,
-                "message": "Destination is required.",
+                "message": (
+                    "Destination is required."
+                ),
             }
         ), 400
+
+    latitude = payload.get(
+        "latitude"
+    )
+
+    longitude = payload.get(
+        "longitude"
+    )
+
+    # Either both destination coordinates must be
+    # supplied or neither may be supplied.
+    if (
+        latitude is None
+        and longitude is None
+    ):
+        destination_latitude = None
+        destination_longitude = None
+
+    elif (
+        latitude is None
+        or longitude is None
+    ):
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "Destination latitude and longitude "
+                    "must be provided together."
+                ),
+            }
+        ), 400
+
+    else:
+        try:
+            destination_latitude = float(
+                latitude
+            )
+
+            destination_longitude = float(
+                longitude
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return jsonify(
+                {
+                    "success": False,
+                    "message": (
+                        "Valid destination coordinates "
+                        "are required."
+                    ),
+                }
+            ), 400
+
+        if not (
+            -90.0
+            <= destination_latitude
+            <= 90.0
+        ):
+            return jsonify(
+                {
+                    "success": False,
+                    "message": (
+                        "Destination latitude is out "
+                        "of range."
+                    ),
+                }
+            ), 400
+
+        if not (
+            -180.0
+            <= destination_longitude
+            <= 180.0
+        ):
+            return jsonify(
+                {
+                    "success": False,
+                    "message": (
+                        "Destination longitude is out "
+                        "of range."
+                    ),
+                }
+            ), 400
 
     # A new destination begins a new journey and clears
     # any pickup information left from an earlier trip.
     reset_trip()
-    set_destination(destination)
+
+    set_destination(
+        destination,
+        latitude=destination_latitude,
+        longitude=destination_longitude,
+    )
 
     trip = get_trip()
 
     return jsonify(
         {
             "success": True,
-            "message": "Destination saved successfully.",
+            "message": (
+                "Destination saved successfully."
+            ),
             "trip": {
-                "destination": trip.destination,
-                "pickup_name": trip.pickup_name,
-                "pickup_latitude": trip.pickup_latitude,
-                "pickup_longitude": trip.pickup_longitude,
-                "trip_started_at": trip.trip_started_at,
-                "trip_completed_at": trip.trip_completed_at,
-                "trip_progress_percent": trip.trip_progress_percent,
-                "destination_reached": trip.destination_reached,
+                "destination": (
+                    trip.destination
+                ),
+                "destination_latitude": (
+                    trip.destination_latitude
+                ),
+                "destination_longitude": (
+                    trip.destination_longitude
+                ),
+                "pickup_name": (
+                    trip.pickup_name
+                ),
+                "pickup_latitude": (
+                    trip.pickup_latitude
+                ),
+                "pickup_longitude": (
+                    trip.pickup_longitude
+                ),
+                "trip_started_at": (
+                    trip.trip_started_at
+                ),
+                "trip_completed_at": (
+                    trip.trip_completed_at
+                ),
+                "trip_progress_percent": (
+                    trip.trip_progress_percent
+                ),
+                "destination_reached": (
+                    trip.destination_reached
+                ),
             },
         }
     )
@@ -668,8 +823,13 @@ def confirm_trip_booking():
 @app.route("/api/trip/dispatch", methods=["POST"])
 def dispatch_trip():
     """
-    Find and assign the best available driver
-    to the active passenger booking.
+    Authenticate the Telegram Mini App passenger and create
+    one canonical pending HABESHAGO Ride Offer.
+
+    This endpoint does not create a Ride directly.
+
+    Canonical Ride creation occurs only after the selected
+    driver accepts the pending Ride Offer.
     """
 
     trip = get_trip()
@@ -678,60 +838,520 @@ def dispatch_trip():
         return jsonify(
             {
                 "success": False,
-                "message": (
-                    "The booking must be dispatch pending "
-                    "before driver search can begin."
+                "error": (
+                    "Trip is not ready for dispatch."
                 ),
             }
         ), 409
 
-    trip.set_booking_status("driver_searching")
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
 
-    driver = find_best_driver(trip)
-
-    if driver is None:
-        trip.set_booking_status("dispatch_failed")
-
+    if not init_data:
         return jsonify(
             {
                 "success": False,
-                "message": "No available driver was found.",
-                "trip": {
-                    "booking_status": trip.booking_status,
-                },
+                "error": (
+                    "Telegram Mini App authentication "
+                    "data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        passenger = (
+            authenticate_mini_app_passenger(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    try:
+        measurement = measure_mini_app_route(
+            trip=trip,
+        )
+    except (
+        MiniAppRouteMeasurementAdapterError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 400
+
+    driver = find_best_driver(
+        trip
+    )
+
+    if driver is None:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "No eligible driver is currently "
+                    "available."
+                ),
             }
         ), 404
 
-    trip.assigned_driver_id = driver.driver_id
-    trip.assigned_driver_name = driver.name
-    trip.assigned_driver_rating = driver.rating
-    trip.assigned_vehicle = driver.vehicle
-    trip.assigned_vehicle_color = driver.vehicle_color
-    trip.assigned_plate_number = driver.plate_number
-    trip.driver_eta_minutes = driver.eta_minutes
+    if driver.pickup_distance_km is None:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Canonical driver pickup distance "
+                    "is unavailable."
+                ),
+            }
+        ), 409
 
-    trip.set_booking_status("driver_assigned")
+    if driver.eta_minutes is None:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Canonical driver pickup ETA "
+                    "is unavailable."
+                ),
+            }
+        ), 409
+
+    if not trip.payment_method:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "A payment method must be selected "
+                    "before dispatch."
+                ),
+            }
+        ), 409
+
+    try:
+        result = orchestrate_mini_app_ride_offer(
+            trip=trip,
+            passenger=passenger,
+            driver=driver,
+            measurement=measurement,
+            pickup_distance_km=(
+                driver.pickup_distance_km
+            ),
+            pickup_eta_minutes=(
+                int(
+                    driver.eta_minutes
+                )
+            ),
+            payment_method=(
+                trip.payment_method
+            ),
+            city="Addis Ababa",
+            quote_id=(
+                f"MINI-{uuid4().hex}"
+            ),
+            calculated_at=(
+                datetime.now(
+                    timezone.utc
+                )
+            ),
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 409
+
+    offer = result.offer
+
+    trip.booking_status = "offer_pending"
+
+    trip.assigned_driver_id = (
+        driver.driver_id
+    )
+    trip.assigned_driver_name = (
+        driver.name
+    )
+    trip.assigned_driver_rating = (
+        driver.rating
+    )
+    trip.assigned_driver_vehicle = (
+        driver.vehicle
+    )
+    trip.assigned_driver_plate = (
+        driver.plate_number
+    )
+    trip.assigned_driver_color = (
+        driver.vehicle_color
+    )
+    trip.driver_eta_minutes = (
+        driver.eta_minutes
+    )
 
     return jsonify(
         {
             "success": True,
-            "message": "Driver assigned successfully.",
+            "status": "offer_pending",
+            "offer_reference": (
+                offer["offer_reference"]
+            ),
+            "driver": {
+                "id": driver.driver_id,
+                "name": driver.name,
+                "rating": driver.rating,
+                "vehicle": driver.vehicle,
+                "plate_number": (
+                    driver.plate_number
+                ),
+                "vehicle_color": (
+                    driver.vehicle_color
+                ),
+                "eta_minutes": (
+                    driver.eta_minutes
+                ),
+            },
+            "pricing": {
+                "quote_id": (
+                    result.pricing.quote.quote_id
+                ),
+                "currency": (
+                    result.pricing.quote.currency
+                ),
+                "fare": str(
+                    result.pricing.fare
+                ),
+            },
+        }
+    )
+
+@app.route(
+    "/api/driver/offers/pending",
+    methods=["GET"],
+)
+def get_authenticated_driver_pending_offer():
+    """
+    Return the authenticated Telegram Mini App driver's
+    current canonical pending Ride Offer.
+
+    The browser never supplies driver_id directly.
+    """
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App driver "
+                    "authentication data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        authenticated_driver = (
+            authenticate_mini_app_driver(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+                require_operational=True,
+            )
+        )
+
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    offer = get_driver_pending_offer(
+        authenticated_driver.driver_id
+    )
+
+    if offer is None:
+        return jsonify(
+            {
+                "success": True,
+                "status": "no_pending_offer",
+                "offer": None,
+            }
+        )
+
+    return jsonify(
+        {
+            "success": True,
+            "status": "offer_pending",
+            "offer": offer,
+        }
+    )
+
+@app.route(
+    "/api/driver/offers/<int:offer_id>/reject",
+    methods=["POST"],
+)
+def reject_authenticated_driver_offer(
+    offer_id: int,
+):
+    """
+    Authenticate the Telegram Mini App driver and reject
+    that driver's current canonical pending Ride Offer.
+
+    The browser never supplies driver_id directly.
+    """
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App driver "
+                    "authentication data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        authenticated_driver = (
+            authenticate_mini_app_driver(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+                require_operational=True,
+            )
+        )
+
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    pending_offer = get_driver_pending_offer(
+        authenticated_driver.driver_id
+    )
+
+    if pending_offer is None:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "No pending Ride Offer exists "
+                    "for this driver."
+                ),
+            }
+        ), 404
+
+    if (
+        pending_offer.get("offer_id")
+        != offer_id
+    ):
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Ride Offer does not belong to "
+                    "the authenticated driver."
+                ),
+            }
+        ), 403
+
+    try:
+        rejected_offer = (
+            reject_driver_ride_offer(
+                offer_id
+            )
+        )
+
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "status": "offer_rejected",
+            "offer": rejected_offer,
+        }
+    )
+
+@app.route(
+    "/api/driver/offers/<int:offer_id>/accept",
+    methods=["POST"],
+)
+def accept_driver_offer(
+    offer_id: int,
+):
+    """
+    Authenticate the Telegram Mini App driver, accept one
+    canonical pending Ride Offer, create the authoritative
+    HABESHAGO Ride, and bind that same Ride identity to the
+    active Mini App Trip.
+
+    The browser never supplies driver_id directly.
+    """
+
+    trip = get_trip()
+
+    if trip.booking_status != "offer_pending":
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Trip is not waiting for driver "
+                    "acceptance."
+                ),
+            }
+        ), 409
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App driver "
+                    "authentication data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        authenticated_driver = (
+            authenticate_mini_app_driver(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+                require_operational=True,
+            )
+        )
+
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    try:
+        lifecycle_result = (
+            accept_offer_and_bind_trip(
+                trip=trip,
+                offer_id=offer_id,
+                driver_id=(
+                    authenticated_driver.driver_id
+                ),
+            )
+        )
+
+    except (
+        MiniAppRideLifecycleBridgeError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 409
+
+    acceptance = (
+        lifecycle_result.acceptance
+    )
+
+    integration = (
+        lifecycle_result.integration
+    )
+
+    ride_id = acceptance.get(
+        "ride_id"
+    )
+
+    if (
+        ride_id is None
+        or integration.reference.ride_id
+        != ride_id
+    ):
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Accepted Ride identity does not "
+                    "match the Mini App Ride binding."
+                ),
+            }
+        ), 409
+
+    trip.set_booking_status(
+        "driver_assigned"
+    )
+
+    return jsonify(
+        {
+            "success": True,
+            "status": "driver_assigned",
+            "ride_id": ride_id,
+            "offer_id": acceptance.get(
+                "offer_id"
+            ),
+            "offer_reference": acceptance.get(
+                "offer_reference"
+            ),
+            "passenger_id": acceptance.get(
+                "passenger_id"
+            ),
+            "driver_id": acceptance.get(
+                "driver_id"
+            ),
             "trip": {
-                "booking_status": trip.booking_status,
-                "assigned_driver_id": trip.assigned_driver_id,
-                "assigned_driver_name": trip.assigned_driver_name,
-                "assigned_driver_rating": (
-                    trip.assigned_driver_rating
+                "booking_status": (
+                    trip.booking_status
                 ),
-                "assigned_vehicle": trip.assigned_vehicle,
-                "assigned_vehicle_color": (
-                    trip.assigned_vehicle_color
+                "canonical_ride_id": (
+                    trip.canonical_ride_id
                 ),
-                "assigned_plate_number": (
-                    trip.assigned_plate_number
+                "canonical_passenger_id": (
+                    trip.canonical_passenger_id
                 ),
-                "driver_eta_minutes": (
-                    trip.driver_eta_minutes
+                "canonical_driver_id": (
+                    trip.canonical_driver_id
+                ),
+                "assigned_driver_id": (
+                    trip.assigned_driver_id
+                ),
+                "assigned_driver_name": (
+                    trip.assigned_driver_name
                 ),
             },
         }

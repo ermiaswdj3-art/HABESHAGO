@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
 
     <meta name="viewport"
@@ -14,47 +15,63 @@
     <link rel="stylesheet"
           href="{{ url_for('static', filename='styles.css') }}">
 
+    <!--
+        Telegram Mini App SDK
+
+        Provides the signed Telegram WebApp initData
+        required by the HABESHAGO authentication
+        boundary.
+
+        The server remains responsible for validating
+        that signed initData before trusting passenger
+        identity.
+    -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
     {% block head %}{% endblock %}
+
 </head>
 
 <body>
 
-    <div id="app">
+<div id="app">
 
-        <header>
-            <h1>{{ page.layout.header.title }}</h1>
-            <p>{{ page.layout.header.subtitle }}</p>
-        </header>
+    <header>
+        <h1>{{ page.layout.header.title }}</h1>
+        <p>{{ page.layout.header.subtitle }}</p>
+    </header>
 
-        <main>
-            {% block content %}{% endblock %}
-        </main>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
 
-        <footer>
+    <footer>
 
-            <nav>
+        <nav>
 
-                <a href="/"
-                   class="nav-link {% if active_page == 'home' %}nav-link-active{% endif %}">
-                    🏠 Home
-                </a>
+            <a href="/"
+               class="nav-link {% if active_page == 'home' %}nav-link-active{% endif %}">
+                🏠 Home
+            </a>
 
-                <a href="/passenger"
-                   class="nav-link {% if active_page == 'passenger' %}nav-link-active{% endif %}">
-                    🚖 My Trips
-                </a>
+            <a href="/passenger"
+               class="nav-link {% if active_page == 'passenger' %}nav-link-active{% endif %}">
+                🚖 My Trips
+            </a>
 
-                <a href="/driver"
-                   class="nav-link {% if active_page == 'driver' %}nav-link-active{% endif %}">
-                    👤 Profile
-                </a>
+            <a href="/driver"
+               class="nav-link {% if active_page == 'driver' %}nav-link-active{% endif %}">
+                👤 Profile
+            </a>
 
-            </nav>
+        </nav>
 
-        </footer>
+    </footer>
 
-    </div>
-    {% block scripts %}{% endblock %}
+</div>
+
+{% block scripts %}{% endblock %}
+
 </body>
 
 </html>

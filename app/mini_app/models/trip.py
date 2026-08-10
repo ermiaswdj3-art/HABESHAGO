@@ -14,8 +14,14 @@ from typing import Optional
 
 @dataclass
 class Trip:
+    # Canonical shared Ride Platform identity
+    canonical_ride_id: Optional[int] = None
+    canonical_passenger_id: Optional[int] = None
+    canonical_driver_id: Optional[int] = None
     # Destination chosen by the passenger
     destination: Optional[str] = None
+    destination_latitude: Optional[float] = None
+    destination_longitude: Optional[float] = None
 
     # Pickup location name
     pickup_name: Optional[str] = None
@@ -93,12 +99,17 @@ class Trip:
 
     def is_ready_for_planning(self) -> bool:
         """
-        Return True when enough information exists
-        to generate mobility options.
+        Return True when enough canonical location context
+        exists to generate mobility options.
+
+        Both pickup and destination coordinates are required
+        for authoritative ride planning.
         """
 
         return (
             self.destination is not None
+            and self.destination_latitude is not None
+            and self.destination_longitude is not None
             and self.pickup_latitude is not None
             and self.pickup_longitude is not None
         )

@@ -30,9 +30,7 @@ def _build_mini_app_driver(
     """
 
     driver = Driver(
-        driver_id=str(
-            ranked_driver["telegram_id"]
-        ),
+        driver_id=ranked_driver["telegram_id"],
         name=ranked_driver["name"],
         rating=float(
             ranked_driver["rating"]
@@ -46,8 +44,12 @@ def _build_mini_app_driver(
         is_available=True,
     )
 
-    driver.eta_minutes = calculate_eta(
+    driver.pickup_distance_km = float(
         ranked_driver["distance"]
+    )
+
+    driver.eta_minutes = calculate_eta(
+        driver.pickup_distance_km
     )
 
     return driver
