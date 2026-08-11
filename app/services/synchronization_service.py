@@ -270,3 +270,80 @@ def clear_pending_updates() -> None:
     """
 
     _PENDING_UPDATES.clear()
+
+def get_pending_passenger_updates(
+    passenger_id: int,
+) -> list[SynchronizationUpdate]:
+    """
+    Return pending passenger synchronization updates
+    belonging to one canonical HABESHAGO passenger.
+
+    The shared passenger queue remains unchanged.
+
+    This helper only exposes updates whose canonical
+    event payload identifies the requested passenger.
+    """
+
+    if (
+        not isinstance(passenger_id, int)
+        or isinstance(passenger_id, bool)
+        or passenger_id <= 0
+    ):
+        raise ValueError(
+            "passenger_id must be a positive integer."
+        )
+
+    passenger_updates = get_pending_updates(
+        SynchronizationTarget.PASSENGER
+    )
+
+    return [
+        update
+        for update in passenger_updates
+        if update.payload.get("passenger_id")
+        == passenger_id
+    ]
+
+
+def pop_pending_passenger_updates(
+    passenger_id: int,
+) -> list[SynchronizationUpdate]:
+    """
+    Return and remove pending passenger synchronization
+    updates belonging to one canonical passenger.
+
+    Updates belonging to other passengers remain queued.
+    """
+
+    if (
+        not isinstance(passenger_id, int)
+        or isinstance(passenger_id, bool)
+        or passenger_id <= 0
+    ):
+        raise ValueError(
+            "passenger_id must be a positive integer."
+        )
+
+    passenger_queue = _PENDING_UPDATES[
+        SynchronizationTarget.PASSENGER
+    ]
+
+    matched_updates = []
+    retained_updates = deque()
+
+    while passenger_queue:
+        update = passenger_queue.popleft()
+
+        if (
+            update.payload.get("passenger_id")
+            == passenger_id
+        ):
+            matched_updates.append(update)
+        else:
+            retained_updates.append(update)
+
+    passenger_queue.extend(
+        retained_updates
+    )
+
+    return matched_updates

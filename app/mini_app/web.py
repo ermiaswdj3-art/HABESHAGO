@@ -115,6 +115,10 @@ from app.services.ride_offer_service import (
     reject_driver_ride_offer,
 )
 
+from app.services.synchronization_service import (
+    get_pending_passenger_updates,
+)
+
 import json
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -2046,6 +2050,92 @@ def finalize_trip_fare():
             "message": "Final fare calculated successfully.",
             "fare": fare_result,
             "payment_status": trip.payment_status,
+        }
+    )
+
+@app.route(
+    "/api/passenger/synchronization/updates",
+    methods=["GET"],
+)
+def get_authenticated_passenger_synchronization_updates():
+    """
+    Return pending synchronization updates belonging
+    to the authenticated Telegram Mini App passenger.
+
+    Retrieval is non-destructive.
+
+    The browser never supplies passenger_id directly.
+    """
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App authentication "
+                    "data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        passenger = (
+            authenticate_mini_app_passenger(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    try:
+        pending_updates = (
+            get_pending_passenger_updates(
+                passenger.passenger_id
+            )
+        )
+    except ValueError as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 409
+
+    updates = [
+        {
+            "update_id": update.update_id,
+            "event_id": update.event_id,
+            "event_type": update.event_type,
+            "entity": update.entity,
+            "entity_id": update.entity_id,
+            "targets": list(update.targets),
+            "payload": dict(update.payload),
+            "source": update.source,
+            "version": update.version,
+            "created_at": (
+                update.created_at.isoformat()
+            ),
+        }
+        for update in pending_updates
+    ]
+
+    return jsonify(
+        {
+            "success": True,
+            "passenger_id": passenger.passenger_id,
+            "count": len(updates),
+            "updates": updates,
         }
     )
 
