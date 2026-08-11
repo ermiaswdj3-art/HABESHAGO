@@ -111,6 +111,11 @@ from app.mini_app.services.passenger_synchronization_recovery_service import (
     recover_passenger_synchronization,
 )
 
+from app.mini_app.services.passenger_synchronization_resume_service import (
+    MiniAppPassengerSynchronizationResumeError,
+    resume_passenger_synchronization,
+)
+
 from app.mini_app.services.dispatch_service import (
     find_best_driver,
 )
@@ -2405,6 +2410,164 @@ def recover_authenticated_passenger_synchronization():
                     len(pending_updates)
                 ),
                 "pending_updates": pending_updates,
+            },
+        }
+    )
+
+@app.route(
+    "/api/passenger/synchronization/resume",
+    methods=["POST"],
+)
+def resume_authenticated_passenger_synchronization():
+    """
+    Resume the authenticated passenger's Mini App
+    synchronization state from the trusted server-side
+    synchronization cursor.
+
+    Passenger identity comes only from authenticated
+    Telegram Mini App init data.
+
+    Resume reconciles Mini App presentation with the
+    authoritative canonical Ride lifecycle and returns
+    pending synchronization updates occurring strictly
+    after the passenger's last acknowledged sequence.
+
+    Resume is non-destructive.
+
+    It never acknowledges updates, never advances the
+    synchronization cursor, and never transitions
+    canonical Ride state.
+    """
+
+    trip = get_trip()
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App authentication "
+                    "data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        passenger = (
+            authenticate_mini_app_passenger(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    try:
+        resume_result = (
+            resume_passenger_synchronization(
+                trip=trip,
+                passenger_id=(
+                    passenger.passenger_id
+                ),
+            )
+        )
+    except (
+        MiniAppPassengerSynchronizationResumeError
+    ) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 409
+
+    pending_updates = [
+        {
+            "update_id": update.update_id,
+            "event_id": update.event_id,
+            "event_type": update.event_type,
+            "entity": update.entity,
+            "entity_id": update.entity_id,
+            "targets": list(update.targets),
+            "payload": dict(update.payload),
+            "source": update.source,
+            "version": update.version,
+            "sequence": update.sequence,
+            "created_at": (
+                update.created_at.isoformat()
+            ),
+        }
+        for update in resume_result.pending_updates
+    ]
+
+    return jsonify(
+        {
+            "success": True,
+            "message": (
+                "Passenger synchronization resumed "
+                "successfully."
+            ),
+            "resume": {
+                "passenger_id": (
+                    resume_result.passenger_id
+                ),
+                "canonical_ride_id": (
+                    resume_result.ride_id
+                ),
+                "canonical_driver_id": (
+                    resume_result.driver_id
+                ),
+                "canonical_state": (
+                    resume_result.canonical_state
+                ),
+                "previous_booking_status": (
+                    resume_result
+                    .previous_presentation_status
+                ),
+                "booking_status": (
+                    resume_result.presentation_status
+                ),
+                "synchronized": (
+                    resume_result.synchronized
+                ),
+                "cursor": {
+                    "last_acknowledged_sequence": (
+                        resume_result
+                        .last_acknowledged_sequence
+                    ),
+                    "updated_at": (
+                        resume_result
+                        .cursor
+                        .updated_at
+                        .isoformat()
+                    ),
+                },
+                "replay_from_sequence": (
+                    resume_result.replay_from_sequence
+                ),
+                "latest_available_sequence": (
+                    resume_result
+                    .latest_available_sequence
+                ),
+                "caught_up": (
+                    resume_result.caught_up
+                ),
+                "pending_update_count": (
+                    resume_result.pending_update_count
+                ),
+                "pending_updates": (
+                    pending_updates
+                ),
             },
         }
     )
