@@ -123,6 +123,7 @@ from app.services.ride_offer_service import (
 from app.services.synchronization_service import (
     acknowledge_pending_passenger_update,
     get_pending_passenger_updates,
+    get_pending_passenger_updates_after_sequence,
 )
 
 import json
@@ -2129,6 +2130,7 @@ def get_authenticated_passenger_synchronization_updates():
             "payload": dict(update.payload),
             "source": update.source,
             "version": update.version,
+            "sequence": update.sequence,
             "created_at": (
                 update.created_at.isoformat()
             ),
@@ -2377,6 +2379,117 @@ def recover_authenticated_passenger_synchronization():
                 ),
                 "pending_updates": pending_updates,
             },
+        }
+    )
+
+@app.route(
+    "/api/passenger/synchronization/replay",
+    methods=["GET"],
+)
+def get_authenticated_passenger_synchronization_replay():
+    """
+    Return pending synchronization updates occurring
+    strictly after one synchronization sequence for the
+    authenticated Telegram Mini App passenger.
+
+    Passenger identity comes only from Telegram
+    authentication.
+
+    Replay is non-destructive.
+    """
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App authentication "
+                    "data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        passenger = (
+            authenticate_mini_app_passenger(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    after_sequence_raw = request.args.get(
+        "after_sequence",
+        "0",
+    )
+
+    try:
+        after_sequence = int(
+            after_sequence_raw
+        )
+    except (TypeError, ValueError):
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "after_sequence must be a "
+                    "non-negative integer."
+                ),
+            }
+        ), 400
+
+    try:
+        replay_updates = (
+            get_pending_passenger_updates_after_sequence(
+                passenger_id=passenger.passenger_id,
+                after_sequence=after_sequence,
+            )
+        )
+    except ValueError as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 400
+
+    updates = [
+        {
+            "update_id": update.update_id,
+            "event_id": update.event_id,
+            "event_type": update.event_type,
+            "entity": update.entity,
+            "entity_id": update.entity_id,
+            "targets": list(update.targets),
+            "payload": dict(update.payload),
+            "source": update.source,
+            "version": update.version,
+            "sequence": update.sequence,
+            "created_at": (
+                update.created_at.isoformat()
+            ),
+        }
+        for update in replay_updates
+    ]
+
+    return jsonify(
+        {
+            "success": True,
+            "passenger_id": passenger.passenger_id,
+            "after_sequence": after_sequence,
+            "count": len(updates),
+            "updates": updates,
         }
     )
 
