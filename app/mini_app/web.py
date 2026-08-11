@@ -106,6 +106,11 @@ from app.mini_app.services.ride_state_synchronization_service import (
     synchronize_trip_with_canonical_ride,
 )
 
+from app.mini_app.services.passenger_synchronization_recovery_service import (
+    MiniAppPassengerSynchronizationRecoveryError,
+    recover_passenger_synchronization,
+)
+
 from app.mini_app.services.dispatch_service import (
     find_best_driver,
 )
@@ -2246,6 +2251,131 @@ def acknowledge_authenticated_passenger_synchronization_update(
                 "version": (
                     acknowledged_update.version
                 ),
+            },
+        }
+    )
+
+@app.route(
+    "/api/passenger/synchronization/recover",
+    methods=["POST"],
+)
+def recover_authenticated_passenger_synchronization():
+    """
+    Recover the authenticated passenger's Mini App
+    synchronization state.
+
+    Recovery reconciles the Mini App Trip with the
+    authoritative canonical Ride lifecycle and returns
+    still-pending passenger synchronization updates.
+
+    Passenger identity comes only from authenticated
+    Telegram Mini App init data.
+
+    Recovery never acknowledges pending updates.
+    """
+
+    trip = get_trip()
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App authentication "
+                    "data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        passenger = (
+            authenticate_mini_app_passenger(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    try:
+        recovery_result = (
+            recover_passenger_synchronization(
+                trip=trip,
+                passenger_id=passenger.passenger_id,
+            )
+        )
+    except (
+        MiniAppPassengerSynchronizationRecoveryError
+    ) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 409
+
+    pending_updates = [
+        {
+            "update_id": update.update_id,
+            "event_id": update.event_id,
+            "event_type": update.event_type,
+            "entity": update.entity,
+            "entity_id": update.entity_id,
+            "targets": list(update.targets),
+            "payload": dict(update.payload),
+            "source": update.source,
+            "version": update.version,
+            "created_at": (
+                update.created_at.isoformat()
+            ),
+        }
+        for update in recovery_result.pending_updates
+    ]
+
+    return jsonify(
+        {
+            "success": True,
+            "message": (
+                "Passenger synchronization recovery "
+                "completed successfully."
+            ),
+            "recovery": {
+                "passenger_id": (
+                    recovery_result.passenger_id
+                ),
+                "canonical_ride_id": (
+                    recovery_result.ride_id
+                ),
+                "canonical_driver_id": (
+                    recovery_result.driver_id
+                ),
+                "canonical_state": (
+                    recovery_result.canonical_state
+                ),
+                "previous_booking_status": (
+                    recovery_result
+                    .previous_presentation_status
+                ),
+                "booking_status": (
+                    recovery_result.presentation_status
+                ),
+                "synchronized": (
+                    recovery_result.synchronized
+                ),
+                "pending_update_count": (
+                    len(pending_updates)
+                ),
+                "pending_updates": pending_updates,
             },
         }
     )
