@@ -39,6 +39,10 @@ from app.models.synchronization_update import (
     SynchronizationUpdate,
 )
 
+from app.models.passenger_synchronization_cursor import (
+    PassengerSynchronizationCursor,
+)
+
 from app.services.synchronization_engine import (
     build_synchronization_update,
 )
@@ -51,6 +55,10 @@ _PENDING_UPDATES: dict[
 
 _SYNCHRONIZATION_SEQUENCE = 0
 
+_PASSENGER_SYNCHRONIZATION_CURSORS: dict[
+    int,
+    PassengerSynchronizationCursor,
+] = {}
 
 def _next_synchronization_sequence() -> int:
     """
@@ -288,6 +296,105 @@ def clear_pending_updates() -> None:
     """
 
     _PENDING_UPDATES.clear()
+
+def get_passenger_synchronization_cursor(
+    passenger_id: int,
+) -> PassengerSynchronizationCursor:
+    """
+    Return the synchronization cursor belonging to one
+    canonical HABESHAGO passenger.
+
+    A passenger without recorded progress begins at
+    synchronization sequence zero.
+    """
+
+    if (
+        not isinstance(passenger_id, int)
+        or isinstance(passenger_id, bool)
+        or passenger_id <= 0
+    ):
+        raise ValueError(
+            "passenger_id must be a positive integer."
+        )
+
+    cursor = _PASSENGER_SYNCHRONIZATION_CURSORS.get(
+        passenger_id
+    )
+
+    if cursor is None:
+        cursor = PassengerSynchronizationCursor(
+            passenger_id=passenger_id,
+            last_sequence=0,
+        )
+
+        _PASSENGER_SYNCHRONIZATION_CURSORS[
+            passenger_id
+        ] = cursor
+
+    return cursor
+
+
+def advance_passenger_synchronization_cursor(
+    *,
+    passenger_id: int,
+    sequence: int,
+) -> PassengerSynchronizationCursor:
+    """
+    Advance one canonical passenger's synchronization
+    cursor to a processed sequence.
+
+    Cursor movement is monotonic.
+
+    Repeating the current sequence is idempotent.
+
+    The cursor may never move backward.
+    """
+
+    if (
+        not isinstance(passenger_id, int)
+        or isinstance(passenger_id, bool)
+        or passenger_id <= 0
+    ):
+        raise ValueError(
+            "passenger_id must be a positive integer."
+        )
+
+    if (
+        not isinstance(sequence, int)
+        or isinstance(sequence, bool)
+        or sequence < 0
+    ):
+        raise ValueError(
+            "sequence must be a non-negative integer."
+        )
+
+    current_cursor = (
+        get_passenger_synchronization_cursor(
+            passenger_id
+        )
+    )
+
+    if sequence < current_cursor.last_sequence:
+        raise ValueError(
+            (
+                "Passenger synchronization cursor "
+                "cannot move backward."
+            )
+        )
+
+    if sequence == current_cursor.last_sequence:
+        return current_cursor
+
+    cursor = PassengerSynchronizationCursor(
+        passenger_id=passenger_id,
+        last_sequence=sequence,
+    )
+
+    _PASSENGER_SYNCHRONIZATION_CURSORS[
+        passenger_id
+    ] = cursor
+
+    return cursor
 
 def get_pending_passenger_updates(
     passenger_id: int,
