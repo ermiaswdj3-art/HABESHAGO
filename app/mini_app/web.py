@@ -116,6 +116,7 @@ from app.services.ride_offer_service import (
 )
 
 from app.services.synchronization_service import (
+    acknowledge_pending_passenger_update,
     get_pending_passenger_updates,
 )
 
@@ -2136,6 +2137,116 @@ def get_authenticated_passenger_synchronization_updates():
             "passenger_id": passenger.passenger_id,
             "count": len(updates),
             "updates": updates,
+        }
+    )
+
+@app.route(
+    "/api/passenger/synchronization/updates/<update_id>/acknowledge",
+    methods=["POST"],
+)
+def acknowledge_authenticated_passenger_synchronization_update(
+    update_id,
+):
+    """
+    Acknowledge one synchronization update belonging
+    to the authenticated Telegram Mini App passenger.
+
+    Authentication determines passenger identity.
+
+    The browser supplies only the synchronization
+    update ID. It cannot choose passenger_id.
+
+    A successful acknowledgement removes exactly one
+    matching update from that passenger's pending
+    synchronization queue.
+    """
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App authentication "
+                    "data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        passenger = (
+            authenticate_mini_app_passenger(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    try:
+        acknowledged_update = (
+            acknowledge_pending_passenger_update(
+                passenger_id=passenger.passenger_id,
+                update_id=update_id,
+            )
+        )
+    except ValueError as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 400
+
+    if acknowledged_update is None:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Pending synchronization update "
+                    "not found for authenticated "
+                    "passenger."
+                ),
+            }
+        ), 404
+
+    return jsonify(
+        {
+            "success": True,
+            "message": (
+                "Passenger synchronization update "
+                "acknowledged successfully."
+            ),
+            "passenger_id": passenger.passenger_id,
+            "update": {
+                "update_id": (
+                    acknowledged_update.update_id
+                ),
+                "event_id": (
+                    acknowledged_update.event_id
+                ),
+                "event_type": (
+                    acknowledged_update.event_type
+                ),
+                "entity": (
+                    acknowledged_update.entity
+                ),
+                "entity_id": (
+                    acknowledged_update.entity_id
+                ),
+                "version": (
+                    acknowledged_update.version
+                ),
+            },
         }
     )
 

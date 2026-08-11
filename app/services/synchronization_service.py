@@ -347,3 +347,76 @@ def pop_pending_passenger_updates(
     )
 
     return matched_updates
+
+def acknowledge_pending_passenger_update(
+    *,
+    passenger_id: int,
+    update_id: str,
+) -> SynchronizationUpdate | None:
+    """
+    Acknowledge and remove one pending synchronization
+    update belonging to one canonical passenger.
+
+    Only the exact update identified by update_id is
+    removed.
+
+    Updates belonging to other passengers and other
+    updates belonging to the same passenger remain queued.
+    """
+
+    if (
+        not isinstance(passenger_id, int)
+        or isinstance(passenger_id, bool)
+        or passenger_id <= 0
+    ):
+        raise ValueError(
+            "passenger_id must be a positive integer."
+        )
+
+    if (
+        not isinstance(update_id, str)
+        or not update_id.strip()
+    ):
+        raise ValueError(
+            "update_id must be a non-empty string."
+        )
+
+    clean_update_id = update_id.strip()
+
+    passenger_queue = _PENDING_UPDATES[
+        SynchronizationTarget.PASSENGER
+    ]
+
+    acknowledged_update = None
+    retained_updates = deque()
+
+    while passenger_queue:
+        update = passenger_queue.popleft()
+
+        belongs_to_passenger = (
+            update.payload.get("passenger_id")
+            == passenger_id
+        )
+
+        matches_update = (
+            update.update_id
+            == clean_update_id
+        )
+
+        if (
+            acknowledged_update is None
+            and belongs_to_passenger
+            and matches_update
+        ):
+            acknowledged_update = update
+            continue
+
+        retained_updates.append(
+            update
+        )
+
+    passenger_queue.extend(
+        retained_updates
+    )
+
+    return acknowledged_update
