@@ -49,6 +49,23 @@ _PENDING_UPDATES: dict[
     deque[SynchronizationUpdate],
 ] = defaultdict(deque)
 
+_SYNCHRONIZATION_SEQUENCE = 0
+
+
+def _next_synchronization_sequence() -> int:
+    """
+    Return the next process-local synchronization
+    delivery sequence.
+
+    Sequence values are strictly increasing within
+    the running synchronization service process.
+    """
+
+    global _SYNCHRONIZATION_SEQUENCE
+
+    _SYNCHRONIZATION_SEQUENCE += 1
+
+    return _SYNCHRONIZATION_SEQUENCE
 
 PAYMENT_EVENT_TYPES = {
     EventType.PAYMENT_TRANSACTION_CREATED,
@@ -212,6 +229,7 @@ def synchronize_event(
             ),
             source=update.source,
             version=update.version,
+            sequence=_next_synchronization_sequence(),
         )
 
         _PENDING_UPDATES[
@@ -304,6 +322,56 @@ def get_pending_passenger_updates(
         == passenger_id
     ]
 
+def get_pending_passenger_updates_after_sequence(
+    *,
+    passenger_id: int,
+    after_sequence: int,
+) -> list[SynchronizationUpdate]:
+    """
+    Return pending passenger synchronization updates
+    occurring strictly after one synchronization sequence.
+
+    The read is non-destructive.
+
+    Only updates belonging to the requested canonical
+    passenger are returned.
+
+    after_sequence=0 returns every currently pending
+    update belonging to that passenger.
+    """
+
+    if (
+        not isinstance(passenger_id, int)
+        or isinstance(passenger_id, bool)
+        or passenger_id <= 0
+    ):
+        raise ValueError(
+            "passenger_id must be a positive integer."
+        )
+
+    if (
+        not isinstance(after_sequence, int)
+        or isinstance(after_sequence, bool)
+        or after_sequence < 0
+    ):
+        raise ValueError(
+            (
+                "after_sequence must be a "
+                "non-negative integer."
+            )
+        )
+
+    passenger_updates = (
+        get_pending_passenger_updates(
+            passenger_id
+        )
+    )
+
+    return [
+        update
+        for update in passenger_updates
+        if update.sequence > after_sequence
+    ]
 
 def pop_pending_passenger_updates(
     passenger_id: int,

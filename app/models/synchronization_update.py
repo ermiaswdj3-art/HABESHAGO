@@ -36,4 +36,6 @@ class SynchronizationUpdate:
 
     version: int = 1
 
+    sequence: int = 0
+
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
