@@ -121,7 +121,7 @@ from app.services.ride_offer_service import (
 )
 
 from app.services.synchronization_service import (
-    acknowledge_pending_passenger_update,
+    acknowledge_pending_passenger_update_in_order,
     get_pending_passenger_updates,
     get_pending_passenger_updates_after_sequence,
 )
@@ -2163,9 +2163,13 @@ def acknowledge_authenticated_passenger_synchronization_update(
     The browser supplies only the synchronization
     update ID. It cannot choose passenger_id.
 
+    Passenger synchronization updates must be
+    acknowledged in delivery order.
+
     A successful acknowledgement removes exactly one
-    matching update from that passenger's pending
-    synchronization queue.
+    matching update and advances the authenticated
+    passenger's synchronization cursor to that
+    update's sequence.
     """
 
     init_data = request.headers.get(
@@ -2200,8 +2204,8 @@ def acknowledge_authenticated_passenger_synchronization_update(
         ), 401
 
     try:
-        acknowledged_update = (
-            acknowledge_pending_passenger_update(
+        acknowledgement_result = (
+            acknowledge_pending_passenger_update_in_order(
                 passenger_id=passenger.passenger_id,
                 update_id=update_id,
             )
@@ -2212,9 +2216,9 @@ def acknowledge_authenticated_passenger_synchronization_update(
                 "success": False,
                 "error": str(exc),
             }
-        ), 400
+        ), 409
 
-    if acknowledged_update is None:
+    if acknowledgement_result is None:
         return jsonify(
             {
                 "success": False,
@@ -2226,6 +2230,11 @@ def acknowledge_authenticated_passenger_synchronization_update(
             }
         ), 404
 
+    (
+        acknowledged_update,
+        synchronization_cursor,
+    ) = acknowledgement_result
+
     return jsonify(
         {
             "success": True,
@@ -2233,7 +2242,9 @@ def acknowledge_authenticated_passenger_synchronization_update(
                 "Passenger synchronization update "
                 "acknowledged successfully."
             ),
-            "passenger_id": passenger.passenger_id,
+            "passenger_id": (
+                passenger.passenger_id
+            ),
             "update": {
                 "update_id": (
                     acknowledged_update.update_id
@@ -2252,6 +2263,22 @@ def acknowledge_authenticated_passenger_synchronization_update(
                 ),
                 "version": (
                     acknowledged_update.version
+                ),
+                "sequence": (
+                    acknowledged_update.sequence
+                ),
+            },
+            "cursor": {
+                "passenger_id": (
+                    synchronization_cursor.passenger_id
+                ),
+                "last_sequence": (
+                    synchronization_cursor.last_sequence
+                ),
+                "updated_at": (
+                    synchronization_cursor
+                    .updated_at
+                    .isoformat()
                 ),
             },
         }

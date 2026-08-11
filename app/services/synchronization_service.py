@@ -595,3 +595,135 @@ def acknowledge_pending_passenger_update(
     )
 
     return acknowledged_update
+
+def acknowledge_pending_passenger_update_in_order(
+    *,
+    passenger_id: int,
+    update_id: str,
+) -> tuple[
+    SynchronizationUpdate,
+    PassengerSynchronizationCursor,
+] | None:
+    """
+    Acknowledge the next eligible synchronization update
+    belonging to one canonical passenger and advance that
+    passenger's trusted synchronization cursor.
+
+    Acknowledgement is ordered.
+
+    A passenger may acknowledge only the earliest pending
+    synchronization update belonging to that passenger.
+
+    All validation occurs before queue or cursor mutation.
+    """
+
+    if (
+        not isinstance(passenger_id, int)
+        or isinstance(passenger_id, bool)
+        or passenger_id <= 0
+    ):
+        raise ValueError(
+            "passenger_id must be a positive integer."
+        )
+
+    if (
+        not isinstance(update_id, str)
+        or not update_id.strip()
+    ):
+        raise ValueError(
+            "update_id must be a non-empty string."
+        )
+
+    clean_update_id = update_id.strip()
+
+    passenger_queue = _PENDING_UPDATES[
+        SynchronizationTarget.PASSENGER
+    ]
+
+    earliest_passenger_update = None
+    matching_update = None
+
+    for update in passenger_queue:
+        if (
+            update.payload.get("passenger_id")
+            != passenger_id
+        ):
+            continue
+
+        if earliest_passenger_update is None:
+            earliest_passenger_update = update
+
+        if update.update_id == clean_update_id:
+            matching_update = update
+
+    if matching_update is None:
+        return None
+
+    if (
+        earliest_passenger_update is None
+        or earliest_passenger_update.update_id
+        != matching_update.update_id
+    ):
+        raise ValueError(
+            (
+                "Passenger synchronization updates "
+                "must be acknowledged in order."
+            )
+        )
+
+    current_cursor = (
+        get_passenger_synchronization_cursor(
+            passenger_id
+        )
+    )
+
+    if (
+        matching_update.sequence
+        < current_cursor.last_sequence
+    ):
+        raise ValueError(
+            (
+                "Passenger synchronization cursor "
+                "cannot move backward."
+            )
+        )
+
+    if (
+        matching_update.sequence
+        == current_cursor.last_sequence
+    ):
+        next_cursor = current_cursor
+    else:
+        next_cursor = PassengerSynchronizationCursor(
+            passenger_id=passenger_id,
+            last_sequence=matching_update.sequence,
+        )
+
+    retained_updates = deque()
+    removed = False
+
+    for update in passenger_queue:
+        if (
+            not removed
+            and update is matching_update
+        ):
+            removed = True
+            continue
+
+        retained_updates.append(
+            update
+        )
+
+    passenger_queue.clear()
+    passenger_queue.extend(
+        retained_updates
+    )
+
+    _PASSENGER_SYNCHRONIZATION_CURSORS[
+        passenger_id
+    ] = next_cursor
+
+    return (
+        matching_update,
+        next_cursor,
+    )
