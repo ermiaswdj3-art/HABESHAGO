@@ -15,9 +15,19 @@ from app.mini_app.models import Trip
 
 def start_trip(
     trip: Trip,
+    *,
+    project_lifecycle_state: bool = True,
 ) -> Trip:
     """
-    Start a securely verified trip.
+    Initialize Mini App trip-start presentation metadata.
+
+    Legacy callers may continue projecting the Mini App
+    lifecycle state directly.
+
+    Canonical Ride Platform callers may disable local
+    lifecycle projection so the authoritative Ride
+    transition occurs before the Mini App presentation
+    state advances.
     """
 
     if not trip.is_ready_to_start_trip():
@@ -32,8 +42,13 @@ def start_trip(
     trip.trip_progress_percent = 0
     trip.destination_reached = False
 
-    trip.set_booking_status("trip_started")
-    trip.set_booking_status("trip_in_progress")
+    if project_lifecycle_state:
+        trip.set_booking_status(
+            "trip_started"
+        )
+        trip.set_booking_status(
+            "trip_in_progress"
+        )
 
     return trip
 
@@ -85,9 +100,19 @@ def advance_trip_progress(
 
 def complete_trip(
     trip: Trip,
+    *,
+    project_lifecycle_state: bool = True,
 ) -> Trip:
     """
     Complete a trip after reaching the destination.
+
+    Legacy callers may continue projecting the Mini App
+    lifecycle state directly.
+
+    Canonical Ride Platform callers may prepare completion
+    metadata without independently claiming that the Ride
+    has completed. The authoritative Ride transition must
+    succeed before presentation state is projected.
     """
 
     if (
@@ -107,6 +132,9 @@ def complete_trip(
     trip.trip_progress_percent = 100
     trip.destination_reached = True
 
-    trip.set_booking_status("trip_completed")
+    if project_lifecycle_state:
+        trip.set_booking_status(
+            "trip_completed"
+        )
 
     return trip

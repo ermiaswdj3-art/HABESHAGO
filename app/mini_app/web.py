@@ -92,6 +92,15 @@ from app.mini_app.services.trip_lifecycle_service import (
     start_trip,
 )
 
+from app.mini_app.services.ride_lifecycle_integration_service import (
+    MiniAppCanonicalRideLifecycleError,
+    mark_driver_en_route,
+    mark_driver_arrived,
+    mark_passenger_on_board,
+    mark_trip_started,
+    mark_trip_completed,
+)
+
 from app.mini_app.services.dispatch_service import (
     find_best_driver,
 )
@@ -1361,7 +1370,11 @@ def accept_driver_offer(
 def update_driver_tracking():
     """
     Move the assigned driver toward the passenger pickup
-    and return the latest tracking state.
+    while routing Ride lifecycle changes through the
+    authoritative HABESHAGO Ride Platform.
+
+    Repeated tracking updates do not repeat an already
+    applied canonical DRIVER_EN_ROUTE transition.
     """
 
     trip = get_trip()
@@ -1398,9 +1411,15 @@ def update_driver_tracking():
         return jsonify(
             {
                 "success": False,
-                "message": "The assigned driver record was not found.",
+                "message": (
+                    "The assigned driver record was not found."
+                ),
             }
         ), 404
+
+    previous_booking_status = (
+        trip.booking_status
+    )
 
     move_driver_toward_pickup(
         driver=driver,
@@ -1408,26 +1427,79 @@ def update_driver_tracking():
         progress_ratio=0.25,
     )
 
-    remaining_distance_km = calculate_tracking_distance_km(
-        driver.latitude,
-        driver.longitude,
-        trip.pickup_latitude,
-        trip.pickup_longitude,
+    remaining_distance_km = (
+        calculate_tracking_distance_km(
+            driver.latitude,
+            driver.longitude,
+            trip.pickup_latitude,
+            trip.pickup_longitude,
+        )
     )
 
     arrival_threshold_km = 0.02
 
-    if remaining_distance_km <= arrival_threshold_km:
-        driver.latitude = trip.pickup_latitude
-        driver.longitude = trip.pickup_longitude
+    lifecycle_result = None
+
+    if (
+        remaining_distance_km
+        <= arrival_threshold_km
+    ):
+        try:
+            lifecycle_result = (
+                mark_driver_arrived(
+                    trip=trip,
+                )
+            )
+        except (
+            MiniAppCanonicalRideLifecycleError
+        ) as error:
+            return jsonify(
+                {
+                    "success": False,
+                    "message": str(error),
+                }
+            ), 409
+
+        driver.latitude = (
+            trip.pickup_latitude
+        )
+        driver.longitude = (
+            trip.pickup_longitude
+        )
         driver.eta_minutes = 0
-        driver.set_driver_status("waiting")
+
+        driver.set_driver_status(
+            "waiting"
+        )
 
         trip.driver_eta_minutes = 0
-        trip.set_booking_status("driver_arrived")
+
     else:
-        trip.driver_eta_minutes = driver.eta_minutes
-        trip.set_booking_status("driver_arriving")
+        trip.driver_eta_minutes = (
+            driver.eta_minutes
+        )
+
+        # Only the first movement after assignment
+        # advances the authoritative Ride lifecycle.
+        if (
+            previous_booking_status
+            == "driver_assigned"
+        ):
+            try:
+                lifecycle_result = (
+                    mark_driver_en_route(
+                        trip=trip,
+                    )
+                )
+            except (
+                MiniAppCanonicalRideLifecycleError
+            ) as error:
+                return jsonify(
+                    {
+                        "success": False,
+                        "message": str(error),
+                    }
+                ), 409
 
     return jsonify(
         {
@@ -1442,11 +1514,28 @@ def update_driver_tracking():
                     remaining_distance_km,
                     3,
                 ),
-                "eta_minutes": driver.eta_minutes,
-                "driver_status": driver.driver_status,
-                "booking_status": trip.booking_status,
+                "eta_minutes": (
+                    driver.eta_minutes
+                ),
+                "driver_status": (
+                    driver.driver_status
+                ),
+                "booking_status": (
+                    trip.booking_status
+                ),
                 "has_arrived": (
-                    trip.booking_status == "driver_arrived"
+                    trip.booking_status
+                    == "driver_arrived"
+                ),
+                "canonical_transition_applied": (
+                    lifecycle_result
+                    is not None
+                ),
+                "canonical_state": (
+                    lifecycle_result.canonical_state
+                    if lifecycle_result
+                    is not None
+                    else None
                 ),
             },
         }
@@ -1508,7 +1597,8 @@ def start_pickup_verification():
 )
 def verify_trip_pickup():
     """
-    Verify the pickup PIN before the ride begins.
+    Verify the pickup PIN and transition the
+    authoritative Ride into passenger-on-board state.
     """
 
     payload = request.get_json(silent=True) or {}
@@ -1525,10 +1615,13 @@ def verify_trip_pickup():
             }
         ), 400
 
+    trip = get_trip()
+
     try:
         is_verified = verify_pickup_pin(
-            trip=get_trip(),
+            trip=trip,
             submitted_pin=submitted_pin,
+            project_ready_state=False,
         )
     except ValueError as error:
         return jsonify(
@@ -1538,15 +1631,15 @@ def verify_trip_pickup():
             }
         ), 409
 
-    trip = get_trip()
-
     if not is_verified:
         return jsonify(
             {
                 "success": False,
                 "message": "Incorrect pickup PIN.",
                 "verification": {
-                    "booking_status": trip.booking_status,
+                    "booking_status": (
+                        trip.booking_status
+                    ),
                     "pickup_verification_attempts": (
                         trip.pickup_verification_attempts
                     ),
@@ -1554,14 +1647,40 @@ def verify_trip_pickup():
             }
         ), 401
 
+    try:
+        lifecycle_result = (
+            mark_passenger_on_board(
+                trip=trip,
+            )
+        )
+    except MiniAppCanonicalRideLifecycleError as error:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(error),
+                "verification": {
+                    "booking_status": (
+                        trip.booking_status
+                    ),
+                    "pickup_pin_verified": (
+                        trip.pickup_pin_verified
+                    ),
+                    "canonical_transition": False,
+                },
+            }
+        ), 409
+
     return jsonify(
         {
             "success": True,
             "message": (
-                "Passenger verified. The trip is ready to start."
+                "Passenger verified. "
+                "The trip is ready to start."
             ),
             "verification": {
-                "booking_status": trip.booking_status,
+                "booking_status": (
+                    trip.booking_status
+                ),
                 "pickup_pin_verified": (
                     trip.pickup_pin_verified
                 ),
@@ -1571,6 +1690,15 @@ def verify_trip_pickup():
                 "pickup_verification_attempts": (
                     trip.pickup_verification_attempts
                 ),
+                "canonical_ride_id": (
+                    lifecycle_result.ride_id
+                ),
+                "canonical_driver_id": (
+                    lifecycle_result.driver_id
+                ),
+                "canonical_state": (
+                    lifecycle_result.canonical_state
+                ),
             },
         }
     )
@@ -1578,14 +1706,30 @@ def verify_trip_pickup():
 @app.route("/api/trip/start", methods=["POST"])
 def start_active_trip():
     """
-    Start the active trip after pickup verification.
+    Start the active trip through the authoritative
+    HABESHAGO Ride lifecycle.
     """
 
     trip = get_trip()
 
     try:
-        start_trip(trip)
+        start_trip(
+            trip,
+            project_lifecycle_state=False,
+        )
     except ValueError as error:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(error),
+            }
+        ), 409
+
+    try:
+        lifecycle_result = mark_trip_started(
+            trip=trip,
+        )
+    except MiniAppCanonicalRideLifecycleError as error:
         return jsonify(
             {
                 "success": False,
@@ -1598,13 +1742,26 @@ def start_active_trip():
             "success": True,
             "message": "Trip started successfully.",
             "trip": {
-                "booking_status": trip.booking_status,
-                "trip_started_at": trip.trip_started_at,
+                "booking_status": (
+                    trip.booking_status
+                ),
+                "trip_started_at": (
+                    trip.trip_started_at
+                ),
                 "trip_progress_percent": (
                     trip.trip_progress_percent
                 ),
                 "destination_reached": (
                     trip.destination_reached
+                ),
+                "canonical_ride_id": (
+                    lifecycle_result.ride_id
+                ),
+                "canonical_driver_id": (
+                    lifecycle_result.driver_id
+                ),
+                "canonical_state": (
+                    lifecycle_result.canonical_state
                 ),
             },
         }
@@ -1672,15 +1829,37 @@ def update_trip_progress():
 )
 def complete_active_trip():
     """
-    Complete the active trip after reaching
-    the destination.
+    Complete the active trip through the authoritative
+    HABESHAGO Ride lifecycle.
+
+    The Mini App prepares completion metadata first, but
+    it does not independently claim that the Ride has
+    completed. The canonical Ride transition must succeed
+    before the Mini App projects trip_completed.
     """
 
     trip = get_trip()
 
     try:
-        complete_trip(trip)
+        complete_trip(
+            trip,
+            project_lifecycle_state=False,
+        )
     except ValueError as error:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(error),
+            }
+        ), 409
+
+    try:
+        lifecycle_result = (
+            mark_trip_completed(
+                trip=trip,
+            )
+        )
+    except MiniAppCanonicalRideLifecycleError as error:
         return jsonify(
             {
                 "success": False,
@@ -1693,7 +1872,9 @@ def complete_active_trip():
             "success": True,
             "message": "Trip completed successfully.",
             "trip": {
-                "booking_status": trip.booking_status,
+                "booking_status": (
+                    trip.booking_status
+                ),
                 "trip_progress_percent": (
                     trip.trip_progress_percent
                 ),
@@ -1702,6 +1883,15 @@ def complete_active_trip():
                 ),
                 "trip_completed_at": (
                     trip.trip_completed_at
+                ),
+                "canonical_ride_id": (
+                    lifecycle_result.ride_id
+                ),
+                "canonical_driver_id": (
+                    lifecycle_result.driver_id
+                ),
+                "canonical_state": (
+                    lifecycle_result.canonical_state
                 ),
             },
         }

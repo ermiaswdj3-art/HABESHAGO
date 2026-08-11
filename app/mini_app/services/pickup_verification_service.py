@@ -3,6 +3,11 @@ HABESHAGO Pickup Verification Service
 
 Generates and verifies the passenger pickup PIN used
 before a ride can begin.
+
+Lifecycle authority belongs to the canonical HABESHAGO
+Ride Platform. This service owns pickup-verification
+metadata but does not independently advance canonical
+Ride lifecycle state.
 """
 
 from datetime import datetime, timezone
@@ -44,9 +49,19 @@ def generate_pickup_pin(
 def verify_pickup_pin(
     trip: Trip,
     submitted_pin: str,
+    *,
+    project_ready_state: bool = True,
 ) -> bool:
     """
     Verify a passenger-provided pickup PIN.
+
+    When project_ready_state is True, preserve the
+    existing standalone Mini App behavior.
+
+    Canonical lifecycle integrations may pass False so
+    verification metadata can succeed first while Ride
+    lifecycle authority remains with the canonical
+    Ride Platform.
     """
 
     if not trip.is_ready_for_pickup_verification():
@@ -54,7 +69,9 @@ def verify_pickup_pin(
             "The trip is not ready for pickup verification."
         )
 
-    clean_pin = str(submitted_pin or "").strip()
+    clean_pin = str(
+        submitted_pin or ""
+    ).strip()
 
     trip.pickup_verification_attempts += 1
 
@@ -66,7 +83,12 @@ def verify_pickup_pin(
         timezone.utc
     ).isoformat()
 
-    trip.set_booking_status("passenger_verified")
-    trip.set_booking_status("ready_to_start")
+    if project_ready_state:
+        trip.set_booking_status(
+            "passenger_verified"
+        )
+        trip.set_booking_status(
+            "ready_to_start"
+        )
 
     return True
