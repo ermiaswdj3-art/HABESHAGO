@@ -101,6 +101,11 @@ from app.mini_app.services.ride_lifecycle_integration_service import (
     mark_trip_completed,
 )
 
+from app.mini_app.services.ride_state_synchronization_service import (
+    MiniAppRideStateSynchronizationError,
+    synchronize_trip_with_canonical_ride,
+)
+
 from app.mini_app.services.dispatch_service import (
     find_best_driver,
 )
@@ -2041,6 +2046,122 @@ def finalize_trip_fare():
             "message": "Final fare calculated successfully.",
             "fare": fare_result,
             "payment_status": trip.payment_status,
+        }
+    )
+
+@app.route(
+    "/api/trip/synchronize",
+    methods=["POST"],
+)
+def synchronize_active_trip():
+    """
+    Synchronize the active Mini App Trip with the
+    authoritative HABESHAGO Ride lifecycle.
+
+    The caller is authenticated through Telegram
+    Mini App init data.
+
+    The browser never supplies ride_id,
+    passenger_id, or driver_id directly.
+
+    This endpoint is read-only with respect to the
+    canonical Ride Platform. It may repair only the
+    Mini App presentation state.
+    """
+
+    trip = get_trip()
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App authentication "
+                    "data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        passenger = (
+            authenticate_mini_app_passenger(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    if (
+        trip.canonical_passenger_id
+        != passenger.passenger_id
+    ):
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Authenticated passenger does not "
+                    "match the Mini App Trip."
+                ),
+            }
+        ), 403
+
+    try:
+        synchronization_result = (
+            synchronize_trip_with_canonical_ride(
+                trip=trip,
+            )
+        )
+    except MiniAppRideStateSynchronizationError as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "message": (
+                "Trip synchronized with canonical "
+                "Ride state."
+            ),
+            "trip": {
+                "canonical_ride_id": (
+                    synchronization_result.ride_id
+                ),
+                "canonical_passenger_id": (
+                    trip.canonical_passenger_id
+                ),
+                "canonical_driver_id": (
+                    trip.canonical_driver_id
+                ),
+                "canonical_state": (
+                    synchronization_result.canonical_state
+                ),
+                "previous_booking_status": (
+                    synchronization_result
+                    .previous_presentation_status
+                ),
+                "booking_status": (
+                    synchronization_result
+                    .presentation_status
+                ),
+                "synchronized": (
+                    synchronization_result.synchronized
+                ),
+            },
         }
     )
 
