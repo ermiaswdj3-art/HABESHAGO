@@ -11,9 +11,9 @@ def get_map_page(mode="light"):
     page = get_app_shell(mode)
 
     page["layout"]["content"] = {
-        "title": "Choose Pickup Location",
+        "title": "Confirm Your Pickup",
         "subtitle": (
-            "Select where the driver should pick you up."
+            "We will locate you automatically. Move the map only if you need to adjust your pickup."
         ),
         "map": {
             "center": {
