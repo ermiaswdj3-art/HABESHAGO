@@ -14,7 +14,7 @@ def get_home_page(mode="light"):
     page = get_app_shell(mode)
 
     page["layout"]["content"] = {
-        "greeting": "Good Morning, Ermias 👋",
+        "greeting": "Welcome to HABESHAGO 👋",
         "headline": "Where are you going today?",
         "search_placeholder": "Search destination...",
 

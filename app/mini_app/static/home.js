@@ -15,6 +15,78 @@
 document.addEventListener("DOMContentLoaded", function () {
     console.log("HABESHAGO home.js loaded successfully.");
 
+    const greetingText = document.querySelector(
+    ".home-greeting-text"
+);
+
+async function loadAuthenticatedPassengerGreeting() {
+    if (!greetingText) {
+        return;
+    }
+
+    const telegramWebApp =
+        window.Telegram &&
+        window.Telegram.WebApp;
+
+    if (!telegramWebApp) {
+        console.log(
+            "Telegram WebApp context unavailable; " +
+            "using public greeting."
+        );
+        return;
+    }
+
+    const initData = String(
+        telegramWebApp.initData || ""
+    ).trim();
+
+    if (!initData) {
+        console.log(
+            "Telegram init data unavailable; " +
+            "using public greeting."
+        );
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "/api/passenger/context",
+            {
+                method: "GET",
+                headers: {
+                    "X-Telegram-Init-Data": initData,
+                },
+            }
+        );
+
+        const result = await response.json();
+
+        if (
+            !response.ok ||
+            !result.success ||
+            !result.greeting
+        ) {
+            throw new Error(
+                result.error ||
+                "Passenger context could not be loaded."
+            );
+        }
+
+        greetingText.textContent = result.greeting;
+
+        console.log(
+            "Authenticated passenger greeting loaded."
+        );
+    } catch (error) {
+        console.error(
+            "Passenger greeting load failed:",
+            error
+        );
+    }
+}
+
+loadAuthenticatedPassengerGreeting();
+
     const searchForm = document.querySelector(".destination-search");
 
     const searchInput = document.querySelector(

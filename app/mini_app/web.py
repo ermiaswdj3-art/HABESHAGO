@@ -1252,6 +1252,79 @@ def reject_authenticated_driver_offer(
     )
 
 @app.route(
+    "/api/passenger/context",
+    methods=["GET"],
+)
+def get_authenticated_passenger_context():
+    """
+    Return trusted passenger identity and Ethiopia-local greeting
+    for the authenticated Telegram Mini App passenger.
+    """
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App authentication "
+                    "data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        passenger = (
+            authenticate_mini_app_passenger(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    local_now = datetime.now(
+        ZoneInfo("Africa/Addis_Ababa")
+    )
+
+    hour = local_now.hour
+
+    if 5 <= hour < 12:
+        greeting_period = "Good Morning"
+    elif 12 <= hour < 18:
+        greeting_period = "Good Afternoon"
+    else:
+        greeting_period = "Good Evening"
+
+    first_name = (
+        passenger.telegram_identity.first_name
+    )
+
+    return jsonify(
+        {
+            "success": True,
+            "first_name": first_name,
+            "greeting": (
+                f"{greeting_period}, "
+                f"{first_name} 👋"
+            ),
+            "timezone": "Africa/Addis_Ababa",
+        }
+    )
+
+@app.route(
     "/api/driver/offers/<int:offer_id>/accept",
     methods=["POST"],
 )
