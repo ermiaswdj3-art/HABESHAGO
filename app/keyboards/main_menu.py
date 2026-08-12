@@ -1,5 +1,10 @@
 from telegram import (
     KeyboardButton,
+    WebAppInfo,
+)
+
+from app.config.settings import (
+    HABESHAGO_MINI_APP_URL,
 )
 
 from app.keyboards.workspace_layout import (
@@ -11,14 +16,31 @@ def get_main_menu():
     """
     Return the HABESHAGO Passenger Workspace.
 
-    Built using the shared Workspace Builder
-    so every HABESHAGO workspace follows
-    the same design language.
+    When the Mini App URL is configured, expose a
+    Telegram Web App launcher directly inside the
+    passenger workspace.
+
+    When the Mini App URL is unavailable, preserve the
+    existing Telegram passenger experience unchanged.
     """
 
     header = []
 
-    primary = [
+    primary = []
+
+    if HABESHAGO_MINI_APP_URL:
+        primary.append(
+            [
+                KeyboardButton(
+                    "🌐 Open HABESHAGO",
+                    web_app=WebAppInfo(
+                        url=HABESHAGO_MINI_APP_URL
+                    ),
+                ),
+            ]
+        )
+
+    primary.append(
         [
             KeyboardButton(
                 "🛺 Request Ride"
@@ -26,8 +48,8 @@ def get_main_menu():
             KeyboardButton(
                 "💼 Register as Driver"
             ),
-        ],
-    ]
+        ]
+    )
 
     secondary = [
         [
