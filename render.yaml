@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: habeshago-mini-app
+    runtime: python
+    plan: free
+
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.mini_app.runtime
+
+    healthCheckPath: /health
+
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+
+      - key: ADMIN_ID
+        sync: false
+
+      - key: HABESHAGO_MINI_APP_URL
+        sync: false
+
+      - key: HABESHAGO_MINI_APP_DRIVER_ID
+        sync: false
