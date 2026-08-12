@@ -245,6 +245,26 @@ def reverse_geocode_pickup(
 
     return str(place_name)
 
+@app.route(
+    "/health",
+    methods=["GET"],
+)
+def mini_app_health():
+    """
+    Return the public HABESHAGO Mini App liveness status.
+
+    This endpoint intentionally avoids database mutation
+    and external provider calls so deployment platforms
+    can determine whether the web process is alive.
+    """
+
+    return jsonify(
+        {
+            "status": "ok",
+            "service": "habeshago-mini-app",
+        }
+    )
+
 @app.route("/")
 def home():
     """
