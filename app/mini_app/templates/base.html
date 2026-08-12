@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
 
@@ -27,6 +27,51 @@
         identity.
     -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <script>
+    (function () {
+        const root = document.documentElement;
+
+        root.dataset.theme = "light";
+
+        const telegram =
+            window.Telegram &&
+            window.Telegram.WebApp;
+
+        if (!telegram) {
+            return;
+        }
+
+        telegram.ready();
+
+        try {
+            telegram.setHeaderColor("#F6F8F7");
+        } catch (error) {
+            console.debug(
+                "Telegram header color unavailable:",
+                error
+            );
+        }
+
+        try {
+            telegram.setBackgroundColor("#F6F8F7");
+        } catch (error) {
+            console.debug(
+                "Telegram background color unavailable:",
+                error
+            );
+        }
+
+        try {
+            telegram.setBottomBarColor("#F6F8F7");
+        } catch (error) {
+            console.debug(
+                "Telegram bottom bar color unavailable:",
+                error
+            );
+        }
+    }());
+</script>
 
     {% block head %}{% endblock %}
 

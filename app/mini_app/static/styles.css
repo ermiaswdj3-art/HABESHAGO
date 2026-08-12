@@ -181,14 +181,32 @@ footer nav button:active {
     transform: scale(0.98);
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --color-background: #101411;
-        --color-surface: #18201B;
-        --color-text-primary: #FFFFFF;
-        --color-text-secondary: #B8C2BC;
-        --color-border: #2C3831;
-    }
+/*
+HABESHAGO Theme Contract
+
+The Mini App is intentionally light-first.
+
+Theme selection belongs to HABESHAGO rather than being
+implicitly controlled by the device color scheme.
+
+Dark mode remains available through the explicit
+data-theme="dark" application contract.
+*/
+
+:root[data-theme="light"] {
+    --color-background: #F6F8F7;
+    --color-surface: #FFFFFF;
+    --color-text-primary: #111111;
+    --color-text-secondary: #5F6B65;
+    --color-border: #DDE5E0;
+}
+
+:root[data-theme="dark"] {
+    --color-background: #101411;
+    --color-surface: #18201B;
+    --color-text-primary: #FFFFFF;
+    --color-text-secondary: #B8C2BC;
+    --color-border: #2C3831;
 }
 
 .hero {
