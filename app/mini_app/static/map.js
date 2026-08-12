@@ -1,7 +1,9 @@
-"use strict";
+﻿"use strict";
 
 document.addEventListener("DOMContentLoaded", function () {
-    const mapElement = document.getElementById("habeshago-map");
+    const mapElement = document.getElementById(
+        "habeshago-map"
+    );
 
     if (!mapElement) {
         return;
@@ -23,6 +25,10 @@ document.addEventListener("DOMContentLoaded", function () {
         "[data-pickup-coordinates]"
     );
 
+    const contextLabel = document.querySelector(
+        "[data-pickup-location-context]"
+    );
+
     const pickupTitle = document.querySelector(
         "[data-pickup-location-name]"
     );
@@ -36,7 +42,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let locationResolved = false;
     let locationSource = "map";
+
     let suppressNextMove = false;
+    let passengerDraggedMap = false;
+
+    let geocodeRequestSequence = 0;
 
     const map = L.map(
         "habeshago-map"
@@ -84,17 +94,98 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         if (pickupTitle) {
-            if (source === "device") {
-                pickupTitle.textContent =
-                    "Your current location";
-            } else {
-                pickupTitle.textContent =
-                    "Adjusted pickup location";
-            }
+            pickupTitle.textContent =
+                source === "device"
+                    ? "Your current location"
+                    : "Adjusted pickup location";
         }
 
         if (confirmButton) {
             confirmButton.disabled = false;
+        }
+    }
+
+    async function loadPickupContext(
+        latitude,
+        longitude
+    ) {
+        const requestSequence =
+            ++geocodeRequestSequence;
+
+        if (contextLabel) {
+            contextLabel.textContent =
+                "Finding nearby location details...";
+        }
+
+        const query =
+            new URLSearchParams({
+                latitude:
+                    String(latitude),
+                longitude:
+                    String(longitude),
+            });
+
+        try {
+            const response = await fetch(
+                `/api/location/reverse?${query}`
+            );
+
+            const result =
+                await response.json();
+
+            if (
+                requestSequence !==
+                geocodeRequestSequence
+            ) {
+                return;
+            }
+
+            if (
+                !response.ok ||
+                !result.success
+            ) {
+                throw new Error(
+                    result.message ||
+                    "Location details unavailable."
+                );
+            }
+
+            const location =
+                result.location || {};
+
+            const fullName =
+                String(
+                    location.full_name || ""
+                ).trim();
+
+            const shortName =
+                String(
+                    location.short_name || ""
+                ).trim();
+
+            if (contextLabel) {
+                contextLabel.textContent =
+                    fullName ||
+                    shortName ||
+                    "Pickup coordinates identified.";
+            }
+        } catch (error) {
+            console.warn(
+                "Pickup context unavailable:",
+                error
+            );
+
+            if (
+                requestSequence !==
+                geocodeRequestSequence
+            ) {
+                return;
+            }
+
+            if (contextLabel) {
+                contextLabel.textContent =
+                    "Pickup coordinates identified.";
+            }
         }
     }
 
@@ -108,12 +199,23 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        if (!passengerDraggedMap) {
+            return;
+        }
+
+        passengerDraggedMap = false;
+
         const center = map.getCenter();
 
         updatePickupDisplay(
             center.lat,
             center.lng,
             "map"
+        );
+
+        loadPickupContext(
+            center.lat,
+            center.lng
         );
     }
 
@@ -141,6 +243,11 @@ document.addEventListener("DOMContentLoaded", function () {
         );
 
         locationResolved = true;
+
+        loadPickupContext(
+            latitude,
+            longitude
+        );
 
         console.log(
             "Passenger location resolved:",
@@ -171,6 +278,11 @@ document.addEventListener("DOMContentLoaded", function () {
             pickupTitle.textContent =
                 "Choose your pickup location";
         }
+
+        if (contextLabel) {
+            contextLabel.textContent =
+                "Move the map to set your pickup.";
+        }
     }
 
     function requestPassengerLocation() {
@@ -187,6 +299,11 @@ document.addEventListener("DOMContentLoaded", function () {
         if (pickupTitle) {
             pickupTitle.textContent =
                 "Finding your current location...";
+        }
+
+        if (contextLabel) {
+            contextLabel.textContent =
+                "Waiting for location permission...";
         }
 
         if (coordinateLabel) {
@@ -228,11 +345,6 @@ document.addEventListener("DOMContentLoaded", function () {
                             selectedLatitude,
                         longitude:
                             selectedLongitude,
-                        name:
-                            locationSource ===
-                            "device"
-                                ? "Current Location"
-                                : "Selected on Map",
                     }),
                 }
             );
@@ -252,7 +364,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
             console.log(
                 "Pickup saved successfully:",
-                result.trip
+                {
+                    source: locationSource,
+                    trip: result.trip,
+                }
             );
 
             window.location.href =
@@ -274,6 +389,17 @@ document.addEventListener("DOMContentLoaded", function () {
                 "Confirm Pickup Location";
         }
     }
+
+    map.on(
+        "dragstart",
+        function () {
+            if (!locationResolved) {
+                return;
+            }
+
+            passengerDraggedMap = true;
+        }
+    );
 
     map.on(
         "moveend",

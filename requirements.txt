@@ -3,3 +3,4 @@ python-telegram-bot==22.8
 python-dotenv==1.2.2
 waitress==3.0.2
 tzdata
+requests==2.34.2

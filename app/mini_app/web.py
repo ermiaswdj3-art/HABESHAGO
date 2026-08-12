@@ -125,16 +125,15 @@ from app.services.ride_offer_service import (
     reject_driver_ride_offer,
 )
 
+from app.services.geocoding_service import (
+    get_location_details,
+)
+
 from app.services.synchronization_service import (
     acknowledge_pending_passenger_update_in_order,
     get_pending_passenger_updates,
     get_pending_passenger_updates_after_sequence,
 )
-
-import json
-from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
 
 from app.mini_app.context import (
     get_trip,
@@ -164,86 +163,78 @@ def reverse_geocode_pickup(
     longitude: float,
 ) -> str:
     """
-    Convert pickup coordinates into a readable place name.
+    Resolve pickup coordinates through the shared
+    HABESHAGO geocoding platform.
 
-    Returns a safe fallback when the external geocoding
-    service is unavailable or has no suitable result.
+    The Mini App intentionally delegates location
+    understanding to the same canonical service used
+    by the Telegram ride experience.
     """
 
-    fallback_name = "Selected on Map"
+    location = get_location_details(
+        latitude=latitude,
+        longitude=longitude,
+        language="en",
+    )
 
-    query = urlencode(
+    return location["short_name"]
+
+
+@app.route(
+    "/api/location/reverse",
+    methods=["GET"],
+)
+def reverse_geocode_location():
+    """
+    Resolve coordinates into structured HABESHAGO
+    passenger-facing location context.
+    """
+
+    try:
+        latitude = float(
+            request.args.get("latitude")
+        )
+        longitude = float(
+            request.args.get("longitude")
+        )
+    except (TypeError, ValueError):
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "Valid latitude and longitude "
+                    "are required."
+                ),
+            }
+        ), 400
+
+    location = get_location_details(
+        latitude=latitude,
+        longitude=longitude,
+        language="en",
+    )
+
+    return jsonify(
         {
-            "lat": latitude,
-            "lon": longitude,
-            "format": "jsonv2",
-            "addressdetails": 1,
-            "zoom": 18,
+            "success": True,
+            "location": {
+                "short_name": (
+                    location["short_name"]
+                ),
+                "city": location["city"],
+                "full_name": (
+                    location["full_name"]
+                ),
+                "latitude": (
+                    location["latitude"]
+                ),
+                "longitude": (
+                    location["longitude"]
+                ),
+            },
         }
     )
 
-    url = (
-        "https://nominatim.openstreetmap.org/reverse?"
-        f"{query}"
-    )
-
-    request_headers = {
-        "User-Agent": (
-            "HABESHAGO-Mini-App/0.1 "
-            "(development contact: project owner)"
-        ),
-        "Accept-Language": "en",
-    }
-
-    request_object = Request(
-        url,
-        headers=request_headers,
-    )
-
-    try:
-        with urlopen(
-            request_object,
-            timeout=5,
-        ) as response:
-            payload = json.loads(
-                response.read().decode("utf-8")
-            )
-    except (
-        HTTPError,
-        URLError,
-        TimeoutError,
-        json.JSONDecodeError,
-    ):
-        return fallback_name
-
-    address = payload.get("address", {})
-
-    place_name = (
-        payload.get("name")
-        or address.get("amenity")
-        or address.get("building")
-        or address.get("road")
-        or address.get("neighbourhood")
-        or address.get("suburb")
-        or address.get("city_district")
-        or address.get("city")
-        or address.get("town")
-        or address.get("village")
-    )
-
-    if not place_name:
-        return fallback_name
-
-    area_name = (
-        address.get("suburb")
-        or address.get("city_district")
-        or address.get("city")
-    )
-
-    if area_name and area_name != place_name:
-        return f"{place_name}, {area_name}"
-
-    return str(place_name)
 
 @app.route(
     "/health",
