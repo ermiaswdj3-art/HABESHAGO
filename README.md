@@ -323,3 +323,75 @@ Browser
 > **"Engineering Ethiopia's AI-Powered Mobility Future."**
 
 🇪🇹 Built with dedication.
+
+# 🚀 Mini App Deployment
+
+HABESHAGO includes a production-ready deployment path
+for the Telegram Mini App.
+
+## Render Deployment
+
+The repository includes `render.yaml`, which defines the
+HABESHAGO Mini App as a Render web service.
+
+Render uses:
+
+```text
+Build:
+pip install -r requirements.txt
+
+Start:
+python -m app.mini_app.runtime
+
+Health:
+GET /health
+```
+The production runtime:
+
+- binds to `0.0.0.0`;
+- respects the deployment platform `PORT`;
+- starts the Flask Mini App through Waitress;
+- exposes `/health` for deployment health checks.
+
+## Required Environment Variables
+
+Configure these values securely in the Render dashboard:
+
+```text
+BOT_TOKEN
+ADMIN_ID
+HABESHAGO_MINI_APP_URL
+HABESHAGO_MINI_APP_DRIVER_ID
+```
+
+Never commit real secret values to `.env`,
+`.env.example`, or `render.yaml`.
+
+## Public Mini App URL
+
+After a successful deployment, Render provides a public
+HTTPS URL for the HABESHAGO Mini App.
+
+That URL becomes the production value of:
+
+```text
+HABESHAGO_MINI_APP_URL
+```
+
+The Telegram passenger menu can then expose:
+
+```text
+🌐 Open HABESHAGO
+```
+
+which launches the deployed HABESHAGO Mini App inside
+Telegram.
+
+## Deployment Boundary
+
+The current deployment foundation prepares the web
+application for a controlled MVP deployment.
+
+The current SQLite database remains local application
+storage and should not yet be treated as durable
+production persistence.
