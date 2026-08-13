@@ -43,6 +43,12 @@ class Trip:
     estimated_fare: Optional[float] = None
     estimated_eta: Optional[str] = None
 
+    # Authoritative booking confirmation
+    pricing_quote_id: Optional[str] = None
+    pricing_configuration_version: Optional[str] = None
+    route_measurement_reference: Optional[str] = None
+    booking_confirmed_at: Optional[str] = None
+
     # HABESHAGO recommendation
     recommendation: Optional[str] = None
 

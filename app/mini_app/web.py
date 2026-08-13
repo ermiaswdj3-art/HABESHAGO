@@ -913,10 +913,13 @@ def update_trip_category():
 @app.route("/api/trip/confirm", methods=["POST"])
 def confirm_trip_booking():
     """
-    Validate and confirm the active passenger booking.
+    Authenticate and authoritatively confirm the active
+    Mini App passenger Ride booking.
 
-    The confirmed booking is then marked as ready
-    for the future Dispatch Engine.
+    Confirmation establishes trusted passenger identity,
+    canonical route measurement and authoritative
+    pre-dispatch pricing before the booking becomes
+    eligible for driver dispatch.
     """
 
     trip = get_trip()
@@ -928,6 +931,17 @@ def confirm_trip_booking():
                 "message": (
                     "The trip is incomplete and cannot "
                     "be confirmed."
+                ),
+            }
+        ), 409
+
+    if trip.service != "ride":
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "Authoritative Mini App confirmation "
+                    "currently supports Ride bookings only."
                 ),
             }
         ), 409
@@ -960,24 +974,113 @@ def confirm_trip_booking():
             }
         ), 409
 
-    trip.set_booking_status("summary_ready")
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
 
-    trip.created_at = datetime.now(
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "Telegram Mini App authentication "
+                    "data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        passenger = authenticate_mini_app_passenger(
+            init_data=init_data,
+            bot_token=BOT_TOKEN,
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(exc),
+            }
+        ), 401
+
+    try:
+        measurement = measure_mini_app_route(
+            trip=trip,
+        )
+    except (
+        MiniAppRouteMeasurementAdapterError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(exc),
+            }
+        ), 400
+
+    calculated_at = datetime.now(
         timezone.utc
-    ).isoformat()
+    )
 
-    trip.set_booking_status("booking_confirmed")
+    try:
+        pricing = price_mini_app_ride_estimate(
+            passenger_id=passenger.passenger_id,
+            measurement=measurement,
+            service_type="ride",
+            ride_category=trip.category,
+            city="Addis Ababa",
+            quote_id=(
+                f"MINI-CONF-{uuid4().hex}"
+            ),
+            calculated_at=calculated_at,
+        )
+    except (
+        MiniAppPricingAdapterError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(exc),
+            }
+        ), 400
 
-    # Commit #67 will begin processing bookings
-    # that have reached this state.
-    trip.set_booking_status("dispatch_pending")
+    trip.canonical_passenger_id = (
+        passenger.passenger_id
+    )
+    trip.estimated_fare = pricing.fare
+    trip.fare_currency = pricing.currency
+    trip.pricing_quote_id = pricing.quote_id
+    trip.pricing_configuration_version = (
+        pricing.configuration_version
+    )
+    trip.route_measurement_reference = (
+        measurement.measurement_reference
+    )
+
+    confirmed_at = calculated_at.isoformat()
+
+    trip.created_at = confirmed_at
+    trip.booking_confirmed_at = confirmed_at
+
+    trip.set_booking_status(
+        "summary_ready"
+    )
+    trip.set_booking_status(
+        "booking_confirmed"
+    )
+    trip.set_booking_status(
+        "dispatch_pending"
+    )
 
     return jsonify(
         {
             "success": True,
             "message": (
-                "Booking confirmed and prepared "
-                "for driver dispatch."
+                "Booking authoritatively confirmed and "
+                "prepared for driver dispatch."
             ),
             "trip": {
                 "destination": trip.destination,
@@ -985,9 +1088,25 @@ def confirm_trip_booking():
                 "service": trip.service,
                 "category": trip.category,
                 "estimated_fare": trip.estimated_fare,
+                "fare_currency": trip.fare_currency,
                 "estimated_eta": trip.estimated_eta,
                 "booking_status": trip.booking_status,
                 "created_at": trip.created_at,
+                "booking_confirmed_at": (
+                    trip.booking_confirmed_at
+                ),
+                "canonical_passenger_id": (
+                    trip.canonical_passenger_id
+                ),
+                "pricing_quote_id": (
+                    trip.pricing_quote_id
+                ),
+                "pricing_configuration_version": (
+                    trip.pricing_configuration_version
+                ),
+                "route_measurement_reference": (
+                    trip.route_measurement_reference
+                ),
             },
         }
     )
