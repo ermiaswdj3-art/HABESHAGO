@@ -129,6 +129,10 @@ from app.services.geocoding_service import (
     get_location_details,
 )
 
+from app.services.destination_search_service import (
+    search_destinations,
+)
+
 from app.services.synchronization_service import (
     acknowledge_pending_passenger_update_in_order,
     get_pending_passenger_updates,
@@ -232,6 +236,47 @@ def reverse_geocode_location():
                     location["longitude"]
                 ),
             },
+        }
+    )
+
+
+@app.route(
+    "/api/destinations/search",
+    methods=["GET"],
+)
+def search_mini_app_destinations():
+    """
+    Search canonical HABESHAGO destinations for the
+    Mini App passenger experience.
+
+    Results come from the shared destination search
+    platform already used by the Telegram client.
+    """
+
+    query = str(
+        request.args.get(
+            "q",
+            "",
+        )
+    ).strip()
+
+    if len(query) < 2:
+        return jsonify(
+            {
+                "success": True,
+                "destinations": [],
+            }
+        )
+
+    destinations = search_destinations(
+        query=query,
+        language="en",
+    )
+
+    return jsonify(
+        {
+            "success": True,
+            "destinations": destinations,
         }
     )
 

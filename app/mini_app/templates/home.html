@@ -49,6 +49,15 @@
 
         <div class="destination-suggestions-list">
 
+            <div
+                class="destination-search-results"
+                data-destination-search-results
+                hidden
+            ></div>
+
+            <div
+                data-static-destination-suggestions
+            >
             {% for destination in page.layout.content.destination_suggestions %}
 
             <button
@@ -80,6 +89,7 @@
             </button>
 
             {% endfor %}
+            </div>
 
             <div
                 class="destination-empty-state"
