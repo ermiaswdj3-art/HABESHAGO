@@ -19,6 +19,14 @@ import os
 
 from waitress import serve
 
+from app.database.database import (
+    create_tables,
+)
+
+from app.pricing.development_configuration import (
+    install_development_pricing_configurations,
+)
+
 from app.mini_app.wsgi import application
 
 
@@ -72,10 +80,37 @@ def get_runtime_port() -> int:
     return port
 
 
+def initialize_runtime() -> None:
+    """
+    Prepare persistent HABESHAGO runtime dependencies
+    before the Mini App begins accepting requests.
+
+    Database schema initialization and development pricing
+    bootstrap are intentionally idempotent.
+    """
+
+    create_tables()
+
+    created_pricing_configurations = (
+        install_development_pricing_configurations()
+    )
+
+    print(
+        (
+            "HABESHAGO runtime initialized. "
+            "New pricing configurations: "
+            f"{len(created_pricing_configurations)}"
+        )
+    )
+
+
 def run() -> None:
     """
-    Start the HABESHAGO Mini App through Waitress.
+    Initialize and start the HABESHAGO Mini App through
+    Waitress.
     """
+
+    initialize_runtime()
 
     host = get_runtime_host()
     port = get_runtime_port()

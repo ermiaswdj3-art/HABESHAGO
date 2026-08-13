@@ -68,11 +68,13 @@ from app.mini_app.auth import (
 )
 
 from app.mini_app.ride_integration import (
+    MiniAppPricingAdapterError,
     MiniAppRideLifecycleBridgeError,
     MiniAppRouteMeasurementAdapterError,
     accept_offer_and_bind_trip,
     measure_mini_app_route,
     orchestrate_mini_app_ride_offer,
+    price_mini_app_ride_estimate,
 )
 
 from app.mini_app.services.payment_service import (
@@ -807,8 +809,87 @@ def update_trip_category():
             }
         ), 409
 
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "Telegram Mini App authentication "
+                    "data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        passenger = (
+            authenticate_mini_app_passenger(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(exc),
+            }
+        ), 401
+
+    try:
+        measurement = measure_mini_app_route(
+            trip=trip,
+        )
+    except (
+        MiniAppRouteMeasurementAdapterError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(exc),
+            }
+        ), 400
+
+    calculated_at = datetime.now(
+        timezone.utc
+    )
+
+    try:
+        pricing = price_mini_app_ride_estimate(
+            passenger_id=passenger.passenger_id,
+            measurement=measurement,
+            service_type="ride",
+            ride_category=category,
+            city="Addis Ababa",
+            quote_id=(
+                f"MINI-EST-{uuid4().hex}"
+            ),
+            calculated_at=calculated_at,
+        )
+    except (
+        MiniAppPricingAdapterError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(exc),
+            }
+        ), 400
+
     trip.category = category
-    trip.set_booking_status("category_selected")
+    trip.estimated_fare = pricing.fare
+    trip.fare_currency = pricing.currency
+    trip.set_booking_status(
+        "category_selected"
+    )
 
     return jsonify(
         {
@@ -818,8 +899,13 @@ def update_trip_category():
                 "service": trip.service,
                 "category": trip.category,
                 "estimated_fare": trip.estimated_fare,
+                "fare_currency": trip.fare_currency,
                 "estimated_eta": trip.estimated_eta,
                 "booking_status": trip.booking_status,
+                "pricing_quote_id": pricing.quote_id,
+                "pricing_configuration_version": (
+                    pricing.configuration_version
+                ),
             },
         }
     )

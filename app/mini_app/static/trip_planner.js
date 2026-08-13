@@ -184,6 +184,12 @@ document.addEventListener("DOMContentLoaded", function () {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
+                        "X-Telegram-Init-Data": (
+                            window.Telegram &&
+                            window.Telegram.WebApp
+                        )
+                            ? window.Telegram.WebApp.initData
+                            : "",
                     },
                     body: JSON.stringify({
                         category: category,

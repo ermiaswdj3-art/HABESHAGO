@@ -203,6 +203,111 @@ def _require_aware_datetime(
     return value
 
 
+def price_mini_app_ride_estimate(
+    *,
+    passenger_id: int,
+    measurement: MiniAppRouteMeasurement,
+    service_type: str,
+    ride_category: str,
+    city: str,
+    quote_id: str,
+    calculated_at: datetime,
+) -> MiniAppPricingResult:
+    """
+    Execute authoritative pre-dispatch pricing for one
+    Mini App passenger Ride selection.
+
+    This boundary intentionally does not require a driver.
+    Driver identity is not yet known when the passenger is
+    comparing Ride categories.
+
+    The HABESHAGO Pricing Platform remains the sole pricing
+    authority. The Mini App supplies trusted passenger
+    identity, canonical route facts and the selected Ride
+    category only.
+    """
+
+    passenger_id = _require_positive_integer(
+        passenger_id,
+        field_name="passenger_id",
+    )
+
+    if not isinstance(
+        measurement,
+        MiniAppRouteMeasurement,
+    ):
+        raise MiniAppPricingAdapterError(
+            (
+                "measurement must be a "
+                "MiniAppRouteMeasurement."
+            )
+        )
+
+    service_type = _require_text(
+        service_type,
+        field_name="service_type",
+    )
+
+    ride_category = _require_text(
+        ride_category,
+        field_name="ride_category",
+    )
+
+    city = _require_text(
+        city,
+        field_name="city",
+    )
+
+    quote_id = _require_text(
+        quote_id,
+        field_name="quote_id",
+    )
+
+    calculated_at = _require_aware_datetime(
+        calculated_at,
+        field_name="calculated_at",
+    )
+
+    try:
+        request = PricingRequest(
+            service_type=service_type,
+            ride_category=ride_category,
+            city=city,
+            distance_km=Decimal(
+                str(
+                    measurement.distance_km
+                )
+            ),
+            duration_minutes=Decimal(
+                str(
+                    measurement.duration_minutes
+                )
+            ),
+            waiting_minutes=Decimal("0"),
+            toll_fee=Decimal("0"),
+            airport_fee=Decimal("0"),
+            currency="ETB",
+            passenger_id=passenger_id,
+            driver_id=None,
+            requested_at=calculated_at,
+        )
+
+        pricing = orchestrate_pricing(
+            request=request,
+            quote_id=quote_id,
+            calculated_at=calculated_at,
+        )
+
+    except ValueError as exc:
+        raise MiniAppPricingAdapterError(
+            str(exc)
+        ) from exc
+
+    return MiniAppPricingResult(
+        pricing=pricing,
+    )
+
+
 def price_mini_app_ride(
     *,
     passenger_id: int,

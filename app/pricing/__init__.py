@@ -1,134 +1,15 @@
-"""
+﻿"""
 HABESHAGO Pricing Platform
 
-Canonical domain contracts for authoritative,
+Canonical package boundary for HABESHAGO's
 versioned and auditable transportation pricing.
+
+Pricing implementation modules are intentionally
+not imported eagerly here.
+
+Consumers should import the specific pricing
+submodule they require. This keeps package
+initialization lightweight and prevents circular
+dependencies between pricing services and
+persistence repositories.
 """
-
-from app.pricing.constants import (
-    PricingComponentType,
-    PricingCurrency,
-    PricingPolicy,
-    PricingQuoteStatus,
-    PricingRideCategory,
-    PricingServiceType,
-    SurgePolicy,
-)
-
-from app.pricing.exceptions import (
-    PricingCalculationError,
-    PricingConfigurationError,
-    PricingError,
-    PricingPolicyError,
-    PricingQuoteError,
-    PricingQuoteExpiredError,
-    PricingValidationError,
-)
-
-from app.pricing.constants import (
-    PricingComponentType,
-    PricingCurrency,
-    PricingPolicy,
-    PricingQuoteStatus,
-    PricingRideCategory,
-    PricingRoundingPolicy,
-    PricingServiceType,
-    SurgePolicy,
-)
-
-from app.pricing.financial import (
-    CommissionPolicy,
-    FinancialAllocation,
-)
-
-from app.pricing.orchestration import (
-    PricingOrchestrationResult,
-)
-
-from app.pricing.orchestrator import (
-    orchestrate_pricing,
-)
-
-from app.pricing.workflow import (
-    PricingWorkflowResult,
-    execute_pricing_workflow,
-)
-
-from app.pricing.financial_engine import (
-    allocate_financials,
-)
-
-from app.pricing.models import (
-    FareBreakdown,
-    PricingComponent,
-    PricingQuote,
-    PricingRequest,
-)
-
-from app.pricing.engine import (
-    calculate_fare_breakdown,
-    create_pricing_quote,
-)
-
-from app.pricing.adjustments import (
-    AdjustedPricingResult,
-    PricingAdjustment,
-    PricingAdjustmentSource,
-    PricingAdjustmentType,
-)
-
-from app.pricing.adjustment_engine import (
-    apply_pricing_adjustments,
-    create_adjusted_pricing_result,
-)
-
-from app.pricing.configuration import (
-    PricingConfiguration,
-)
-
-from app.pricing.versions import (
-    PRICING_CONTRACT_VERSION,
-    PRICING_PLATFORM_VERSION,
-)
-
-
-__all__ = [
-    "FareBreakdown",
-    "PricingCalculationError",
-    "PricingComponent",
-    "PricingComponentType",
-    "PricingConfigurationError",
-    "PricingCurrency",
-    "PricingError",
-    "PricingPlatformVersion",
-    "PricingPolicy",
-    "PricingPolicyError",
-    "PricingQuote",
-    "PricingQuoteError",
-    "PricingQuoteExpiredError",
-    "PricingQuoteStatus",
-    "PricingRequest",
-    "PricingRideCategory",
-    "PricingServiceType",
-    "PricingValidationError",
-    "PRICING_CONTRACT_VERSION",
-    "PRICING_PLATFORM_VERSION",
-    "PricingRoundingPolicy",
-    "PricingConfiguration",
-    "calculate_fare_breakdown",
-    "create_pricing_quote",
-    "AdjustedPricingResult",
-    "PricingAdjustment",
-    "PricingAdjustmentSource",
-    "PricingAdjustmentType",
-    "apply_pricing_adjustments",
-    "create_adjusted_pricing_result",
-    "CommissionPolicy",
-    "FinancialAllocation",
-    "allocate_financials",
-    "PricingOrchestrationResult",
-    "PricingWorkflowResult",
-    "orchestrate_pricing",
-    "execute_pricing_workflow",
-    "SurgePolicy",
-]

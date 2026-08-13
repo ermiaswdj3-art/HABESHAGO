@@ -43,6 +43,7 @@ from app.mini_app.ride_integration.pricing_adapter import (
     MiniAppPricingAdapterError,
     MiniAppPricingResult,
     price_mini_app_ride,
+    price_mini_app_ride_estimate,
 )
 
 from app.mini_app.ride_integration.reference_loader import (
@@ -110,4 +111,5 @@ __all__ = [
     "MiniAppRouteMeasurementAdapterError",
     "measure_mini_app_route",
     "price_mini_app_ride",
+    "price_mini_app_ride_estimate",
 ]
