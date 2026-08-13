@@ -127,6 +127,23 @@ from app.services.ride_offer_service import (
     reject_driver_ride_offer,
 )
 
+from app.services.driver_dashboard_service import (
+    get_driver_dashboard as get_shared_driver_dashboard,
+)
+
+from app.services.driver_registration_service import (
+    get_driver_registration_status,
+)
+
+from app.services.vehicle_management_service import (
+    get_driver_vehicle_management,
+)
+
+from app.services.driver_availability_service import (
+    get_driver_availability,
+    transition_driver_status,
+)
+
 from app.services.geocoding_service import (
     get_location_details,
 )
@@ -1324,6 +1341,188 @@ def dispatch_trip():
                     result.pricing.fare
                 ),
             },
+        }
+    )
+
+@app.route(
+    "/api/driver/context",
+    methods=["GET"],
+)
+def get_authenticated_driver_context():
+    """
+    Return the authoritative HABESHAGO driver context for
+    the authenticated Telegram Mini App driver.
+
+    The browser never supplies driver_id directly.
+    """
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App driver "
+                    "authentication data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        authenticated_driver = (
+            authenticate_mini_app_driver(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+                require_operational=False,
+            )
+        )
+
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    driver_id = authenticated_driver.driver_id
+
+    dashboard = get_shared_driver_dashboard(
+        driver_id
+    )
+
+    registration = get_driver_registration_status(
+        driver_id
+    )
+
+    vehicle_management = (
+        get_driver_vehicle_management(
+            driver_id
+        )
+    )
+
+    availability = get_driver_availability(
+        driver_id
+    )
+
+    if dashboard is None:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Canonical HABESHAGO driver "
+                    "dashboard was not found."
+                ),
+            }
+        ), 404
+
+    return jsonify(
+        {
+            "success": True,
+            "driver": {
+                "driver_id": driver_id,
+                "telegram_id": (
+                    authenticated_driver.telegram_id
+                ),
+                "can_operate": (
+                    authenticated_driver.can_operate
+                ),
+            },
+            "dashboard": dashboard,
+            "registration": registration,
+            "vehicle_management": (
+                vehicle_management
+            ),
+            "availability": availability,
+        }
+    )
+
+@app.route(
+    "/api/driver/status",
+    methods=["POST"],
+)
+def transition_authenticated_driver_status():
+    """
+    Transition the authenticated Telegram Mini App driver's
+    canonical HABESHAGO operational status.
+
+    The browser never supplies driver_id directly.
+    """
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App driver "
+                    "authentication data is required."
+                ),
+            }
+        ), 401
+
+    payload = request.get_json(
+        silent=True
+    ) or {}
+
+    target_status = payload.get(
+        "status"
+    )
+
+    if target_status not in {
+        "offline",
+        "available",
+        "unavailable",
+    }:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Driver status must be one of: "
+                    "offline, available, unavailable."
+                ),
+            }
+        ), 400
+
+    try:
+        authenticated_driver = (
+            authenticate_mini_app_driver(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+                require_operational=False,
+            )
+        )
+
+        state = transition_driver_status(
+            authenticated_driver.driver_id,
+            target_status,
+        )
+
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 409
+
+    availability = get_driver_availability(
+        authenticated_driver.driver_id
+    )
+
+    return jsonify(
+        {
+            "success": True,
+            "status": state.operational_status,
+            "availability": availability,
         }
     )
 

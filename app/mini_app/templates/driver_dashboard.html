@@ -8,7 +8,227 @@ Driver Dashboard &#8226; HABESHAGO
 
 <section class="driver-dashboard-page">
 
-    {% if page.driver_dashboard %}
+    {% if page.driver_context_mode == "authenticated_client" %}
+
+    <header class="driver-dashboard-header">
+
+        <p class="trip-planner-eyebrow">
+            Driver Operations
+        </p>
+
+        <h1>
+            HABESHAGO Driver
+        </h1>
+
+        <p class="driver-dashboard-subtitle">
+            {{ page.subtitle }}
+        </p>
+
+    </header>
+
+    <section class="driver-status-card">
+
+        <div class="driver-status-heading">
+
+            <div>
+                <span class="driver-dashboard-label">
+                    Current status
+                </span>
+
+                <h2 data-driver-status-label>
+                    Loading driver status...
+                </h2>
+            </div>
+
+            <span
+                class="
+                    driver-status-badge
+                    driver-status-offline
+                "
+                data-driver-status-badge
+            >
+                Loading
+            </span>
+
+        </div>
+
+        <div class="driver-status-details">
+
+            <span>
+                Online:
+                <strong data-driver-online>
+                    —
+                </strong>
+            </span>
+
+            <span>
+                Available:
+                <strong data-driver-available>
+                    —
+                </strong>
+            </span>
+
+        </div>
+
+        <button
+            type="button"
+            class="primary-button"
+            data-driver-status-action
+            disabled
+        >
+            Loading...
+        </button>
+
+        <p
+            class="driver-dashboard-note"
+            data-driver-status-feedback
+        >
+            Authenticating your HABESHAGO driver context...
+        </p>
+
+    </section>
+
+    <section
+        class="driver-ride-offer-section"
+        data-driver-ride-offer-section
+    >
+
+        <div class="section-heading">
+
+            <div>
+                <p class="trip-planner-eyebrow">
+                    Live dispatch
+                </p>
+
+                <h2>Ride Offer</h2>
+            </div>
+
+        </div>
+
+        <div
+            class="driver-ride-offer-status"
+            data-driver-offer-status
+        >
+            Checking for a pending ride offer...
+        </div>
+
+        <article
+            class="driver-ride-offer-card"
+            data-driver-offer-card
+            hidden
+        >
+
+            <div class="driver-ride-offer-header">
+
+                <div>
+                    <span>Offer</span>
+
+                    <strong data-offer-reference>
+                        —
+                    </strong>
+                </div>
+
+                <span
+                    class="
+                        driver-status-badge
+                        driver-status-available
+                    "
+                >
+                    Pending
+                </span>
+
+            </div>
+
+            <div class="driver-ride-offer-grid">
+
+                <div>
+                    <span>Pickup</span>
+                    <strong data-offer-pickup>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Destination</span>
+                    <strong data-offer-destination>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Trip distance</span>
+                    <strong data-offer-distance>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Trip ETA</span>
+                    <strong data-offer-trip-eta>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Pickup ETA</span>
+                    <strong data-offer-pickup-eta>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Fare</span>
+                    <strong data-offer-fare>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Payment</span>
+                    <strong data-offer-payment>
+                        —
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Service</span>
+                    <strong data-offer-service>
+                        —
+                    </strong>
+                </div>
+
+            </div>
+
+            <div class="driver-ride-offer-actions">
+
+                <button
+                    type="button"
+                    class="driver-ride-offer-accept"
+                    data-accept-driver-offer
+                >
+                    Accept Ride
+                </button>
+
+                <button
+                    type="button"
+                    class="driver-ride-offer-reject"
+                    data-reject-driver-offer
+                >
+                    Reject Ride
+                </button>
+
+            </div>
+
+            <p
+                class="driver-ride-offer-feedback"
+                data-driver-offer-feedback
+            ></p>
+
+        </article>
+
+    </section>
+
+    {% elif page.driver_dashboard %}
 
     {% set dashboard = page.driver_dashboard %}
     {% set profile = dashboard.profile %}
@@ -42,15 +262,18 @@ Driver Dashboard &#8226; HABESHAGO
                     Current status
                 </span>
 
-                <h2>
+                <h2 data-driver-status-label>
                     {{ status.label }}
                 </h2>
             </div>
 
-            <span class="
-                        driver-status-badge
-                        driver-status-{{ status.code }}
-                    ">
+            <span
+                class="
+                    driver-status-badge
+                    driver-status-{{ status.code }}
+                "
+                data-driver-status-badge
+            >
                 {{ status.code
                 | replace("_", " ")
                 | title }}
@@ -62,27 +285,34 @@ Driver Dashboard &#8226; HABESHAGO
 
             <span>
                 Online:
-                <strong>
+                <strong data-driver-online>
                     {{ "Yes" if status.is_online else "No" }}
                 </strong>
             </span>
 
             <span>
                 Available:
-                <strong>
+                <strong data-driver-available>
                     {{ "Yes" if status.is_available else "No" }}
                 </strong>
             </span>
 
         </div>
 
-        <button type="button" class="primary-button" disabled>
+        <button
+            type="button"
+            class="primary-button"
+            data-driver-status-action
+        >
             {{ status.action }}
         </button>
 
-        <p class="driver-dashboard-note">
-            Driver status controls will become active
-            in Commit #76.
+        <p
+            class="driver-dashboard-note"
+            data-driver-status-feedback
+        >
+            Driver status is synchronized with the
+            authoritative HABESHAGO platform.
         </p>
 
     </section>
