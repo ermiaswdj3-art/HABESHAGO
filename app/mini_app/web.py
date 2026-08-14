@@ -8,8 +8,6 @@ from flask import Flask, jsonify, render_template, request
 
 from datetime import datetime, timezone
 
-from app.mini_app.repositories import get_driver_by_id
-
 from app.mini_app.pages.home import get_home_page
 from app.mini_app.pages.passenger_dashboard import (
     get_passenger_dashboard,
@@ -48,7 +46,7 @@ from app.mini_app.pages.driver_assignment import (
 
 from app.mini_app.services.tracking_service import (
     calculate_distance_km as calculate_tracking_distance_km,
-    move_driver_toward_pickup,
+    estimate_eta_minutes,
 )
 
 from datetime import (
@@ -142,6 +140,19 @@ from app.services.vehicle_management_service import (
 from app.services.driver_availability_service import (
     get_driver_availability,
     transition_driver_status,
+)
+
+from app.database.driver_repository import (
+    update_driver_location,
+)
+
+from app.services.live_location_service import (
+    get_usable_live_location,
+    record_live_location,
+)
+
+from app.state.active_ride_state import (
+    active_rides,
 )
 
 from app.services.geocoding_service import (
@@ -1527,6 +1538,592 @@ def transition_authenticated_driver_status():
     )
 
 @app.route(
+    "/api/driver/location",
+    methods=["POST"],
+)
+def update_authenticated_driver_location():
+    """
+    Record one authenticated Telegram Mini App driver's
+    current location in the canonical HABESHAGO location
+    platform.
+
+    Driver identity comes only from Telegram Mini App
+    authentication.
+
+    The browser never supplies driver_id directly.
+    """
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App driver "
+                    "authentication data is required."
+                ),
+            }
+        ), 401
+
+    payload = request.get_json(
+        silent=True
+    ) or {}
+
+    try:
+        latitude = float(
+            payload.get("latitude")
+        )
+
+        longitude = float(
+            payload.get("longitude")
+        )
+
+    except (TypeError, ValueError):
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Valid latitude and longitude "
+                    "are required."
+                ),
+            }
+        ), 400
+
+    if not -90 <= latitude <= 90:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Latitude must be between "
+                    "-90 and 90."
+                ),
+            }
+        ), 400
+
+    if not -180 <= longitude <= 180:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Longitude must be between "
+                    "-180 and 180."
+                ),
+            }
+        ), 400
+
+    try:
+        authenticated_driver = (
+            authenticate_mini_app_driver(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+                require_operational=True,
+            )
+        )
+
+        driver_id = (
+            authenticated_driver.driver_id
+        )
+
+        update_driver_location(
+            driver_id,
+            latitude,
+            longitude,
+        )
+
+        live_location = record_live_location(
+            entity_id=driver_id,
+            latitude=latitude,
+            longitude=longitude,
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "message": (
+                "Driver live location updated."
+            ),
+            "driver_id": driver_id,
+            "location": {
+                "latitude": (
+                    live_location.latitude
+                ),
+                "longitude": (
+                    live_location.longitude
+                ),
+                "status": (
+                    live_location.status
+                ),
+                "recorded_at": (
+                    live_location
+                    .recorded_at
+                    .isoformat()
+                ),
+            },
+        }
+    )
+
+
+@app.route(
+    "/api/driver/ride/start",
+    methods=["POST"],
+)
+def start_authenticated_driver_ride():
+    """
+    Start the authenticated Telegram Mini App driver's
+    currently active canonical HABESHAGO Ride.
+
+    The browser never supplies driver_id or ride_id.
+    """
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App driver "
+                    "authentication data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        authenticated_driver = (
+            authenticate_mini_app_driver(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+                require_operational=True,
+            )
+        )
+
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    driver_id = (
+        authenticated_driver.driver_id
+    )
+
+    active_ride = active_rides.get(
+        driver_id
+    )
+
+    if active_ride is None:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "No active canonical Ride exists "
+                    "for this driver."
+                ),
+            }
+        ), 409
+
+    trip = get_trip()
+
+    if trip.canonical_driver_id != driver_id:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Authenticated driver does not "
+                    "match the Mini App Ride driver."
+                ),
+            }
+        ), 403
+
+    if (
+        trip.canonical_ride_id
+        != active_ride.get("ride_id")
+    ):
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Active Ride identity does not "
+                    "match the Mini App canonical Ride."
+                ),
+            }
+        ), 409
+
+    if (
+        trip.canonical_passenger_id
+        != active_ride.get("passenger_id")
+    ):
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Active Ride passenger identity "
+                    "does not match the Mini App Ride."
+                ),
+            }
+        ), 409
+
+    previous_booking_status = (
+        trip.booking_status
+    )
+
+    previous_started_at = (
+        trip.trip_started_at
+    )
+
+    previous_progress = (
+        trip.trip_progress_percent
+    )
+
+    previous_destination_reached = (
+        trip.destination_reached
+    )
+
+    try:
+        start_trip(
+            trip,
+            project_lifecycle_state=False,
+        )
+
+        lifecycle_result = (
+            mark_trip_started(
+                trip=trip,
+            )
+        )
+
+    except (
+        MiniAppCanonicalRideLifecycleError,
+        ValueError,
+    ) as exc:
+        trip.booking_status = (
+            previous_booking_status
+        )
+        trip.trip_started_at = (
+            previous_started_at
+        )
+        trip.trip_progress_percent = (
+            previous_progress
+        )
+        trip.destination_reached = (
+            previous_destination_reached
+        )
+
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "status": "trip_started",
+            "ride_id": lifecycle_result.ride_id,
+            "driver_id": lifecycle_result.driver_id,
+            "canonical_state": (
+                lifecycle_result.canonical_state
+            ),
+            "trip": {
+                "booking_status": (
+                    trip.booking_status
+                ),
+                "trip_started_at": (
+                    trip.trip_started_at
+                ),
+                "trip_progress_percent": (
+                    trip.trip_progress_percent
+                ),
+                "destination_reached": (
+                    trip.destination_reached
+                ),
+            },
+        }
+    )
+
+
+@app.route(
+    "/api/driver/ride/complete",
+    methods=["POST"],
+)
+def complete_authenticated_driver_ride():
+    """
+    Complete the authenticated Telegram Mini App driver's
+    currently active canonical HABESHAGO Ride.
+
+    Completion requires a fresh driver GPS location near
+    the canonical Ride destination.
+
+    The browser never supplies driver_id or ride_id.
+    """
+
+    init_data = request.headers.get(
+        "X-Telegram-Init-Data",
+        "",
+    )
+
+    if not init_data:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Telegram Mini App driver "
+                    "authentication data is required."
+                ),
+            }
+        ), 401
+
+    try:
+        authenticated_driver = (
+            authenticate_mini_app_driver(
+                init_data=init_data,
+                bot_token=BOT_TOKEN,
+                require_operational=True,
+            )
+        )
+
+    except (TypeError, ValueError) as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    driver_id = (
+        authenticated_driver.driver_id
+    )
+
+    active_ride = active_rides.get(
+        driver_id
+    )
+
+    if active_ride is None:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "No active canonical Ride exists "
+                    "for this driver."
+                ),
+            }
+        ), 409
+
+    trip = get_trip()
+
+    if trip.canonical_driver_id != driver_id:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Authenticated driver does not "
+                    "match the Mini App Ride driver."
+                ),
+            }
+        ), 403
+
+    if (
+        trip.canonical_ride_id
+        != active_ride.get("ride_id")
+    ):
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Active Ride identity does not "
+                    "match the Mini App canonical Ride."
+                ),
+            }
+        ), 409
+
+    if (
+        trip.canonical_passenger_id
+        != active_ride.get("passenger_id")
+    ):
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Active Ride passenger identity "
+                    "does not match the Mini App Ride."
+                ),
+            }
+        ), 409
+
+    if (
+        trip.destination_latitude is None
+        or trip.destination_longitude is None
+    ):
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "Canonical destination coordinates "
+                    "are unavailable."
+                ),
+            }
+        ), 409
+
+    live_location = get_usable_live_location(
+        driver_id
+    )
+
+    if live_location is None:
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "A fresh live location is required "
+                    "before completing the Ride."
+                ),
+            }
+        ), 409
+
+    remaining_distance_km = (
+        calculate_tracking_distance_km(
+            live_location.latitude,
+            live_location.longitude,
+            trip.destination_latitude,
+            trip.destination_longitude,
+        )
+    )
+
+    destination_threshold_km = 0.05
+
+    if (
+        remaining_distance_km
+        > destination_threshold_km
+    ):
+        return jsonify(
+            {
+                "success": False,
+                "error": (
+                    "The driver has not yet reached "
+                    "the Ride destination."
+                ),
+                "remaining_distance_km": round(
+                    remaining_distance_km,
+                    3,
+                ),
+            }
+        ), 409
+
+    previous_booking_status = (
+        trip.booking_status
+    )
+    previous_completed_at = (
+        trip.trip_completed_at
+    )
+    previous_progress = (
+        trip.trip_progress_percent
+    )
+    previous_destination_reached = (
+        trip.destination_reached
+    )
+
+    try:
+        trip.trip_progress_percent = 100
+        trip.destination_reached = True
+
+        trip.set_booking_status(
+            "arriving_destination"
+        )
+
+        complete_trip(
+            trip,
+            project_lifecycle_state=False,
+        )
+
+        lifecycle_result = (
+            mark_trip_completed(
+                trip=trip,
+            )
+        )
+
+        # The canonical Ride is now terminal.
+        # Release the driver's shared runtime assignment
+        # only after authoritative completion succeeds.
+        active_rides.pop(
+            driver_id,
+            None,
+        )
+
+    except (
+        MiniAppCanonicalRideLifecycleError,
+        ValueError,
+    ) as exc:
+        trip.booking_status = (
+            previous_booking_status
+        )
+        trip.trip_completed_at = (
+            previous_completed_at
+        )
+        trip.trip_progress_percent = (
+            previous_progress
+        )
+        trip.destination_reached = (
+            previous_destination_reached
+        )
+
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "status": "trip_completed",
+            "ride_id": lifecycle_result.ride_id,
+            "driver_id": lifecycle_result.driver_id,
+            "canonical_state": (
+                lifecycle_result.canonical_state
+            ),
+            "remaining_distance_km": round(
+                remaining_distance_km,
+                3,
+            ),
+            "trip": {
+                "booking_status": (
+                    trip.booking_status
+                ),
+                "trip_completed_at": (
+                    trip.trip_completed_at
+                ),
+                "trip_progress_percent": (
+                    trip.trip_progress_percent
+                ),
+                "destination_reached": (
+                    trip.destination_reached
+                ),
+            },
+        }
+    )
+
+
+@app.route(
     "/api/driver/offers/pending",
     methods=["GET"],
 )
@@ -1920,15 +2517,17 @@ def accept_driver_offer(
         }
     )
 
-@app.route("/api/trip/tracking/update", methods=["POST"])
+@app.route(
+    "/api/trip/tracking/update",
+    methods=["POST"],
+)
 def update_driver_tracking():
     """
-    Move the assigned driver toward the passenger pickup
-    while routing Ride lifecycle changes through the
-    authoritative HABESHAGO Ride Platform.
+    Return the assigned canonical driver's real live
+    location while routing Ride lifecycle changes through
+    the authoritative HABESHAGO Ride Platform.
 
-    Repeated tracking updates do not repeat an already
-    applied canonical DRIVER_EN_ROUTE transition.
+    This endpoint does not simulate driver movement.
     """
 
     trip = get_trip()
@@ -1938,7 +2537,10 @@ def update_driver_tracking():
         "driver_arriving",
     }
 
-    if trip.booking_status not in allowed_tracking_states:
+    if (
+        trip.booking_status
+        not in allowed_tracking_states
+    ):
         return jsonify(
             {
                 "success": False,
@@ -1949,49 +2551,77 @@ def update_driver_tracking():
             }
         ), 409
 
-    if not trip.assigned_driver_id:
-        return jsonify(
-            {
-                "success": False,
-                "message": "No assigned driver was found.",
-            }
-        ), 409
-
-    driver = get_driver_by_id(
-        trip.assigned_driver_id
-    )
-
-    if driver is None:
+    if not trip.canonical_driver_id:
         return jsonify(
             {
                 "success": False,
                 "message": (
-                    "The assigned driver record was not found."
+                    "No canonical driver is bound "
+                    "to this Ride."
                 ),
             }
-        ), 404
+        ), 409
+
+    driver_id = trip.canonical_driver_id
+
+    if (
+        trip.assigned_driver_id is not None
+        and int(trip.assigned_driver_id)
+        != driver_id
+    ):
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "Assigned driver identity does not "
+                    "match the canonical Ride driver."
+                ),
+            }
+        ), 409
+
+    if (
+        trip.pickup_latitude is None
+        or trip.pickup_longitude is None
+    ):
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "Canonical pickup coordinates "
+                    "are unavailable."
+                ),
+            }
+        ), 409
+
+    live_location = get_usable_live_location(
+        driver_id
+    )
+
+    if live_location is None:
+        return jsonify(
+            {
+                "success": False,
+                "message": (
+                    "A fresh live location is not "
+                    "available for the assigned driver."
+                ),
+            }
+        ), 409
 
     previous_booking_status = (
         trip.booking_status
     )
 
-    move_driver_toward_pickup(
-        driver=driver,
-        trip=trip,
-        progress_ratio=0.25,
-    )
-
     remaining_distance_km = (
         calculate_tracking_distance_km(
-            driver.latitude,
-            driver.longitude,
+            live_location.latitude,
+            live_location.longitude,
             trip.pickup_latitude,
             trip.pickup_longitude,
         )
     )
 
     arrival_threshold_km = 0.02
-
     lifecycle_result = None
 
     if (
@@ -2004,6 +2634,7 @@ def update_driver_tracking():
                     trip=trip,
                 )
             )
+
         except (
             MiniAppCanonicalRideLifecycleError
         ) as error:
@@ -2014,27 +2645,21 @@ def update_driver_tracking():
                 }
             ), 409
 
-        driver.latitude = (
-            trip.pickup_latitude
-        )
-        driver.longitude = (
-            trip.pickup_longitude
-        )
-        driver.eta_minutes = 0
-
-        driver.set_driver_status(
-            "waiting"
-        )
-
+        eta_minutes = 0
         trip.driver_eta_minutes = 0
+        driver_status = "waiting"
 
     else:
-        trip.driver_eta_minutes = (
-            driver.eta_minutes
+        eta_minutes = estimate_eta_minutes(
+            remaining_distance_km
         )
 
-        # Only the first movement after assignment
-        # advances the authoritative Ride lifecycle.
+        trip.driver_eta_minutes = (
+            eta_minutes
+        )
+
+        driver_status = "arriving"
+
         if (
             previous_booking_status
             == "driver_assigned"
@@ -2045,6 +2670,7 @@ def update_driver_tracking():
                         trip=trip,
                     )
                 )
+
             except (
                 MiniAppCanonicalRideLifecycleError
             ) as error:
@@ -2058,22 +2684,34 @@ def update_driver_tracking():
     return jsonify(
         {
             "success": True,
-            "message": "Driver tracking updated.",
+            "message": (
+                "Canonical driver live location loaded."
+            ),
             "tracking": {
-                "driver_id": driver.driver_id,
-                "driver_name": driver.name,
-                "latitude": driver.latitude,
-                "longitude": driver.longitude,
+                "driver_id": driver_id,
+                "driver_name": (
+                    trip.assigned_driver_name
+                ),
+                "latitude": (
+                    live_location.latitude
+                ),
+                "longitude": (
+                    live_location.longitude
+                ),
+                "location_status": (
+                    live_location.status
+                ),
+                "location_recorded_at": (
+                    live_location
+                    .recorded_at
+                    .isoformat()
+                ),
                 "remaining_distance_km": round(
                     remaining_distance_km,
                     3,
                 ),
-                "eta_minutes": (
-                    driver.eta_minutes
-                ),
-                "driver_status": (
-                    driver.driver_status
-                ),
+                "eta_minutes": eta_minutes,
+                "driver_status": driver_status,
                 "booking_status": (
                     trip.booking_status
                 ),
@@ -2094,6 +2732,7 @@ def update_driver_tracking():
             },
         }
     )
+
 
 @app.route(
     "/api/trip/pickup-verification/start",

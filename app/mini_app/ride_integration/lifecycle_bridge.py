@@ -23,6 +23,14 @@ from app.mini_app.models import (
     Trip,
 )
 
+from app.constants.ride_states import (
+    RideState,
+)
+
+from app.state.active_ride_state import (
+    active_rides,
+)
+
 from app.mini_app.ride_integration.acceptance_adapter import (
     attach_trip_from_accepted_offer,
 )
@@ -190,6 +198,83 @@ def accept_offer_and_bind_trip(
                 "the accepted canonical Ride."
             )
         )
+
+    canonical_ride_id = (
+        integration.reference.ride_id
+    )
+
+    canonical_passenger_id = (
+        integration.reference.passenger_id
+    )
+
+    canonical_driver_id = (
+        integration.reference.driver_id
+    )
+
+    active_rides[
+        canonical_driver_id
+    ] = {
+        "ride_id": canonical_ride_id,
+        "offer_id": acceptance.get(
+            "offer_id"
+        ),
+        "offer_reference": acceptance.get(
+            "offer_reference"
+        ),
+        "passenger_id": canonical_passenger_id,
+        "pickup": acceptance.get(
+            "pickup"
+        ),
+        "destination": acceptance.get(
+            "destination"
+        ),
+        "distance": float(
+            acceptance.get(
+                "distance"
+            )
+            or 0
+        ),
+        "pickup_distance": float(
+            acceptance.get(
+                "pickup_distance"
+            )
+            or 0
+        ),
+        "pickup_eta": int(
+            acceptance.get(
+                "pickup_eta"
+            )
+            or 0
+        ),
+        "trip_eta": int(
+            acceptance.get(
+                "trip_eta"
+            )
+            or 0
+        ),
+        "fare": float(
+            acceptance.get(
+                "fare"
+            )
+            or 0
+        ),
+        "payment_method": (
+            acceptance.get(
+                "payment_method"
+            )
+            or "Cash"
+        ),
+        "service_type": (
+            acceptance.get(
+                "service_type"
+            )
+            or "ride"
+        ),
+        "status": (
+            RideState.DRIVER_ACCEPTED
+        ),
+        "recovered": False,
+    }
 
     return MiniAppRideLifecycleResult(
         acceptance=acceptance,

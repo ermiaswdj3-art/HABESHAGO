@@ -57,8 +57,37 @@ document.addEventListener(
                 "[data-driver-status-feedback]"
             );
 
+        const driverLocationFeedback =
+            document.querySelector(
+                "[data-driver-location-feedback]"
+            );
+
+        const driverRideLifecycle =
+            document.querySelector(
+                "[data-driver-ride-lifecycle]"
+            );
+
+        const startRideButton =
+            document.querySelector(
+                "[data-start-driver-ride]"
+            );
+
+        const completeRideButton =
+            document.querySelector(
+                "[data-complete-driver-ride]"
+            );
+
+        const driverRideFeedback =
+            document.querySelector(
+                "[data-driver-ride-feedback]"
+            );
+
         let currentOffer = null;
         let currentDriverStatus = null;
+
+        let driverLocationWatchId = null;
+        let lastLocationUpload = null;
+        let locationUploadInProgress = false;
 
         function getTelegramInitData() {
             if (
@@ -85,8 +114,8 @@ document.addEventListener(
 
             element.textContent =
                 value === null ||
-                value === undefined ||
-                value === ""
+                    value === undefined ||
+                    value === ""
                     ? "—"
                     : String(value);
         }
@@ -121,6 +150,279 @@ document.addEventListener(
                 driverStatusFeedback.textContent =
                     message;
             }
+        }
+
+        function setDriverLocationFeedback(message) {
+            if (driverLocationFeedback) {
+                driverLocationFeedback.textContent =
+                    message;
+            }
+        }
+
+        function stopDriverLocationWatch() {
+            if (
+                driverLocationWatchId !== null &&
+                navigator.geolocation
+            ) {
+                navigator.geolocation.clearWatch(
+                    driverLocationWatchId
+                );
+            }
+
+            driverLocationWatchId = null;
+            lastLocationUpload = null;
+            locationUploadInProgress = false;
+
+            setDriverLocationFeedback(
+                "Live GPS is paused while you are offline."
+            );
+        }
+
+        function shouldUploadLocation(
+            latitude,
+            longitude
+        ) {
+            if (!lastLocationUpload) {
+                return true;
+            }
+
+            const latitudeDifference = Math.abs(
+                latitude -
+                lastLocationUpload.latitude
+            );
+
+            const longitudeDifference = Math.abs(
+                longitude -
+                lastLocationUpload.longitude
+            );
+
+            const ageMilliseconds =
+                Date.now() -
+                lastLocationUpload.uploadedAt;
+
+            return (
+                latitudeDifference >= 0.00005 ||
+                longitudeDifference >= 0.00005 ||
+                ageMilliseconds >= 15000
+            );
+        }
+
+        async function uploadDriverLocation(
+            latitude,
+            longitude
+        ) {
+            const initData =
+                getTelegramInitData();
+
+            if (!initData) {
+                setDriverLocationFeedback(
+                    "Telegram authentication is required " +
+                    "for live GPS."
+                );
+                return;
+            }
+
+            if (
+                !Number.isFinite(latitude) ||
+                !Number.isFinite(longitude)
+            ) {
+                setDriverLocationFeedback(
+                    "The device returned an invalid GPS location."
+                );
+                return;
+            }
+
+            if (
+                locationUploadInProgress ||
+                !shouldUploadLocation(
+                    latitude,
+                    longitude
+                )
+            ) {
+                return;
+            }
+
+            locationUploadInProgress = true;
+
+            try {
+                const response = await fetch(
+                    "/api/driver/location",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                            "X-Telegram-Init-Data":
+                                initData,
+                        },
+                        body: JSON.stringify(
+                            {
+                                latitude:
+                                    latitude,
+                                longitude:
+                                    longitude,
+                            }
+                        ),
+                    }
+                );
+
+                const result =
+                    await response.json();
+
+                if (
+                    !response.ok ||
+                    !result.success
+                ) {
+                    throw new Error(
+                        result.error ||
+                        "Unable to update live location."
+                    );
+                }
+
+                lastLocationUpload = {
+                    latitude:
+                        result.location.latitude,
+                    longitude:
+                        result.location.longitude,
+                    uploadedAt:
+                        Date.now(),
+                };
+
+                setDriverLocationFeedback(
+                    "Live GPS connected • " +
+                    String(
+                        result.location.status ||
+                        "live"
+                    )
+                );
+
+            } catch (error) {
+                console.error(
+                    "Driver live location update failed:",
+                    error
+                );
+
+                setDriverLocationFeedback(
+                    error.message ||
+                    "Live GPS update failed."
+                );
+
+            } finally {
+                locationUploadInProgress = false;
+            }
+        }
+
+        function handleDriverLocationSuccess(
+            position
+        ) {
+            const latitude =
+                Number(
+                    position.coords.latitude
+                );
+
+            const longitude =
+                Number(
+                    position.coords.longitude
+                );
+
+            uploadDriverLocation(
+                latitude,
+                longitude
+            );
+        }
+
+        function handleDriverLocationError(
+            error
+        ) {
+            console.error(
+                "Driver geolocation failed:",
+                error
+            );
+
+            if (
+                error &&
+                error.code === 1
+            ) {
+                setDriverLocationFeedback(
+                    "Location permission was denied. " +
+                    "Enable location access to share live GPS."
+                );
+                return;
+            }
+
+            if (
+                error &&
+                error.code === 2
+            ) {
+                setDriverLocationFeedback(
+                    "Your current GPS location is unavailable."
+                );
+                return;
+            }
+
+            if (
+                error &&
+                error.code === 3
+            ) {
+                setDriverLocationFeedback(
+                    "GPS request timed out. Waiting for " +
+                    "the next location update."
+                );
+                return;
+            }
+
+            setDriverLocationFeedback(
+                "Unable to access device GPS."
+            );
+        }
+
+        function startDriverLocationWatch() {
+            if (
+                currentDriverStatus === "offline"
+            ) {
+                stopDriverLocationWatch();
+                return;
+            }
+
+            if (!navigator.geolocation) {
+                setDriverLocationFeedback(
+                    "Device geolocation is not supported."
+                );
+                return;
+            }
+
+            if (
+                driverLocationWatchId !== null
+            ) {
+                return;
+            }
+
+            setDriverLocationFeedback(
+                "Connecting to live GPS..."
+            );
+
+            driverLocationWatchId =
+                navigator.geolocation.watchPosition(
+                    handleDriverLocationSuccess,
+                    handleDriverLocationError,
+                    {
+                        enableHighAccuracy: true,
+                        maximumAge: 5000,
+                        timeout: 15000,
+                    }
+                );
+        }
+
+        function synchronizeDriverLocationWatch() {
+            if (
+                currentDriverStatus ===
+                "offline"
+            ) {
+                stopDriverLocationWatch();
+                return;
+            }
+
+            startDriverLocationWatch();
         }
 
         function getDriverStatusPresentation(
@@ -238,6 +540,9 @@ document.addEventListener(
                         "platform."
                     )
             );
+
+            synchronizeDriverLocationWatch();
+
         }
 
         async function fetchDriverContext() {
@@ -438,9 +743,9 @@ document.addEventListener(
                 "[data-offer-pickup]",
                 (
                     pickup.latitude !==
-                        undefined &&
+                    undefined &&
                     pickup.longitude !==
-                        undefined
+                    undefined
                 )
                     ? (
                         Number(
@@ -458,9 +763,9 @@ document.addEventListener(
                 "[data-offer-destination]",
                 (
                     destination.latitude !==
-                        undefined &&
+                    undefined &&
                     destination.longitude !==
-                        undefined
+                    undefined
                 )
                     ? (
                         Number(
@@ -485,7 +790,7 @@ document.addEventListener(
             setText(
                 "[data-offer-trip-eta]",
                 offer.trip_eta === null ||
-                offer.trip_eta === undefined
+                    offer.trip_eta === undefined
                     ? "—"
                     : `${offer.trip_eta} min`
             );
@@ -493,7 +798,7 @@ document.addEventListener(
             setText(
                 "[data-offer-pickup-eta]",
                 offer.pickup_eta === null ||
-                offer.pickup_eta === undefined
+                    offer.pickup_eta === undefined
                     ? "—"
                     : `${offer.pickup_eta} min`
             );
@@ -683,6 +988,15 @@ document.addEventListener(
 
                 currentOffer = null;
 
+                showDriverRideLifecycle(
+                    "start"
+                );
+
+                setDriverRideFeedback(
+                    "Driver accepted the canonical Ride. "
+                    + "Start the Ride after passenger pickup."
+                );
+
                 if (acceptButton) {
                     acceptButton.textContent =
                         "Ride Accepted";
@@ -824,10 +1138,216 @@ document.addEventListener(
             }
         }
 
+        function setDriverRideFeedback(
+            message
+        ) {
+            if (driverRideFeedback) {
+                driverRideFeedback.textContent =
+                    message || "";
+            }
+        }
+
+        function showDriverRideLifecycle(
+            mode
+        ) {
+            if (!driverRideLifecycle) {
+                return;
+            }
+
+            driverRideLifecycle.hidden = false;
+
+            if (startRideButton) {
+                startRideButton.hidden =
+                    mode !== "start";
+
+                startRideButton.disabled = false;
+            }
+
+            if (completeRideButton) {
+                completeRideButton.hidden =
+                    mode !== "complete";
+
+                completeRideButton.disabled = false;
+            }
+        }
+
+        async function startDriverRide() {
+            const initData =
+                getTelegramInitData();
+
+            if (!initData) {
+                setDriverRideFeedback(
+                    "Telegram authentication is required."
+                );
+                return;
+            }
+
+            if (startRideButton) {
+                startRideButton.disabled = true;
+                startRideButton.textContent =
+                    "Starting Ride...";
+            }
+
+            setDriverRideFeedback("");
+
+            try {
+                const response = await fetch(
+                    "/api/driver/ride/start",
+                    {
+                        method: "POST",
+                        headers: {
+                            "X-Telegram-Init-Data":
+                                initData,
+                        },
+                    }
+                );
+
+                const result =
+                    await response.json();
+
+                if (
+                    !response.ok ||
+                    !result.success
+                ) {
+                    throw new Error(
+                        result.error ||
+                        "Unable to start Ride."
+                    );
+                }
+
+                setDriverRideFeedback(
+                    "Ride started successfully."
+                );
+
+                setStatus(
+                    "Canonical Ride #" +
+                    result.ride_id +
+                    " is in progress."
+                );
+
+                showDriverRideLifecycle(
+                    "complete"
+                );
+
+                if (startRideButton) {
+                    startRideButton.textContent =
+                        "Start Ride";
+                }
+
+            } catch (error) {
+                console.error(
+                    "Driver Ride start failed:",
+                    error
+                );
+
+                setDriverRideFeedback(
+                    error.message ||
+                    "Unable to start Ride."
+                );
+
+                if (startRideButton) {
+                    startRideButton.disabled = false;
+                    startRideButton.textContent =
+                        "Start Ride";
+                }
+            }
+        }
+
+        async function completeDriverRide() {
+            const initData =
+                getTelegramInitData();
+
+            if (!initData) {
+                setDriverRideFeedback(
+                    "Telegram authentication is required."
+                );
+                return;
+            }
+
+            if (completeRideButton) {
+                completeRideButton.disabled = true;
+                completeRideButton.textContent =
+                    "Completing Ride...";
+            }
+
+            setDriverRideFeedback("");
+
+            try {
+                const response = await fetch(
+                    "/api/driver/ride/complete",
+                    {
+                        method: "POST",
+                        headers: {
+                            "X-Telegram-Init-Data":
+                                initData,
+                        },
+                    }
+                );
+
+                const result =
+                    await response.json();
+
+                if (
+                    !response.ok ||
+                    !result.success
+                ) {
+                    throw new Error(
+                        result.error ||
+                        "Unable to complete Ride."
+                    );
+                }
+
+                setDriverRideFeedback(
+                    "Ride completed successfully."
+                );
+
+                setStatus(
+                    "Canonical Ride #" +
+                    result.ride_id +
+                    " completed."
+                );
+
+                if (driverRideLifecycle) {
+                    driverRideLifecycle.hidden = true;
+                }
+
+            } catch (error) {
+                console.error(
+                    "Driver Ride completion failed:",
+                    error
+                );
+
+                setDriverRideFeedback(
+                    error.message ||
+                    "Unable to complete Ride."
+                );
+
+                if (completeRideButton) {
+                    completeRideButton.disabled = false;
+                    completeRideButton.textContent =
+                        "Complete Ride";
+                }
+            }
+        }
+
         if (driverStatusAction) {
             driverStatusAction.addEventListener(
                 "click",
                 transitionDriverStatus
+            );
+        }
+
+        if (startRideButton) {
+            startRideButton.addEventListener(
+                "click",
+                startDriverRide
+            );
+        }
+
+        if (completeRideButton) {
+            completeRideButton.addEventListener(
+                "click",
+                completeDriverRide
             );
         }
 
@@ -838,12 +1358,17 @@ document.addEventListener(
             );
         }
 
-        if (rejectButton) {
+                if (rejectButton) {
             rejectButton.addEventListener(
                 "click",
                 rejectCurrentOffer
             );
         }
+
+        window.addEventListener(
+            "pagehide",
+            stopDriverLocationWatch
+        );
 
         fetchDriverContext();
         fetchPendingOffer();

@@ -86,6 +86,13 @@ Driver Dashboard &#8226; HABESHAGO
             Authenticating your HABESHAGO driver context...
         </p>
 
+        <p
+            class="driver-dashboard-note"
+            data-driver-location-feedback
+        >
+            Live GPS is waiting for driver authentication.
+        </p>
+
     </section>
 
     <section
@@ -222,6 +229,34 @@ Driver Dashboard &#8226; HABESHAGO
             <p
                 class="driver-ride-offer-feedback"
                 data-driver-offer-feedback
+            ></p>
+
+            <div
+                class="driver-ride-offer-actions"
+                data-driver-ride-lifecycle
+                hidden
+            >
+                <button
+                    type="button"
+                    class="driver-ride-offer-accept"
+                    data-start-driver-ride
+                >
+                    Start Ride
+                </button>
+
+                <button
+                    type="button"
+                    class="driver-ride-offer-reject"
+                    data-complete-driver-ride
+                    hidden
+                >
+                    Complete Ride
+                </button>
+            </div>
+
+            <p
+                class="driver-ride-offer-feedback"
+                data-driver-ride-feedback
             ></p>
 
         </article>

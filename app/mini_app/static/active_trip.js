@@ -1,7 +1,9 @@
-"use strict";
+﻿"use strict";
 
 document.addEventListener("DOMContentLoaded", function () {
-    console.log("HABESHAGO Active Trip initialized.");
+    console.log(
+        "HABESHAGO canonical Active Trip synchronization initialized."
+    );
 
     const statusElement = document.querySelector(
         "[data-active-trip-status]"
@@ -31,8 +33,23 @@ document.addEventListener("DOMContentLoaded", function () {
         "[data-active-trip-feedback]"
     );
 
+    const SYNCHRONIZATION_INTERVAL_MS = 3000;
+
+    let synchronizationInterval = null;
+    let synchronizationInFlight = false;
     let tripFinished = false;
-    let progressInterval = null;
+
+    function getTelegramInitData() {
+        if (
+            window.Telegram
+            && window.Telegram.WebApp
+            && window.Telegram.WebApp.initData
+        ) {
+            return window.Telegram.WebApp.initData;
+        }
+
+        return "";
+    }
 
     function formatStatus(value) {
         return String(value || "")
@@ -51,98 +68,199 @@ document.addEventListener("DOMContentLoaded", function () {
         element.classList.remove("is-hidden");
     }
 
-    async function sendPostRequest(
-        url,
-        payload
-    ) {
-        const response = await fetch(
-            url,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(payload || {}),
-            }
-        );
-
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-            throw new Error(
-                result.message ||
-                "The request could not be completed."
+    function stopSynchronization() {
+        if (synchronizationInterval !== null) {
+            window.clearInterval(
+                synchronizationInterval
             );
-        }
 
-        return result;
+            synchronizationInterval = null;
+        }
     }
 
-    function updateProgressInterface(trip) {
-        const progress = Number(
-            trip.trip_progress_percent || 0
-        );
+    async function synchronizeCanonicalTrip() {
+        if (
+            tripFinished
+            || synchronizationInFlight
+        ) {
+            return;
+        }
+
+        synchronizationInFlight = true;
+
+        try {
+            const initData = getTelegramInitData();
+
+            if (!initData) {
+                throw new Error(
+                    "Telegram Mini App authentication data is required."
+                );
+            }
+
+            const response = await fetch(
+                "/api/trip/synchronize",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Telegram-Init-Data": initData,
+                    },
+                    body: JSON.stringify({}),
+                }
+            );
+
+            const result = await response.json();
+
+            if (
+                !response.ok
+                || !result.success
+            ) {
+                throw new Error(
+                    result.error
+                    || result.message
+                    || "Trip synchronization failed."
+                );
+            }
+
+            updatePassengerPresentation(
+                result.trip
+            );
+
+        } catch (error) {
+            console.error(
+                "Canonical trip synchronization failed:",
+                error
+            );
+
+            if (feedback) {
+                feedback.textContent =
+                    error.message
+                    || "Live trip status is temporarily unavailable.";
+            }
+
+        } finally {
+            synchronizationInFlight = false;
+        }
+    }
+
+    function updatePassengerPresentation(trip) {
+        const canonicalState = String(
+            trip.canonical_state || ""
+        ).toUpperCase();
+
+        const bookingStatus = String(
+            trip.booking_status || ""
+        ).toLowerCase();
 
         if (statusElement) {
             statusElement.textContent = formatStatus(
-                trip.booking_status
+                bookingStatus
+                || canonicalState
             );
         }
 
-        if (progressFill) {
-            progressFill.style.width =
-                `${progress}%`;
-        }
-
-        if (progressText) {
-            progressText.textContent =
-                `${progress}%`;
+        if (
+            canonicalState === "TRIP_COMPLETED"
+            || bookingStatus === "trip_completed"
+        ) {
+            showTripCompletion(trip);
+            return;
         }
 
         if (
-            trip.booking_status ===
-            "arriving_destination"
+            canonicalState === "TRIP_STARTED"
+            || bookingStatus === "trip_started"
+            || bookingStatus === "trip_in_progress"
         ) {
-            if (messageTitle) {
-                messageTitle.textContent =
-                    "You have reached the destination.";
-            }
+            showTripInProgress();
+            return;
+        }
 
-            if (messageText) {
-                messageText.textContent =
-                    "Completing your HABESHAGO trip...";
-            }
+        if (
+            canonicalState === "DRIVER_ARRIVED"
+            || bookingStatus === "driver_arrived"
+        ) {
+            showDriverArrived();
+            return;
+        }
 
-            if (feedback) {
-                feedback.textContent =
-                    "Destination reached.";
-            }
-        } else {
-            if (messageTitle) {
-                messageTitle.textContent =
-                    "Your trip is underway.";
-            }
+        if (
+            canonicalState === "DRIVER_ARRIVING"
+            || bookingStatus === "driver_arriving"
+        ) {
+            showDriverEnRoute();
+            return;
+        }
 
-            if (messageText) {
-                messageText.textContent =
-                    `${progress}% of the journey completed.`;
-            }
+        if (feedback) {
+            feedback.textContent =
+                "Waiting for the latest canonical Ride state.";
+        }
+    }
 
-            if (feedback) {
-                feedback.textContent =
-                    "Trip progress updated.";
-            }
+    function showDriverEnRoute() {
+        if (messageTitle) {
+            messageTitle.textContent =
+                "Your driver is on the way.";
+        }
+
+        if (messageText) {
+            messageText.textContent =
+                "HABESHAGO is receiving the driver's live Ride state.";
+        }
+
+        if (feedback) {
+            feedback.textContent =
+                "Driver en route.";
+        }
+    }
+
+    function showDriverArrived() {
+        if (messageTitle) {
+            messageTitle.textContent =
+                "Your driver has arrived.";
+        }
+
+        if (messageText) {
+            messageText.textContent =
+                "Meet your driver at the pickup point.";
+        }
+
+        if (feedback) {
+            feedback.textContent =
+                "Driver arrived.";
+        }
+    }
+
+    function showTripInProgress() {
+        if (progressText) {
+            progressText.textContent = "Live";
+        }
+
+        if (messageTitle) {
+            messageTitle.textContent =
+                "Your trip is underway.";
+        }
+
+        if (messageText) {
+            messageText.textContent =
+                "Your driver is taking you toward your destination.";
+        }
+
+        if (feedback) {
+            feedback.textContent =
+                "Canonical Ride is in progress.";
         }
     }
 
     function showTripCompletion(trip) {
+        if (tripFinished) {
+            return;
+        }
+
         tripFinished = true;
 
-        if (progressInterval !== null) {
-            window.clearInterval(
-                progressInterval
-            );
-        }
+        stopSynchronization();
 
         if (statusElement) {
             statusElement.textContent =
@@ -169,10 +287,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (feedback) {
             feedback.textContent =
-                "Trip completed successfully.";
+                "Canonical Ride completed successfully.";
         }
 
         showElement(completionCard);
+
+        console.log(
+            "Canonical Ride completed:",
+            trip
+        );
 
         window.setTimeout(
             function () {
@@ -180,92 +303,17 @@ document.addEventListener("DOMContentLoaded", function () {
             },
             2000
         );
-
-        console.log(
-            "Trip completed:",
-            trip
-        );
     }
 
-    async function completeTrip() {
-        try {
-            const result = await sendPostRequest(
-                "/api/trip/complete",
-                {}
-            );
+    window.addEventListener(
+        "pagehide",
+        stopSynchronization
+    );
 
-            showTripCompletion(result.trip);
-        } catch (error) {
-            console.error(
-                "Trip completion failed:",
-                error
-            );
+    synchronizeCanonicalTrip();
 
-            if (feedback) {
-                feedback.textContent =
-                    error.message ||
-                    "The trip could not be completed.";
-            }
-
-            tripFinished = true;
-        }
-    }
-
-    async function advanceTrip() {
-        if (tripFinished) {
-            return;
-        }
-
-        try {
-            const result = await sendPostRequest(
-                "/api/trip/progress",
-                {
-                    progress_increment: 20,
-                }
-            );
-
-            const trip = result.trip;
-
-            updateProgressInterface(trip);
-
-            console.log(
-                "Trip progress:",
-                trip
-            );
-
-            if (
-                trip.booking_status ===
-                "arriving_destination"
-                && trip.destination_reached
-            ) {
-                await completeTrip();
-            }
-        } catch (error) {
-            console.error(
-                "Trip progress failed:",
-                error
-            );
-
-            if (feedback) {
-                feedback.textContent =
-                    error.message ||
-                    "Trip progress is temporarily unavailable.";
-            }
-
-            tripFinished = true;
-
-            if (progressInterval !== null) {
-                window.clearInterval(
-                    progressInterval
-                );
-            }
-        }
-    }
-
-    progressInterval = window.setInterval(
-        function () {
-            advanceTrip();
-        },
-        3000
+    synchronizationInterval = window.setInterval(
+        synchronizeCanonicalTrip,
+        SYNCHRONIZATION_INTERVAL_MS
     );
 });
