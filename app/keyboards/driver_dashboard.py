@@ -1,5 +1,10 @@
 from telegram import (
     KeyboardButton,
+    WebAppInfo,
+)
+
+from app.config.settings import (
+    HABESHAGO_MINI_APP_URL,
 )
 
 from app.keyboards.workspace_layout import (
@@ -14,6 +19,12 @@ def get_driver_dashboard_keyboard():
     Built using the shared Workspace Builder
     so every HABESHAGO workspace follows
     the same design language.
+
+    The Mini App launch button uses the same
+    configured HABESHAGO Mini App URL as the
+    passenger workspace. Driver identity and
+    authority are resolved by the shared
+    platform after the Mini App opens.
     """
 
     header = [
@@ -24,7 +35,24 @@ def get_driver_dashboard_keyboard():
         ],
     ]
 
-    primary = [
+    primary = []
+
+    if HABESHAGO_MINI_APP_URL:
+        primary.append(
+            [
+                KeyboardButton(
+                    "🌐 Open HABESHAGO",
+                    web_app=WebAppInfo(
+                        url=(
+                            HABESHAGO_MINI_APP_URL.rstrip("/")
+                            + "/driver"
+                        )
+                    ),
+                ),
+            ]
+        )
+
+    primary.append(
         [
             KeyboardButton(
                 "🟢 Go Online"
@@ -32,8 +60,16 @@ def get_driver_dashboard_keyboard():
             KeyboardButton(
                 "🔴 Go Offline"
             ),
-        ],
-    ]
+        ]
+    )
+
+    primary.append(
+        [
+            KeyboardButton(
+                "📍 Update My Location"
+            ),
+        ]
+    )
 
     secondary = [
         [

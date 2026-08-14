@@ -12,8 +12,8 @@ from app.keyboards.availability import (
     get_availability_keyboard,
 )
 
-from app.keyboards.driver_menu import (
-    get_driver_menu,
+from app.keyboards.driver_dashboard import (
+    get_driver_dashboard_keyboard,
 )
 
 from app.services.driver_availability_service import (
@@ -44,14 +44,14 @@ async def go_online(
         await update.message.reply_text(
             "❌ Unable to go online.\n\n"
             f"{error}",
-            reply_markup=get_driver_menu(),
+            reply_markup=get_driver_dashboard_keyboard(),
         )
         return
 
     await update.message.reply_text(
         "🟢 You are now ONLINE and AVAILABLE.\n\n"
         "You can receive new HABESHAGO ride offers.",
-        reply_markup=get_driver_menu(),
+        reply_markup=get_driver_dashboard_keyboard(),
     )
 
 
@@ -79,14 +79,14 @@ async def go_offline(
         await update.message.reply_text(
             "❌ Unable to go offline.\n\n"
             f"{error}",
-            reply_markup=get_driver_menu(),
+            reply_markup=get_driver_dashboard_keyboard(),
         )
         return
 
     await update.message.reply_text(
         "🔴 You are now OFFLINE.\n\n"
         "You will not receive new HABESHAGO ride offers.",
-        reply_markup=get_driver_menu(),
+        reply_markup=get_driver_dashboard_keyboard(),
     )
 
 

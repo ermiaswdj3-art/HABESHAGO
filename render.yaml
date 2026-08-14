@@ -21,3 +21,6 @@ services:
 
       - key: HABESHAGO_MINI_APP_DRIVER_ID
         sync: false
+
+      - key: HABESHAGO_RUNTIME_BRIDGE_TOKEN
+        sync: false

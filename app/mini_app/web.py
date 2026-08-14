@@ -60,6 +60,11 @@ from app.config.settings import (
     BOT_TOKEN,
 )
 
+from app.runtime_bridge import (
+    RuntimeBridgeAuthenticationError,
+    authenticate_runtime_bridge,
+)
+
 from app.mini_app.auth import (
     authenticate_mini_app_driver,
     authenticate_mini_app_passenger,
@@ -4016,6 +4021,47 @@ def choose_trip_payment_method():
             },
         }
     )
+
+@app.route(
+    "/api/runtime/bridge/health",
+    methods=["GET"],
+)
+def runtime_bridge_health():
+    """
+    Verify authenticated access to the canonical
+    HABESHAGO deployed runtime.
+
+    This endpoint exposes no secret material and
+    performs no business-state mutation.
+    """
+
+    bridge_token = request.headers.get(
+        "X-HABESHAGO-Runtime-Bridge",
+        "",
+    )
+
+    try:
+        authenticate_runtime_bridge(
+            bridge_token
+        )
+
+    except RuntimeBridgeAuthenticationError as exc:
+        return jsonify(
+            {
+                "success": False,
+                "error": str(exc),
+            }
+        ), 401
+
+    return jsonify(
+        {
+            "success": True,
+            "runtime": "habeshago",
+            "bridge": "authenticated",
+            "canonical_runtime": True,
+        }
+    )
+
 
 @app.route("/payment")
 def payment_page():
