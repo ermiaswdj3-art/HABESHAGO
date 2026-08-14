@@ -1,3 +1,15 @@
+"""
+HABESHAGO Active Ride Queue Handler
+
+Displays canonical active HABESHAGO Rides for the
+configured Operations administrator.
+
+Ride identity, lifecycle, fare, route, driver context,
+and live GPS come from the shared Admin Operations
+Platform. This handler does not maintain competing
+Ride queries or lifecycle state.
+"""
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -5,106 +17,208 @@ from app.config.settings import (
     ADMIN_ID,
 )
 
-from app.database.database import (
-    create_connection,
-)
-
-
-ACTIVE_RIDE_STATUSES = (
-    "ACCEPTED",
-    "DRIVER_ARRIVING",
-    "DRIVER_ARRIVED",
-    "TRIP_STARTED",
+from app.services.admin_operations_service import (
+    get_admin_operations_snapshot,
 )
 
 
 STATUS_LABELS = {
-    "ACCEPTED": "✅ Driver Accepted",
-    "DRIVER_ARRIVING": "🚗 Driver Arriving",
-    "DRIVER_ARRIVED": "📍 Driver Arrived",
-    "TRIP_STARTED": "🚕 Trip Started",
+    "ACCEPTED": "Driver Accepted",
+    "DRIVER_ARRIVING": "Driver Arriving",
+    "DRIVER_ARRIVED": "Driver Arrived",
+    "TRIP_STARTED": "Trip Started",
 }
 
 
-def get_active_rides():
+def _format_coordinate(
+    value,
+) -> str:
     """
-    Return active rides with passenger and
-    driver names for the Operations Center.
+    Return one coordinate for Operations display.
     """
 
-    connection = create_connection()
-    cursor = connection.cursor()
+    if value is None:
+        return "Not available"
 
-    cursor.execute(
-        """
-        SELECT
-            rides.id,
-            rides.passenger_id,
-            passengers.full_name,
-            rides.driver_id,
-            drivers.full_name,
-            rides.status,
-            rides.distance,
-            rides.fare,
-            rides.accepted_at,
-            rides.arrived_at,
-            rides.started_at
-        FROM rides
+    try:
+        return f"{float(value):.6f}"
 
-        LEFT JOIN passengers
-            ON passengers.telegram_id
-            = rides.passenger_id
+    except (TypeError, ValueError):
+        return str(value)
 
-        LEFT JOIN drivers
-            ON drivers.telegram_id
-            = rides.driver_id
 
-        WHERE rides.status IN (
-            'ACCEPTED',
-            'DRIVER_ARRIVING',
-            'DRIVER_ARRIVED',
-            'TRIP_STARTED'
-        )
+def _format_timestamp(
+    value,
+) -> str:
+    """
+    Return one lifecycle timestamp for display.
+    """
 
-        ORDER BY
-            COALESCE(
-                rides.accepted_at,
-                rides.created_at
-            ) ASC
-        """
+    if value in (
+        None,
+        "",
+    ):
+        return "Not recorded"
+
+    return str(value)
+
+
+def _format_active_ride(
+    ride: dict,
+) -> str:
+    """
+    Build one human-readable canonical Ride block.
+    """
+
+    ride_id = ride.get(
+        "ride_id"
     )
 
-    rides = cursor.fetchall()
+    passenger_id = ride.get(
+        "passenger_id"
+    )
 
-    connection.close()
+    driver_id = ride.get(
+        "driver_id"
+    )
 
-    return rides
+    status = ride.get(
+        "status"
+    )
 
+    status_display = (
+        STATUS_LABELS.get(
+            status,
+            status or "Unknown",
+        )
+    )
 
-def get_latest_progress_time(
-    status,
-    accepted_at,
-    arrived_at,
-    started_at,
-):
-    """
-    Return the timestamp representing the
-    ride's latest lifecycle progress.
-    """
+    driver = (
+        ride.get("driver")
+        or {}
+    )
 
-    if (
-        status == "TRIP_STARTED"
-        and started_at
-    ):
-        return started_at
+    driver_name = (
+        driver.get("full_name")
+        or f"Driver #{driver_id}"
+    )
 
-    if (
-        status == "DRIVER_ARRIVED"
-        and arrived_at
-    ):
-        return arrived_at
+    service_type = (
+        ride.get("service_type")
+        or "Not recorded"
+    )
 
-    return accepted_at or "Not recorded"
+    distance = ride.get(
+        "distance"
+    )
+
+    fare = ride.get(
+        "fare"
+    )
+
+    pickup = (
+        ride.get("pickup")
+        or {}
+    )
+
+    destination = (
+        ride.get("destination")
+        or {}
+    )
+
+    live_location = ride.get(
+        "live_location"
+    )
+
+    try:
+        distance_display = (
+            f"{float(distance or 0):.2f} km"
+        )
+    except (TypeError, ValueError):
+        distance_display = str(
+            distance
+        )
+
+    try:
+        fare_display = (
+            f"{float(fare or 0):,.2f} ETB"
+        )
+    except (TypeError, ValueError):
+        fare_display = str(
+            fare
+        )
+
+    lines = [
+        f"🚕 Ride #{ride_id}",
+        "",
+        f"👤 Passenger: #{passenger_id}",
+        (
+            "🚗 Driver: "
+            f"{driver_name} (#{driver_id})"
+        ),
+        f"📌 Status: {status_display}",
+        f"🚘 Service: {service_type}",
+        "",
+        (
+            "📍 Pickup: "
+            f"{_format_coordinate(pickup.get('latitude'))}, "
+            f"{_format_coordinate(pickup.get('longitude'))}"
+        ),
+        (
+            "🏁 Destination: "
+            f"{_format_coordinate(destination.get('latitude'))}, "
+            f"{_format_coordinate(destination.get('longitude'))}"
+        ),
+        "",
+        f"🛣 Distance: {distance_display}",
+        f"💰 Fare: {fare_display}",
+        "",
+        "🕒 Lifecycle",
+        (
+            "Accepted: "
+            f"{_format_timestamp(ride.get('accepted_at'))}"
+        ),
+        (
+            "Arrived: "
+            f"{_format_timestamp(ride.get('arrived_at'))}"
+        ),
+        (
+            "Started: "
+            f"{_format_timestamp(ride.get('started_at'))}"
+        ),
+    ]
+
+    if live_location is None:
+        lines.extend(
+            [
+                "",
+                "📡 Live GPS: Not currently available",
+            ]
+        )
+
+    else:
+        lines.extend(
+            [
+                "",
+                (
+                    "📡 Live GPS: "
+                    f"{live_location.get('status') or 'live'}"
+                ),
+                (
+                    "Location: "
+                    f"{_format_coordinate(live_location.get('latitude'))}, "
+                    f"{_format_coordinate(live_location.get('longitude'))}"
+                ),
+                (
+                    "Recorded: "
+                    f"{_format_timestamp(live_location.get('recorded_at'))}"
+                ),
+            ]
+        )
+
+    return "\n".join(
+        lines
+    )
 
 
 async def show_active_ride_queue(
@@ -112,8 +226,8 @@ async def show_active_ride_queue(
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """
-    Display all active rides in a
-    human-friendly dispatcher view.
+    Display canonical active Rides to the configured
+    HABESHAGO Operations administrator.
     """
 
     if update.message is None:
@@ -131,86 +245,52 @@ async def show_active_ride_queue(
         )
         return
 
-    rides = get_active_rides()
+    snapshot = (
+        get_admin_operations_snapshot()
+    )
 
-    if not rides:
+    rides = snapshot.get(
+        "active_rides",
+        [],
+    )
+
+    aggregate_active_count = (
+        snapshot.get(
+            "rides",
+            {},
+        ).get(
+            "active",
+            0,
+        )
+    )
+
+    if aggregate_active_count != len(
+        rides
+    ):
         await update.message.reply_text(
-            "📋 ACTIVE RIDE QUEUE\n\n"
-            "✅ There are currently no active rides."
+            "⚠️ Operations consistency check failed. "
+            "Active Ride totals do not match the "
+            "canonical Ride detail queue."
         )
         return
 
-    message_parts = [
-        "📋 HABESHAGO ACTIVE RIDE QUEUE",
-        "",
-        f"🚕 Active Rides: {len(rides)}",
-        "━━━━━━━━━━━━━━",
-    ]
-
-    for ride in rides:
-        (
-            ride_id,
-            passenger_id,
-            passenger_name,
-            driver_id,
-            driver_name,
-            status,
-            distance,
-            fare,
-            accepted_at,
-            arrived_at,
-            started_at,
-        ) = ride
-
-        passenger_display = (
-            passenger_name
-            or f"Passenger #{passenger_id}"
+    if not rides:
+        await update.message.reply_text(
+            "📋 HABESHAGO ACTIVE RIDE QUEUE\n\n"
+            "✅ There are currently no canonical "
+            "active rides."
         )
-
-        driver_display = (
-            driver_name
-            or f"Driver #{driver_id}"
-        )
-
-        status_display = STATUS_LABELS.get(
-            status,
-            status,
-        )
-
-        latest_progress = (
-            get_latest_progress_time(
-                status,
-                accepted_at,
-                arrived_at,
-                started_at,
-            )
-        )
-
-        message_parts.extend(
-            [
-                "",
-                f"🚖 Ride #{ride_id}",
-                "",
-                "👤 Passenger",
-                passenger_display,
-                "",
-                "🚗 Driver",
-                driver_display,
-                "",
-                f"📌 Status: {status_display}",
-                f"🕒 Latest Progress: {latest_progress}",
-                "",
-                f"🛣 Trip Distance: {distance:.2f} km",
-                f"💰 Estimated Fare: {fare:,.2f} ETB",
-                "",
-                "━━━━━━━━━━━━━━",
-            ]
-        )
-
-    message = "\n".join(
-        message_parts
-    )
+        return
 
     await update.message.reply_text(
-        message
+        "📋 HABESHAGO ACTIVE RIDE QUEUE\n\n"
+        f"🚕 Active Rides: {len(rides)}\n"
+        "Source: Canonical Operations Platform"
     )
+
+    for ride in rides:
+        await update.message.reply_text(
+            _format_active_ride(
+                ride
+            )
+        )

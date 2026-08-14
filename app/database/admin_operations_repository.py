@@ -497,3 +497,107 @@ def get_settlement_operations_summary() -> dict:
         )
 
     return summary
+
+def get_active_ride_operations_details() -> list[dict]:
+    """
+    Return canonical active Ride records for Operations.
+
+    Each result represents one authoritative HABESHAGO
+    Ride, enriched with the assigned driver's canonical
+    identity and current operational context.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    active_placeholders = ", ".join(
+        "?"
+        for _ in ACTIVE_RIDE_STATUSES
+    )
+
+    cursor.execute(
+        f"""
+        SELECT
+            rides.id,
+            rides.passenger_id,
+            rides.driver_id,
+            rides.pickup_latitude,
+            rides.pickup_longitude,
+            rides.destination_latitude,
+            rides.destination_longitude,
+            rides.distance,
+            rides.fare,
+            rides.service_type,
+            rides.status,
+            rides.created_at,
+            rides.requested_at,
+            rides.accepted_at,
+            rides.arrived_at,
+            rides.started_at,
+            drivers.full_name,
+            drivers.phone_number,
+            drivers.vehicle,
+            drivers.vehicle_color,
+            drivers.plate_number,
+            drivers.rating,
+            drivers.operational_status,
+            drivers.latitude,
+            drivers.longitude
+        FROM rides
+        LEFT JOIN drivers
+            ON drivers.telegram_id =
+                rides.driver_id
+        WHERE rides.status IN (
+            {active_placeholders}
+        )
+        ORDER BY
+            rides.created_at DESC,
+            rides.id DESC
+        """,
+        ACTIVE_RIDE_STATUSES,
+    )
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    return [
+        {
+            "ride_id": row[0],
+            "passenger_id": row[1],
+            "driver_id": row[2],
+            "pickup": {
+                "latitude": row[3],
+                "longitude": row[4],
+            },
+            "destination": {
+                "latitude": row[5],
+                "longitude": row[6],
+            },
+            "distance": float(
+                row[7] or 0
+            ),
+            "fare": float(
+                row[8] or 0
+            ),
+            "service_type": row[9],
+            "status": row[10],
+            "created_at": row[11],
+            "requested_at": row[12],
+            "accepted_at": row[13],
+            "arrived_at": row[14],
+            "started_at": row[15],
+            "driver": {
+                "full_name": row[16],
+                "phone_number": row[17],
+                "vehicle": row[18],
+                "vehicle_color": row[19],
+                "plate_number": row[20],
+                "rating": row[21],
+                "operational_status": row[22],
+                "latitude": row[23],
+                "longitude": row[24],
+            },
+        }
+        for row in rows
+    ]
