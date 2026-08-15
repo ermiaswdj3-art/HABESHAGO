@@ -296,6 +296,51 @@ def _has_returning_clause(
         )
     )
 
+def translate_sqlite_transaction_statements(
+    statement: str,
+) -> str:
+    """
+    Translate SQLite transaction-control statements used
+    by HABESHAGO into PostgreSQL-compatible SQL.
+
+    SQLite:
+
+        BEGIN IMMEDIATE
+
+    PostgreSQL:
+
+        BEGIN
+
+    HABESHAGO's authoritative write invariants continue to
+    be enforced by conditional writes and transaction
+    rollback inside the calling service.
+    """
+
+    if not isinstance(statement, str):
+        raise TypeError(
+            "SQL statement must be a string."
+        )
+
+    import re
+
+    return re.sub(
+        r"""
+        ^\s*
+        BEGIN
+        \s+
+        IMMEDIATE
+        \s*;?
+        \s*$
+        """,
+        "BEGIN",
+        statement,
+        flags=(
+            re.IGNORECASE
+            | re.VERBOSE
+        ),
+    )
+
+
 class PostgreSQLCompatibleCursor:
     """
     DB-API compatibility cursor for HABESHAGO PostgreSQL.
@@ -321,8 +366,14 @@ class PostgreSQLCompatibleCursor:
         statement,
         parameters=None,
     ):
+        translated = (
+            translate_sqlite_transaction_statements(
+                statement
+            )
+        )
+
         translated = translate_sql_parameters(
-            statement
+            translated
         )
 
         translated = (
@@ -383,7 +434,6 @@ class PostgreSQLCompatibleCursor:
             ) from exc
 
         if capture_insert_id:
-
             if returned_row is not None:
                 self._lastrowid = (
                     returned_row[0]
@@ -615,6 +665,43 @@ def translate_sqlite_datetime_functions(
         "CURRENT_TIMESTAMP",
         statement,
         flags=re.IGNORECASE,
+    )
+
+    # Historical SQLite Ride Offer creation SQL uses:
+    #
+    #     DATETIME(
+    #         'now',
+    #         '+' || %s || ' seconds'
+    #     )
+    #
+    # PostgreSQL expresses the same expiration contract by
+    # adding the supplied number of seconds to the canonical
+    # current timestamp.
+    translated = re.sub(
+        r"""
+        DATETIME
+        \s*\(
+        \s*['"]now['"]
+        \s*,\s*
+        ['"]\+['"]
+        \s*\|\|\s*
+        %s
+        \s*\|\|\s*
+        ['"]\ seconds['"]
+        \s*\)
+        """,
+        (
+            "CURRENT_TIMESTAMP "
+            "+ ("
+            "CAST(%s AS DOUBLE PRECISION) "
+            "* INTERVAL '1 second'"
+            ")"
+        ),
+        translated,
+        flags=(
+            re.IGNORECASE
+            | re.VERBOSE
+        ),
     )
 
     translated = re.sub(
