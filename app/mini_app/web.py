@@ -160,6 +160,10 @@ from app.state.active_ride_state import (
     active_rides,
 )
 
+from app.services.recovery_service import (
+    recover_active_rides,
+)
+
 from app.services.geocoding_service import (
     get_location_details,
 )
@@ -1736,6 +1740,22 @@ def start_authenticated_driver_ride():
         driver_id
     )
 
+    # ==========================================
+    # ACTIVE RIDE DATABASE RECOVERY
+    # ==========================================
+    #
+    # Render process memory is not canonical
+    # platform authority. If this worker does not
+    # currently hold the driver's active Ride,
+    # rebuild shared runtime state from PostgreSQL
+    # before rejecting the lifecycle operation.
+    if active_ride is None:
+        recover_active_rides()
+
+        active_ride = active_rides.get(
+            driver_id
+        )
+
     if active_ride is None:
         return jsonify(
             {
@@ -1922,6 +1942,22 @@ def complete_authenticated_driver_ride():
     active_ride = active_rides.get(
         driver_id
     )
+
+    # ==========================================
+    # ACTIVE RIDE DATABASE RECOVERY
+    # ==========================================
+    #
+    # Render process memory is not canonical
+    # platform authority. If this worker does not
+    # currently hold the driver's active Ride,
+    # rebuild shared runtime state from PostgreSQL
+    # before rejecting the lifecycle operation.
+    if active_ride is None:
+        recover_active_rides()
+
+        active_ride = active_rides.get(
+            driver_id
+        )
 
     if active_ride is None:
         return jsonify(

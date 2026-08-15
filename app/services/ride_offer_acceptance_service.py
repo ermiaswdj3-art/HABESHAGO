@@ -312,6 +312,39 @@ def accept_offer_and_create_ride(
                 "Ride offer could not be accepted."
             )
 
+        # ==========================================
+        # ATOMIC DRIVER ASSIGNMENT
+        # ==========================================
+        #
+        # The same transaction that creates the
+        # canonical Ride and accepts the Ride Offer
+        # must also remove the selected driver from
+        # new-dispatch eligibility.
+        #
+        # Driver remains online, but unavailable
+        # until the Ride lifecycle releases them.
+        cursor.execute(
+            """
+            UPDATE drivers
+            SET
+                operational_status = 'unavailable',
+                is_online = 1,
+                is_available = 0,
+                operational_status_updated_at =
+                    CURRENT_TIMESTAMP
+            WHERE telegram_id = ?
+              AND is_online = 1
+              AND is_available = 1
+            """,
+            (driver_id,),
+        )
+
+        if cursor.rowcount != 1:
+            raise ValueError(
+                "Driver could not be assigned "
+                "to the accepted ride."
+            )
+
         cursor.execute(
             """
             SELECT
