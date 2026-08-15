@@ -1,7 +1,7 @@
-import sqlite3
 from datetime import datetime
 
 from app.database.database import (
+    DATABASE_ERROR_TYPES,
     create_connection,
 )
 
@@ -30,7 +30,7 @@ def check_database_health():
 
         return result == (1,)
 
-    except sqlite3.Error:
+    except DATABASE_ERROR_TYPES:
         return False
 
     finally:
@@ -151,7 +151,7 @@ def get_system_health():
     try:
         metrics = get_system_metrics()
         metrics_available = True
-    except sqlite3.Error:
+    except DATABASE_ERROR_TYPES:
         metrics = {
             "total_passengers": 0,
             "total_drivers": 0,
@@ -167,7 +167,7 @@ def get_system_health():
     try:
         stale_rides = get_stale_active_rides()
         stale_check_available = True
-    except sqlite3.Error:
+    except DATABASE_ERROR_TYPES:
         stale_rides = []
         stale_check_available = False
 

@@ -1,22 +1,81 @@
 import os
 import sqlite3
 
+from app.database.backend import (
+    POSTGRESQL_BACKEND,
+    SQLITE_BACKEND,
+    get_database_backend,
+    validate_database_configuration,
+)
+
+from app.database.postgresql import (
+    create_postgresql_connection,
+)
+
+from app.database.postgresql_schema import (
+    create_postgresql_tables,
+)
+
+from app.database.errors import (
+    HABESHAGODatabaseError,
+)
 
 DATABASE_NAME = "habeshago.db"
 
 
+
+
+# Backend-neutral database failure contract.
+#
+# SQLite currently exposes its native DB-API error family,
+# while PostgreSQL failures crossing the compatibility
+# boundary use HABESHAGODatabaseError.
+DATABASE_ERROR_TYPES = (
+    sqlite3.Error,
+    HABESHAGODatabaseError,
+)
+
 def create_connection():
     """
-    Create and return a connection to the HABESHAGO database.
+    Create and return the canonical HABESHAGO
+    database connection.
+
+    SQLite remains the active development backend.
+
+    PostgreSQL configuration is recognized by the
+    platform contract but is intentionally rejected
+    until the production PostgreSQL connection adapter
+    and SQL compatibility layer are installed.
     """
+
+    backend = validate_database_configuration()
+
+    if backend == POSTGRESQL_BACKEND:
+        return create_postgresql_connection()
+
+    if backend != SQLITE_BACKEND:
+        raise RuntimeError(
+            "Unsupported HABESHAGO database backend."
+        )
 
     database_path = os.path.abspath(
         DATABASE_NAME
     )
 
-    print("\n==============================")
-    print("DATABASE:", database_path)
-    print("==============================\n")
+    print(
+        "\n=============================="
+    )
+    print(
+        "DATABASE BACKEND:",
+        backend,
+    )
+    print(
+        "DATABASE:",
+        database_path,
+    )
+    print(
+        "==============================\n"
+    )
 
     return sqlite3.connect(
         database_path
@@ -486,7 +545,25 @@ def migrate_existing_driver_vehicles(
 def create_tables():
     """
     Create and safely upgrade all HABESHAGO database tables.
+
+    SQLite retains the historical migration authority.
+
+    PostgreSQL uses only the canonical fresh-schema
+    authority and never executes legacy SQLite migrations.
     """
+
+    backend = validate_database_configuration()
+
+    if backend == POSTGRESQL_BACKEND:
+        connection = create_connection()
+
+        try:
+            return create_postgresql_tables(
+                connection
+            )
+
+        finally:
+            connection.close()
 
     connection = create_connection()
     cursor = connection.cursor()
