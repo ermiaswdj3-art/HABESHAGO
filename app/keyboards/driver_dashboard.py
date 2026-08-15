@@ -1,11 +1,14 @@
-from telegram import (
-    KeyboardButton,
-    WebAppInfo,
-)
+"""
+HABESHAGO Driver Dashboard Keyboard
 
-from app.config.settings import (
-    HABESHAGO_MINI_APP_URL,
-)
+Provides the canonical Telegram Driver Workspace.
+
+The Mini App entry is intentionally a normal Telegram
+text action. The authenticated Web App is launched by
+the bot through a dedicated inline Web App button.
+"""
+
+from telegram import KeyboardButton
 
 from app.keyboards.workspace_layout import (
     build_workspace,
@@ -14,70 +17,48 @@ from app.keyboards.workspace_layout import (
 
 def get_driver_dashboard_keyboard():
     """
-    Return the HABESHAGO Driver Workspace.
+    Return the canonical HABESHAGO Driver Workspace.
 
-    Built using the shared Workspace Builder
-    so every HABESHAGO workspace follows
-    the same design language.
-
-    The Mini App launch button uses the same
-    configured HABESHAGO Mini App URL as the
-    passenger workspace. Driver identity and
-    authority are resolved by the shared
-    platform after the Mini App opens.
+    Business state remains canonical and shared across
+    Telegram Bot, Mini App, and future HABESHAGO clients.
     """
 
     header = [
         [
             KeyboardButton(
-                "🚖 Driver Dashboard"
+                "\U0001F696 Driver Dashboard"
             ),
         ],
     ]
 
-    primary = []
-
-    if HABESHAGO_MINI_APP_URL:
-        primary.append(
-            [
-                KeyboardButton(
-                    "🌐 Open HABESHAGO",
-                    web_app=WebAppInfo(
-                        url=(
-                            HABESHAGO_MINI_APP_URL.rstrip("/")
-                            + "/driver"
-                        )
-                    ),
-                ),
-            ]
-        )
-
-    primary.append(
+    primary = [
         [
             KeyboardButton(
-                "🟢 Go Online"
+                "\U0001F310 Open HABESHAGO"
             ),
-            KeyboardButton(
-                "🔴 Go Offline"
-            ),
-        ]
-    )
-
-    primary.append(
+        ],
         [
             KeyboardButton(
-                "📍 Update My Location"
+                "\U0001F7E2 Go Online"
             ),
-        ]
-    )
+            KeyboardButton(
+                "\U0001F534 Go Offline"
+            ),
+        ],
+        [
+            KeyboardButton(
+                "\U0001F4CD Update My Location"
+            ),
+        ],
+    ]
 
     secondary = [
         [
             KeyboardButton(
-                "👤 My Profile"
+                "\U0001F464 My Profile"
             ),
             KeyboardButton(
-                "📋 My Rides"
+                "\U0001F4CB My Rides"
             ),
         ],
     ]

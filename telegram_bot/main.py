@@ -85,6 +85,10 @@ from app.handlers.driver_dashboard import (
     show_driver_dashboard,
 )
 
+from app.handlers.driver_mini_app import (
+    launch_driver_mini_app,
+)
+
 from app.handlers.driver_response import (
     accept_ride,
     decline_ride,
@@ -435,6 +439,16 @@ def main():
         MessageHandler(
             filters.TEXT & filters.Regex("^🚖 Driver Dashboard$"),
             show_driver_dashboard,
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT
+            & filters.Regex(
+                "^\U0001F310 Open HABESHAGO$"
+            ),
+            launch_driver_mini_app,
         )
     )
 

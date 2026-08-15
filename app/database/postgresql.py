@@ -532,10 +532,10 @@ def translate_sqlite_datetime_functions(
     statement: str,
 ) -> str:
     """
-    Translate the simple SQLite DATETIME forms currently used
-    by HABESHAGO ride-offer lifecycle SQL into PostgreSQL.
+    Translate the SQLite date/time forms currently used
+    by HABESHAGO into PostgreSQL-compatible SQL.
 
-    Supported forms:
+    Supported DATETIME forms:
 
         DATETIME('now')
             -> CURRENT_TIMESTAMP
@@ -543,12 +543,64 @@ def translate_sqlite_datetime_functions(
         DATETIME(column_or_parameter)
             -> CAST(column_or_parameter AS TIMESTAMP)
 
-    Complex SQLite modifier forms such as:
+        DATETIME(
+            'now',
+            'localtime',
+            %s
+        )
+            -> CURRENT_TIMESTAMP
+               + CAST(%s AS INTERVAL)
 
-        DATETIME('now', 'localtime', ?)
+    Supported DATE forms:
 
-    are intentionally left unchanged. They require explicit
-    semantic handling rather than unsafe textual rewriting.
+        DATE('now', 'localtime')
+            -> CURRENT_DATE
+
+        DATE(
+            'now',
+            'localtime',
+            '-6 days'
+        )
+            -> CAST(
+                   CURRENT_DATE
+                   - INTERVAL '6 days'
+                   AS DATE
+               )
+
+        DATE(column_or_parameter)
+            -> CAST(column_or_parameter AS DATE)
+
+        DATE(COALESCE(...))
+            -> CAST(COALESCE(...) AS DATE)
+
+    Supported STRFTIME forms:
+
+        STRFTIME(
+            '%Y-%m',
+            column_or_parameter
+        )
+            -> TO_CHAR(
+                   CAST(
+                       column_or_parameter
+                       AS TIMESTAMP
+                   ),
+                   'YYYY-MM'
+               )
+
+        STRFTIME(
+            '%Y-%m',
+            'now',
+            'localtime'
+        )
+            -> TO_CHAR(
+                   CURRENT_TIMESTAMP,
+                   'YYYY-MM'
+               )
+
+    HABESHAGO canonical persistence time is UTC.
+    Historical SQLite 'localtime' forms are therefore
+    translated against PostgreSQL canonical current
+    date/time rather than server-local persistence time.
     """
 
     if not isinstance(statement, str):
@@ -586,8 +638,10 @@ def translate_sqlite_datetime_functions(
         ),
     )
 
-    # HABESHAGO canonical persistence time is UTC.
-    #
+    # ==============================================
+    # SQLITE DATETIME MODIFIER COMPATIBILITY
+    # ==============================================
+
     # Historical SQLite health SQL uses:
     #
     #     DATETIME(
@@ -622,15 +676,15 @@ def translate_sqlite_datetime_functions(
         ),
     )
 
-    # Historical SQLite operational-summary SQL compares
-    # canonical timestamps using:
+    # ==============================================
+    # SQLITE DATE COMPATIBILITY
+    # ==============================================
+
+    # Historical SQLite operational-summary SQL uses:
     #
     #     DATE(value) = DATE('now', 'localtime')
     #
-    # HABESHAGO persistence time is canonical UTC. PostgreSQL
-    # therefore evaluates the same platform-day contract using
-    # CAST(value AS DATE) and CURRENT_DATE rather than inheriting
-    # SQLite process-local time semantics.
+    # HABESHAGO persistence time is canonical UTC.
     translated = re.sub(
         r"""
         DATE
@@ -648,6 +702,41 @@ def translate_sqlite_datetime_functions(
         ),
     )
 
+    # Historical SQLite weekly earnings SQL uses:
+    #
+    #     DATE(
+    #         'now',
+    #         'localtime',
+    #         '-6 days'
+    #     )
+    #
+    # PostgreSQL evaluates the same seven-calendar-day
+    # window from the canonical UTC platform date.
+    translated = re.sub(
+        r"""
+        DATE
+        \s*\(
+        \s*['"]now['"]
+        \s*,\s*
+        ['"]localtime['"]
+        \s*,\s*
+        ['"]-6\ days['"]
+        \s*\)
+        """,
+        (
+            "CAST("
+            "CURRENT_DATE - INTERVAL '6 days' "
+            "AS DATE)"
+        ),
+        translated,
+        flags=(
+            re.IGNORECASE
+            | re.VERBOSE
+        ),
+    )
+
+    # Translate DATE(column), DATE(%s), and the simple
+    # DATE(COALESCE(...)) form already used by HABESHAGO.
     translated = re.sub(
         r"""
         DATE
@@ -667,6 +756,78 @@ def translate_sqlite_datetime_functions(
         \)
         """,
         r"CAST(\1 AS DATE)",
+        translated,
+        flags=(
+            re.IGNORECASE
+            | re.VERBOSE
+        ),
+    )
+
+    # ==============================================
+    # SQLITE STRFTIME COMPATIBILITY
+    # ==============================================
+
+    # Historical SQLite monthly earnings SQL uses:
+    #
+    #     STRFTIME(
+    #         '%Y-%m',
+    #         created_at
+    #     )
+    #
+    # PostgreSQL exposes the same year-month contract
+    # through TO_CHAR.
+    translated = re.sub(
+        r"""
+        STRFTIME
+        \s*\(
+        \s*['"]%Y-%m['"]
+        \s*,\s*
+        (
+            %s
+            |
+            [A-Za-z_][A-Za-z0-9_.]*
+        )
+        \s*\)
+        """,
+        (
+            r"TO_CHAR("
+            r"CAST(\1 AS TIMESTAMP), "
+            r"'YYYY-MM'"
+            r")"
+        ),
+        translated,
+        flags=(
+            re.IGNORECASE
+            | re.VERBOSE
+        ),
+    )
+
+    # Historical SQLite monthly current-period SQL uses:
+    #
+    #     STRFTIME(
+    #         '%Y-%m',
+    #         'now',
+    #         'localtime'
+    #     )
+    #
+    # Evaluate against HABESHAGO canonical PostgreSQL time.
+    translated = re.sub(
+        r"""
+        STRFTIME
+        \s*\(
+        \s*['"]%Y-%m['"]
+        \s*,\s*
+        ['"]now['"]
+        \s*,\s*
+        ['"]localtime['"]
+        \s*\)
+        """,
+        (
+            "TO_CHAR("
+            "CURRENT_TIMESTAMP, "
+            "'YYYY-MM'"
+            ")"
+        ),
         translated,
         flags=(
             re.IGNORECASE
