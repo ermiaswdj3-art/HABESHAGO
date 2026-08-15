@@ -695,8 +695,11 @@ def update_driver_location(
     cursor.execute(
         """
         UPDATE drivers
-        SET latitude = ?,
-            longitude = ?
+        SET
+            latitude = ?,
+            longitude = ?,
+            live_location_updated_at =
+                CURRENT_TIMESTAMP
         WHERE telegram_id = ?
         """,
         (
@@ -709,6 +712,53 @@ def update_driver_location(
     connection.commit()
 
     connection.close()
+
+
+def get_driver_live_location(
+    driver_id: int,
+):
+    """
+    Return one driver's latest shared live-location
+    coordinates and canonical recording timestamp.
+
+    A driver without a recording timestamp does not yet
+    have a cross-process live-location record.
+    """
+
+    connection = create_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            latitude,
+            longitude,
+            live_location_updated_at
+        FROM drivers
+        WHERE telegram_id = ?
+        """,
+        (driver_id,),
+    )
+
+    row = cursor.fetchone()
+
+    connection.close()
+
+    if row is None:
+        return None
+
+    recorded_at = row[2]
+
+    if recorded_at is None:
+        return None
+
+    return {
+        "driver_id": driver_id,
+        "latitude": float(row[0]),
+        "longitude": float(row[1]),
+        "recorded_at": recorded_at,
+    }
+
 
 def get_driver_profile(driver_id):
     """

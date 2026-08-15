@@ -362,6 +362,17 @@ def migrate_drivers_table(
         "TIMESTAMP",
     )
 
+    # ==========================================
+    # SHARED LIVE LOCATION AUTHORITY
+    # ==========================================
+
+    add_column_if_missing(
+        cursor,
+        "drivers",
+        "live_location_updated_at",
+        "TIMESTAMP",
+    )
+
         # Preserve the existing operational meaning of
     # drivers created before Commit #76.
     #
@@ -634,6 +645,8 @@ def create_tables():
 
                 latitude REAL NOT NULL,
                 longitude REAL NOT NULL,
+
+                live_location_updated_at TIMESTAMP,
 
                 created_at TIMESTAMP
                     DEFAULT CURRENT_TIMESTAMP

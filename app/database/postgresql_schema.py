@@ -360,6 +360,23 @@ def create_postgresql_tables(
                 statement
             )
 
+        # ==========================================
+        # SHARED LIVE LOCATION AUTHORITY
+        # ==========================================
+        #
+        # Fresh databases inherit the column from
+        # the canonical drivers schema.
+        #
+        # Existing PostgreSQL databases receive
+        # this additive idempotent migration.
+        cursor.execute(
+            """
+            ALTER TABLE drivers
+            ADD COLUMN IF NOT EXISTS
+                live_location_updated_at TIMESTAMP
+            """
+        )
+
         for statement in index_statements:
             cursor.execute(
                 statement

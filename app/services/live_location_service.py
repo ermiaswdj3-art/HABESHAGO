@@ -24,6 +24,10 @@ from app.models.live_location import (
     LiveLocation,
 )
 
+from app.database.driver_repository import (
+    get_driver_live_location,
+)
+
 from app.services.live_location_engine import (
     is_location_usable,
     refresh_location_status,
@@ -74,12 +78,55 @@ def get_live_location(
     returning it.
     """
 
-    location = _LIVE_LOCATIONS.get(entity_id)
+    # Canonical driver GPS is shared through
+    # persistence so separate HABESHAGO processes
+    # observe one operational location truth.
+    persisted_location = (
+        get_driver_live_location(
+            entity_id
+        )
+    )
+
+    if persisted_location is not None:
+        location = LiveLocation(
+            entity_id=entity_id,
+            latitude=(
+                persisted_location[
+                    "latitude"
+                ]
+            ),
+            longitude=(
+                persisted_location[
+                    "longitude"
+                ]
+            ),
+            recorded_at=(
+                persisted_location[
+                    "recorded_at"
+                ]
+            ),
+        )
+
+        _LIVE_LOCATIONS[
+            entity_id
+        ] = location
+
+        return refresh_location_status(
+            location
+        )
+
+    # Preserve process-local support for entities
+    # without a canonical driver location record.
+    location = _LIVE_LOCATIONS.get(
+        entity_id
+    )
 
     if location is None:
         return None
 
-    return refresh_location_status(location)
+    return refresh_location_status(
+        location
+    )
 
 
 def get_usable_live_location(
